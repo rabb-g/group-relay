@@ -91,6 +91,40 @@ public class MessageRepository {
         return ts;
     }
 
+    /**
+     * Messages actually relayed to the group today (the shared group daily pool's usage). Counts
+     * the dedicated "RELAYED" marker logged only on the success path in
+     * {@code CommandProcessor.relayPlainMessage} -- deliberately not the general "RELAY" category,
+     * which is logged for every inbound message (including commands and quota-blocked ones) and
+     * would otherwise double-count or count messages that were never actually relayed.
+     */
+    public int countRelayedSince(long sinceTimestamp) {
+        return countWhere("category = 'RELAYED' AND direction = 'IN' AND timestamp >= ?",
+                new String[]{String.valueOf(sinceTimestamp)});
+    }
+
+    /** One member's own relayed messages today (that member's individual daily pool usage). */
+    public int countRelayedForMemberSince(long memberId, long sinceTimestamp) {
+        return countWhere("member_id = ? AND category = 'RELAYED' AND direction = 'IN' AND timestamp >= ?",
+                new String[]{String.valueOf(memberId), String.valueOf(sinceTimestamp)});
+    }
+
+    /** Sends that exhausted their retry limit today, for the dashboard's "Failed Today" tile. */
+    public int countFailedSince(long sinceTimestamp) {
+        return countWhere("category = 'FAILED' AND timestamp >= ?", new String[]{String.valueOf(sinceTimestamp)});
+    }
+
+    private int countWhere(String selection, String[] args) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + DbHelper.TABLE_MESSAGE_LOG + " WHERE " + selection, args);
+        int count = 0;
+        if (c.moveToFirst()) {
+            count = c.getInt(0);
+        }
+        c.close();
+        return count;
+    }
+
     public int countSince(long sinceTimestamp) {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
         Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + DbHelper.TABLE_MESSAGE_LOG +

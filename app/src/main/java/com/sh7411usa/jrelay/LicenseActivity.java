@@ -1,12 +1,11 @@
 package com.sh7411usa.jrelay;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-public class LicenseActivity extends Activity {
+public class LicenseActivity extends BaseActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

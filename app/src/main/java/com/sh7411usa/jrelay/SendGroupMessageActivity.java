@@ -1,12 +1,11 @@
 package com.sh7411usa.jrelay;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.widget.EditText;
 
 import com.sh7411usa.jrelay.sms.CommandProcessor;
 
-public class SendGroupMessageActivity extends Activity {
+public class SendGroupMessageActivity extends BaseActivity {
 
     private EditText messageInput;
 

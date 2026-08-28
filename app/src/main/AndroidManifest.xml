@@ -35,7 +35,7 @@
         <activity android:name=".MembershipActivity" android:exported="false" />
         <activity android:name=".MemberDetailActivity" android:exported="false" />
         <activity android:name=".AddMemberActivity" android:exported="false" />
-        <activity android:name=".RateLimitActivity" android:exported="false" />
+        <activity android:name=".SettingsActivity" android:exported="false" />
         <activity android:name=".SendGroupMessageActivity" android:exported="false" />
         <activity android:name=".LicenseActivity" android:exported="false" />
 

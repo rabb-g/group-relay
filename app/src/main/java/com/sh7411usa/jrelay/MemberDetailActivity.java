@@ -1,6 +1,5 @@
 package com.sh7411usa.jrelay;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
@@ -23,12 +22,13 @@ import com.sh7411usa.jrelay.model.Member;
 import com.sh7411usa.jrelay.model.MessageRecord;
 import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.PhoneNumberUtils;
+import com.sh7411usa.jrelay.util.DailyLimitManager;
 import com.sh7411usa.jrelay.util.Prefs;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class MemberDetailActivity extends Activity {
+public class MemberDetailActivity extends BaseActivity {
 
     public static final String EXTRA_MEMBER_ID = "extra_member_id";
 
@@ -41,7 +41,11 @@ public class MemberDetailActivity extends Activity {
 
     private TextView nicknameView;
     private TextView numberView;
-    private TextView statsView;
+    private TextView memberMetaView;
+    private TextView statSentView;
+    private TextView statReceivedView;
+    private TextView statTodayView;
+    private TextView statActivityLevelView;
     private LinearLayout activityContainer;
     private Button adminButton;
     private Button muteButton;
@@ -53,6 +57,12 @@ public class MemberDetailActivity extends Activity {
     private EditText rateMinWaitInput;
     private EditText rateMaxWaitInput;
     private CheckBox rateInitialDelayCheckbox;
+
+    private CheckBox customDailyLimitCheckbox;
+    private LinearLayout dailyLimitFieldsContainer;
+    private EditText dailyLimitValueInput;
+    private TextView dailyLimitUsageView;
+    private Button overrideDailyLimitButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,7 +77,11 @@ public class MemberDetailActivity extends Activity {
 
         nicknameView = findViewById(R.id.text_nickname);
         numberView = findViewById(R.id.text_number);
-        statsView = findViewById(R.id.text_stats);
+        memberMetaView = findViewById(R.id.text_member_meta);
+        statSentView = findViewById(R.id.text_stat_sent);
+        statReceivedView = findViewById(R.id.text_stat_received);
+        statTodayView = findViewById(R.id.text_stat_today);
+        statActivityLevelView = findViewById(R.id.text_stat_activity_level);
         activityContainer = findViewById(R.id.container_member_activity);
         adminButton = findViewById(R.id.button_toggle_admin);
         muteButton = findViewById(R.id.button_toggle_mute);
@@ -79,6 +93,12 @@ public class MemberDetailActivity extends Activity {
         rateMinWaitInput = findViewById(R.id.edit_member_min_wait);
         rateMaxWaitInput = findViewById(R.id.edit_member_max_wait);
         rateInitialDelayCheckbox = findViewById(R.id.checkbox_member_initial_delay);
+
+        customDailyLimitCheckbox = findViewById(R.id.checkbox_custom_daily_limit);
+        dailyLimitFieldsContainer = findViewById(R.id.container_daily_limit_fields);
+        dailyLimitValueInput = findViewById(R.id.edit_daily_limit_value);
+        dailyLimitUsageView = findViewById(R.id.text_daily_limit_usage);
+        overrideDailyLimitButton = findViewById(R.id.button_override_daily_limit);
 
         adminButton.setOnClickListener(v -> {
             memberRepository.setAdmin(member.id, !member.isAdmin);
@@ -99,6 +119,11 @@ public class MemberDetailActivity extends Activity {
         customRateLimitCheckbox.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) ->
                 rateLimitFieldsContainer.setVisibility(isChecked ? View.VISIBLE : View.GONE));
         findViewById(R.id.button_save_rate_limit).setOnClickListener(v -> saveRateLimit());
+
+        customDailyLimitCheckbox.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) ->
+                dailyLimitFieldsContainer.setVisibility(isChecked ? View.VISIBLE : View.GONE));
+        findViewById(R.id.button_save_daily_limit).setOnClickListener(v -> saveDailyLimit());
+        overrideDailyLimitButton.setOnClickListener(v -> overrideDailyLimit());
     }
 
     @Override
@@ -123,19 +148,44 @@ public class MemberDetailActivity extends Activity {
         long lastActivity = messageRepository.lastActivityForMember(member.id);
         long sevenDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(7);
         int recentCount = messageRepository.countForMemberSince(member.id, sevenDaysAgo);
+        long startOfDay = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1);
+        int todayCount = messageRepository.countForMemberSince(member.id, startOfDay);
 
-        StringBuilder stats = new StringBuilder();
-        stats.append(getString(R.string.label_member_since, DateFormat.format("MMM d, yyyy", member.createdAt))).append("\n");
         if (lastActivity > 0) {
-            stats.append(getString(R.string.label_last_activity, DateFormat.format("MMM d, yyyy h:mm a", lastActivity))).append("\n");
+            memberMetaView.setText(getString(R.string.label_member_meta_with_activity,
+                    DateFormat.format("MMM d, yyyy", member.createdAt), DateFormat.format("MMM d, h:mm a", lastActivity)));
+        } else {
+            memberMetaView.setText(getString(R.string.label_member_meta, DateFormat.format("MMM d, yyyy", member.createdAt)));
         }
-        stats.append(getString(R.string.label_messages_sent, sentCount)).append("\n");
-        stats.append(getString(R.string.label_messages_received, receivedCount)).append("\n");
-        stats.append(getString(R.string.label_activity_level, activityLevelLabel(recentCount)));
-        statsView.setText(stats.toString());
+
+        statSentView.setText(String.valueOf(sentCount));
+        statReceivedView.setText(String.valueOf(receivedCount));
+        statTodayView.setText(String.valueOf(todayCount));
+        setActivityLevel(recentCount);
 
         populateRateLimitFields();
+        populateDailyLimitFields();
         renderActivity();
+    }
+
+    private void setActivityLevel(int recentCount) {
+        int labelRes;
+        int colorRes;
+        if (recentCount >= 20) {
+            labelRes = R.string.activity_level_high;
+            colorRes = R.color.success;
+        } else if (recentCount >= 5) {
+            labelRes = R.string.activity_level_medium;
+            colorRes = R.color.primary;
+        } else if (recentCount >= 1) {
+            labelRes = R.string.activity_level_low;
+            colorRes = R.color.warning;
+        } else {
+            labelRes = R.string.activity_level_none;
+            colorRes = R.color.text_secondary;
+        }
+        statActivityLevelView.setText(labelRes);
+        statActivityLevelView.setTextColor(getColor(colorRes));
     }
 
     private void populateRateLimitFields() {
@@ -168,23 +218,49 @@ public class MemberDetailActivity extends Activity {
         Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
     }
 
+    private void populateDailyLimitFields() {
+        customDailyLimitCheckbox.setChecked(member.dailyLimitCustom);
+        dailyLimitFieldsContainer.setVisibility(member.dailyLimitCustom ? View.VISIBLE : View.GONE);
+        dailyLimitValueInput.setText(String.valueOf(
+                member.dailyLimitValue != null ? member.dailyLimitValue : prefs.getDefaultIndividualLimitSeed()));
+
+        if (!member.dailyLimitCustom) {
+            dailyLimitUsageView.setText(R.string.daily_limit_not_customized);
+            overrideDailyLimitButton.setVisibility(View.GONE);
+            return;
+        }
+
+        DailyLimitManager.Status status = new DailyLimitManager(this).memberStatus(member);
+        dailyLimitUsageView.setText(getString(R.string.tpl_daily_limit_usage, status.used, status.limit));
+        overrideDailyLimitButton.setVisibility(status.isExhausted() ? View.VISIBLE : View.GONE);
+    }
+
+    private void saveDailyLimit() {
+        if (!customDailyLimitCheckbox.isChecked()) {
+            memberRepository.clearDailyLimitOverride(member.id);
+            refresh();
+            Toast.makeText(this, R.string.daily_limit_saved, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int value = Math.max(0, parseOrDefault(dailyLimitValueInput, prefs.getDefaultIndividualLimitSeed()));
+        memberRepository.setDailyLimitOverride(member.id, value);
+        refresh();
+        Toast.makeText(this, R.string.daily_limit_saved, Toast.LENGTH_SHORT).show();
+    }
+
+    private void overrideDailyLimit() {
+        new DailyLimitManager(this).overrideMember(member);
+        refresh();
+        Toast.makeText(this, R.string.daily_limit_override_done, Toast.LENGTH_SHORT).show();
+    }
+
     private int parseOrDefault(EditText input, int defaultValue) {
         try {
             return Integer.parseInt(input.getText().toString().trim());
         } catch (NumberFormatException e) {
             return defaultValue;
         }
-    }
-
-    private String activityLevelLabel(int recentCount) {
-        if (recentCount >= 20) {
-            return getString(R.string.activity_level_high);
-        } else if (recentCount >= 5) {
-            return getString(R.string.activity_level_medium);
-        } else if (recentCount >= 1) {
-            return getString(R.string.activity_level_low);
-        }
-        return getString(R.string.activity_level_none);
     }
 
     private void renderActivity() {

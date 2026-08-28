@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "jrelay.db";
-    private static final int DB_VERSION = 2;
+    private static final int DB_VERSION = 3;
 
     public static final String TABLE_MEMBERS = "members";
     public static final String TABLE_MESSAGE_LOG = "message_log";
@@ -43,7 +43,12 @@ public class DbHelper extends SQLiteOpenHelper {
                 "rate_burst_max INTEGER," +
                 "rate_min_wait INTEGER," +
                 "rate_max_wait INTEGER," +
-                "rate_initial_delay INTEGER" +
+                "rate_initial_delay INTEGER," +
+                "daily_limit_custom INTEGER NOT NULL DEFAULT 0," +
+                "daily_limit_value INTEGER," +
+                "daily_limit_bonus INTEGER NOT NULL DEFAULT 0," +
+                "daily_limit_bonus_window_start INTEGER NOT NULL DEFAULT 0," +
+                "failed_count INTEGER NOT NULL DEFAULT 0" +
                 ")");
 
         db.execSQL("CREATE TABLE " + TABLE_MESSAGE_LOG + " (" +
@@ -61,7 +66,8 @@ public class DbHelper extends SQLiteOpenHelper {
                 "phone_e164 TEXT NOT NULL," +
                 "body TEXT NOT NULL," +
                 "enqueued_at INTEGER NOT NULL," +
-                "status TEXT NOT NULL DEFAULT 'PENDING'" +
+                "status TEXT NOT NULL DEFAULT 'PENDING'," +
+                "attempts INTEGER NOT NULL DEFAULT 0" +
                 ")");
     }
 
@@ -75,6 +81,14 @@ public class DbHelper extends SQLiteOpenHelper {
             db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN rate_min_wait INTEGER");
             db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN rate_max_wait INTEGER");
             db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN rate_initial_delay INTEGER");
+        }
+        if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN daily_limit_custom INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN daily_limit_value INTEGER");
+            db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN daily_limit_bonus INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN daily_limit_bonus_window_start INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN failed_count INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("ALTER TABLE " + TABLE_OUTBOX + " ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0");
         }
     }
 

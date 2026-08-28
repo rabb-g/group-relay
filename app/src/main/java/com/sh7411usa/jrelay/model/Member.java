@@ -18,4 +18,13 @@ public class Member {
     public Integer rateMinWait;
     public Integer rateMaxWait;
     public Integer rateInitialDelay;
+
+    /** When true, dailyLimitValue caps this member's own relayed messages per day, independent of the group pool. */
+    public boolean dailyLimitCustom;
+    public Integer dailyLimitValue;
+    public int dailyLimitBonus;
+    public long dailyLimitBonusWindowStart;
+
+    /** Cumulative sends that exhausted retries since this member's last successful send. */
+    public int failedCount;
 }

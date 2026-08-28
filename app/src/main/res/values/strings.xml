@@ -12,19 +12,37 @@
     <!-- Dashboard -->
     <string name="group_name_label">Group Name</string>
     <string name="edit_group_name">Edit</string>
+    <string name="action_options">Options</string>
+    <string name="menu_set_group_name">Set Group Name</string>
     <string name="add_member_shortcut">Add Member</string>
     <string name="view_membership">Membership</string>
-    <string name="view_rate_limit">Configure</string>
+    <string name="view_rate_limit">Settings</string>
     <string name="stats_members">Members: %1$d</string>
     <string name="stats_admins">Admins: %1$d</string>
     <string name="stats_muted">Muted: %1$d</string>
     <string name="stats_messages_today">Messages Today: %1$d</string>
     <string name="stats_messages_total">Messages Total: %1$d</string>
+    <string name="stats_failed_today">Failed Today: %1$d</string>
     <string name="stats_queue_count">Messages in Queue: %1$d</string>
     <string name="stats_next_burst">Next burst in %1$s (%2$d messages)</string>
+    <string name="badge_sending">Sending…</string>
     <string name="send_group_message_shortcut">Send to Group</string>
     <string name="recent_activity">Recent Activity</string>
     <string name="no_activity_yet">No activity yet.</string>
+
+    <!-- Dashboard stat tiles -->
+    <string name="tile_members">Members</string>
+    <string name="tile_admins">Admins</string>
+    <string name="tile_muted">Muted</string>
+    <string name="tile_messages_today">Messages Today</string>
+    <string name="tile_messages_total">Messages Total</string>
+    <string name="tile_failed_today">Failed Today</string>
+    <string name="tile_queue">In Queue</string>
+    <string name="tile_messages_sent">Sent</string>
+    <string name="tile_messages_received">Received</string>
+    <string name="tile_activity_level">Activity</string>
+    <string name="label_member_meta">Member since %1$s</string>
+    <string name="label_member_meta_with_activity">Member since %1$s • Last active %2$s</string>
 
     <!-- Membership -->
     <string name="membership_title">Members</string>
@@ -82,9 +100,25 @@
     <string name="action_save_rate_limit">Save Send Pacing</string>
     <string name="rate_limit_member_saved">Send pacing saved.</string>
 
-    <!-- Rate limiting -->
-    <string name="rate_limit_title">Rate Limiting</string>
+    <!-- Member Detail: Daily Limit override -->
+    <string name="section_daily_limit">Daily Limit</string>
+    <string name="daily_limit_member_desc">By default this member draws only from the group\'s shared daily limit. Turn this on to also cap their own messages per day.</string>
+    <string name="checkbox_custom_daily_limit">Use a custom daily limit for this member</string>
+    <string name="label_daily_limit_value">Messages per day</string>
+    <string name="hint_daily_limit_value">Messages per day</string>
+    <string name="action_save_daily_limit">Save Daily Limit</string>
+    <string name="daily_limit_saved">Daily limit saved.</string>
+    <string name="tpl_daily_limit_usage">Today: %1$d / %2$d</string>
+    <string name="daily_limit_not_customized">No individual limit set for this member (they still draw from the group\'s shared daily limit).</string>
+    <string name="action_override_daily_limit">Override (+1 Today)</string>
+    <string name="daily_limit_override_done">Added 1 message for today.</string>
+
+    <!-- Settings -->
+    <string name="rate_limit_title">Settings</string>
     <string name="action_view_license">License</string>
+    <string name="section_staggering">Staggering</string>
+    <string name="staggering_desc">Waits between bursts of outgoing messages so sends don\'t all fire at once.</string>
+    <string name="checkbox_staggering_enabled">Enable staggering between bursts</string>
     <string name="rate_limit_app_section">Group Default Send Pacing</string>
     <string name="rate_limit_app_desc">Applies to every member unless they have a custom pace set on their own member screen.</string>
     <string name="label_burst_min">Minimum messages per burst</string>
@@ -96,6 +130,73 @@
     <string name="hint_min_wait">Seconds</string>
     <string name="hint_max_wait">Seconds</string>
     <string name="checkbox_initial_delay">Wait before sending the first burst (uses the wait range above)</string>
+
+    <string name="section_burst_configuration">Burst Configuration</string>
+    <string name="label_burst_mode">Messages per burst</string>
+    <string name="burst_mode_random_range">Random amount, between bounds</string>
+    <string name="burst_mode_fixed">Fixed amount</string>
+    <string name="burst_mode_all_at_once">All messages at once</string>
+    <string name="label_fixed_burst_size">Fixed messages per burst</string>
+    <string name="hint_fixed_burst_size">Messages per burst</string>
+
+    <string name="section_microspacing">Microspacing</string>
+    <string name="microspacing_desc">Paces individual messages apart within one burst, in milliseconds.</string>
+    <string name="checkbox_microspacing_enabled">Enable microspacing within a burst</string>
+    <string name="label_microspacing_mode">Spacing amount</string>
+    <string name="microspacing_mode_fixed">Fixed</string>
+    <string name="microspacing_mode_random_range">Random, between bounds</string>
+    <string name="label_microspacing_fixed_ms">Milliseconds between messages</string>
+    <string name="hint_microspacing_fixed_ms">Milliseconds</string>
+    <string name="label_microspacing_min_ms">Minimum milliseconds</string>
+    <string name="label_microspacing_max_ms">Maximum milliseconds</string>
+
+    <string name="section_delivery_shuffle">Delivery Queue Shuffling</string>
+    <string name="delivery_shuffle_desc">Dispatches messages to members in a random order each cycle instead of a repeating order.</string>
+    <string name="checkbox_delivery_shuffle">Shuffle delivery order</string>
+
+    <string name="section_message_content">Message Content</string>
+    <string name="checkbox_append_sender_number">Append sender\'s number to relayed messages</string>
+    <string name="append_sender_number_desc">Adds the sender\'s own number in plain digits (e.g. 2345678910) to the end of every relayed message.</string>
+    <string name="checkbox_strip_phone_numbers">Strip phone numbers from relayed messages</string>
+    <string name="strip_phone_numbers_desc">Removes anything that looks like a phone number from a member\'s message before relaying it.</string>
+
+    <string name="section_salting">Salting</string>
+    <string name="salting_desc">Makes each relayed message unique, e.g. to avoid carrier duplicate-message filtering. All off by default.</string>
+    <string name="checkbox_salt_timestamp">Append a unique timestamp</string>
+    <string name="label_salt_timestamp_format">Timestamp format</string>
+    <string name="salt_format_time">Time (HH:mm:ss)</string>
+    <string name="salt_format_unix_seconds">Unix seconds</string>
+    <string name="salt_format_hex_seconds">Hex seconds (short)</string>
+    <string name="salt_format_hex_millis">Hex milliseconds (short, unique)</string>
+    <string name="checkbox_salt_hex">Append a random 3-digit hex code</string>
+    <string name="label_salt_hex_position">Position</string>
+    <string name="salt_position_append">Append</string>
+    <string name="salt_position_prepend">Prepend</string>
+    <string name="checkbox_salt_zwsp">Inject random invisible spaces between words</string>
+
+    <string name="section_failures_retries">Failures &amp; Retries</string>
+    <string name="label_retry_limit">Retry limit</string>
+    <string name="hint_retry_limit">Retries</string>
+    <string name="retry_limit_desc">How many times to retry a failed send. 1 means one retry after the initial attempt (2 attempts total, never more).</string>
+    <string name="label_failure_alert_threshold">Failure alert threshold</string>
+    <string name="hint_failure_alert_threshold">Failures</string>
+    <string name="failure_alert_threshold_desc">Alert admins once a member\'s failed-send count reaches a multiple of this number.</string>
+
+    <string name="section_group_daily_limit">Group Daily Limit</string>
+    <string name="label_daily_limit_reset_time">Limits reset at</string>
+    <string name="checkbox_group_daily_limit_enabled">Enable a shared group daily limit</string>
+    <string name="group_daily_limit_desc">The total number of messages the app may relay per day across the whole group. Takes precedence over any member\'s individual limit.</string>
+    <string name="label_group_daily_limit_value">Group daily limit</string>
+    <string name="hint_group_daily_limit_value">Messages per day</string>
+    <string name="tpl_group_daily_limit_status">Today: %1$d / %2$d used. Resets at %3$s.</string>
+    <string name="group_daily_limit_status_disabled">The group daily limit is currently disabled.</string>
+    <string name="label_default_individual_limit">Default individual limit</string>
+    <string name="default_individual_limit_desc">A separate, per-member cap. Set a number below, then push it onto members\' own limits with the buttons -- this does not touch the shared group pool above.</string>
+    <string name="hint_default_individual_limit">Messages per day</string>
+    <string name="action_apply_to_all">Apply to All Members</string>
+    <string name="action_apply_to_non_customized">Apply to Members Without a Custom Limit</string>
+    <string name="individual_limit_applied">Applied to %1$d member(s).</string>
+
     <string name="rate_limit_system_section">Android Outgoing SMS Limit</string>
     <string name="rate_limit_system_desc">Android itself warns/blocks an app that sends too many texts too quickly. These are the system-wide thresholds.</string>
     <string name="label_system_max_count">Max messages before warning</string>
@@ -104,6 +205,22 @@
     <string name="hint_system_interval_minutes">Minutes</string>
     <string name="rate_limit_permission_missing">jRelay does not have permission to change this system setting. Run this command from a computer with ADB, with the device connected:</string>
     <string name="rate_limit_value_unavailable">Not available on this device</string>
+
+    <string name="section_language">Language</string>
+    <string name="label_language">App language</string>
+    <!-- Each shown in its own language, not translated per-locale -->
+    <string name="language_system">System Default</string>
+    <string name="language_english">English</string>
+    <string name="language_hebrew">עברית</string>
+    <string name="language_yiddish">יידיש</string>
+
+    <string name="section_appearance">Appearance</string>
+    <string name="label_theme">Theme</string>
+    <string name="theme_system">System Default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+    <string name="section_miscellaneous">Miscellaneous</string>
 
     <!-- Clear History -->
     <string name="action_clear_history">Clear History (%1$s)</string>
@@ -148,8 +265,20 @@
     <string name="tpl_admin_relay_prefix">[Admin-only from %1$s]: %2$s</string>
     <string name="tpl_dm_prefix">[Admin]: %1$s</string>
     <string name="tpl_commands_list_common">Available commands:\n#commands - show this list\n#mute - pause messages\n#unmute - resume messages\n#stop - leave the group\n#list - list members\n#name &lt;new nickname&gt; - change your nickname\n#admin &lt;message&gt; - message admins only</string>
-    <string name="tpl_commands_list_admin_extra">\n(Admins) #add &lt;number&gt; &lt;nickname&gt; - add a member\n(Admins) #remove &lt;nickname or number&gt; - remove a member\n(Admins) #topic &lt;new name&gt; - change the group name</string>
+    <string name="tpl_commands_list_admin_extra">\n(Admins) #add &lt;number&gt; &lt;nickname&gt; - add a member\n(Admins) #remove &lt;nickname or number&gt; - remove a member\n(Admins) #topic &lt;new name&gt; - change the group name\n(Admins) #limits - show today\'s group limit status\n(Admins) #override [nickname or number] - add 1 message to the group limit, or a member\'s individual limit</string>
     <string name="tpl_list_you">(You)</string>
     <string name="tpl_list_admin">(admin)</string>
     <string name="default_added_by_admin">An Admin</string>
+
+    <!-- Daily limit templates -->
+    <string name="tpl_group_limit_blocked">Group limit reached: %1$d of %2$d messages used today. Resets at %3$s. Contact an admin for an override.</string>
+    <string name="tpl_individual_limit_blocked">Individual limit reached: %1$d of %2$d messages used today. Resets at %3$s. Contact an admin for an override.</string>
+    <string name="tpl_limits_status">Group limit: %1$d of %2$d messages used today (%3$d remaining). Resets at %4$s.</string>
+    <string name="tpl_limits_disabled">The group daily limit is not enabled.</string>
+    <string name="tpl_override_group_done">Added 1 message to the group\'s limit for today.</string>
+    <string name="tpl_override_member_done">Added 1 message to %1$s\'s limit for today.</string>
+    <string name="tpl_override_member_no_limit">%1$s does not have an individual limit set. Use #override with no name to add to the group limit instead.</string>
+
+    <!-- Failure alert -->
+    <string name="tpl_failure_alert">@system: %1$s has had %2$d failed messages.</string>
 </resources>

@@ -1,12 +1,15 @@
 package com.sh7411usa.jrelay.sms;
 
 import android.content.Context;
+import android.text.format.DateFormat;
 
 import com.sh7411usa.jrelay.R;
 import com.sh7411usa.jrelay.db.MemberRepository;
 import com.sh7411usa.jrelay.db.MessageRepository;
 import com.sh7411usa.jrelay.db.OutboxRepository;
 import com.sh7411usa.jrelay.model.Member;
+import com.sh7411usa.jrelay.util.DailyLimitManager;
+import com.sh7411usa.jrelay.util.MessageSalt;
 import com.sh7411usa.jrelay.util.NotificationHelper;
 import com.sh7411usa.jrelay.util.Prefs;
 
@@ -71,6 +74,10 @@ public class CommandProcessor {
             handleRemove(sender, text);
         } else if (lower.startsWith("#topic")) {
             handleTopicChange(sender, text);
+        } else if (lower.equals("#limits")) {
+            handleLimits(sender);
+        } else if (lower.startsWith("#override")) {
+            handleOverride(sender, text);
         } else {
             reply(sender, context.getString(R.string.tpl_unknown_command));
         }
@@ -259,6 +266,72 @@ public class CommandProcessor {
         SmsSendService.start(context);
     }
 
+    private void handleLimits(Member requester) {
+        if (!requester.isAdmin) {
+            reply(requester, context.getString(R.string.tpl_unauthorized));
+            return;
+        }
+        DailyLimitManager.Status status = new DailyLimitManager(context).groupStatus();
+        if (!status.enabled) {
+            reply(requester, context.getString(R.string.tpl_limits_disabled));
+            return;
+        }
+        reply(requester, context.getString(R.string.tpl_limits_status,
+                status.used, status.limit, status.remaining(), resetTimeLabel(status.resetAtMillis)));
+    }
+
+    private void handleOverride(Member sender, String text) {
+        if (!sender.isAdmin) {
+            reply(sender, context.getString(R.string.tpl_unauthorized));
+            return;
+        }
+        String rest = stripLeadingWord(text).trim();
+        DailyLimitManager limitManager = new DailyLimitManager(context);
+        if (rest.isEmpty()) {
+            limitManager.overrideGroup();
+            reply(sender, context.getString(R.string.tpl_override_group_done));
+            return;
+        }
+
+        Member target = memberRepository.findActiveByNickname(rest);
+        if (target == null) {
+            String normalized = PhoneNumberUtils.normalize(rest);
+            if (normalized != null) {
+                Member byPhone = memberRepository.findByPhone(normalized);
+                if (byPhone != null && byPhone.active) {
+                    target = byPhone;
+                }
+            }
+        }
+        if (target == null) {
+            return;
+        }
+
+        if (!limitManager.overrideMember(target)) {
+            reply(sender, context.getString(R.string.tpl_override_member_no_limit, target.nickname));
+            return;
+        }
+        reply(sender, context.getString(R.string.tpl_override_member_done, target.nickname));
+    }
+
+    private String resetTimeLabel(long resetAtMillis) {
+        return DateFormat.format("h:mm a", resetAtMillis).toString();
+    }
+
+    /** Notifies admins that a member has repeatedly failed to receive messages, e.g. their number may be bad. */
+    public void alertAdminsOfFailures(Member target, int failedCount) {
+        String formatted = context.getString(R.string.tpl_failure_alert, target.nickname, failedCount);
+        List<Member> admins = memberRepository.getActiveAdmins();
+        for (Member admin : admins) {
+            if (admin.isMuted) {
+                continue;
+            }
+            enqueue(admin, formatted, "ADMIN");
+        }
+        NotificationHelper.showAdminMessage(context, formatted);
+        SmsSendService.start(context);
+    }
+
     /** Sends a one-off admin direct message to a member, regardless of their mute state. */
     public void sendDirectMessage(Member target, String body) {
         String formatted = context.getString(R.string.tpl_dm_prefix, body);
@@ -277,7 +350,25 @@ public class CommandProcessor {
     }
 
     private void relayPlainMessage(Member sender, String body) {
+        DailyLimitManager limitManager = new DailyLimitManager(context);
+
+        DailyLimitManager.Status groupStatus = limitManager.groupStatus();
+        if (groupStatus.isExhausted()) {
+            reply(sender, context.getString(R.string.tpl_group_limit_blocked,
+                    groupStatus.used, groupStatus.limit, resetTimeLabel(groupStatus.resetAtMillis)));
+            return;
+        }
+
+        DailyLimitManager.Status memberStatus = limitManager.memberStatus(sender);
+        if (memberStatus.isExhausted()) {
+            reply(sender, context.getString(R.string.tpl_individual_limit_blocked,
+                    memberStatus.used, memberStatus.limit, resetTimeLabel(memberStatus.resetAtMillis)));
+            return;
+        }
+
         String formatted = context.getString(R.string.tpl_relay_prefix, sender.nickname, body);
+        formatted = MessageSalt.applyAll(prefs, sender.phoneE164, formatted);
+        messageRepository.log(sender.id, "IN", "RELAYED", body);
         broadcastExcept(sender.id, formatted, "RELAY");
     }
 

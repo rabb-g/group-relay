@@ -33,11 +33,95 @@
             android:padding="16dp">
 
             <TextView
-                android:id="@+id/text_stats"
-                style="@style/TextAppearance.JRelay.Body"
+                android:id="@+id/text_member_meta"
+                style="@style/TextAppearance.JRelay.Caption"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp" />
+                android:layout_marginBottom="8dp" />
+
+            <GridLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:columnCount="2"
+                android:layout_marginBottom="20dp">
+
+                <LinearLayout
+                    style="@style/Widget.JRelay.Tile"
+                    android:layout_width="0dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp">
+
+                    <TextView
+                        android:id="@+id/text_stat_sent"
+                        style="@style/TextAppearance.JRelay.TileValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <TextView
+                        style="@style/TextAppearance.JRelay.TileLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tile_messages_sent" />
+                </LinearLayout>
+
+                <LinearLayout
+                    style="@style/Widget.JRelay.Tile"
+                    android:layout_width="0dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp">
+
+                    <TextView
+                        android:id="@+id/text_stat_received"
+                        style="@style/TextAppearance.JRelay.TileValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <TextView
+                        style="@style/TextAppearance.JRelay.TileLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tile_messages_received" />
+                </LinearLayout>
+
+                <LinearLayout
+                    style="@style/Widget.JRelay.Tile"
+                    android:layout_width="0dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp">
+
+                    <TextView
+                        android:id="@+id/text_stat_today"
+                        style="@style/TextAppearance.JRelay.TileValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <TextView
+                        style="@style/TextAppearance.JRelay.TileLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tile_messages_today" />
+                </LinearLayout>
+
+                <LinearLayout
+                    style="@style/Widget.JRelay.Tile"
+                    android:layout_width="0dp"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp">
+
+                    <TextView
+                        android:id="@+id/text_stat_activity_level"
+                        style="@style/TextAppearance.JRelay.TileValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <TextView
+                        style="@style/TextAppearance.JRelay.TileLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tile_activity_level" />
+                </LinearLayout>
+
+            </GridLayout>
 
             <Button
                 android:id="@+id/button_toggle_admin"
@@ -209,6 +293,73 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/action_save_rate_limit"
+                android:layout_marginBottom="24dp" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/section_daily_limit"
+                android:layout_marginBottom="6dp" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/daily_limit_member_desc"
+                android:layout_marginBottom="10dp" />
+
+            <CheckBox
+                android:id="@+id/checkbox_custom_daily_limit"
+                style="@style/Widget.JRelay.CheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/checkbox_custom_daily_limit"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:id="@+id/container_daily_limit_fields"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/TextAppearance.JRelay.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_daily_limit_value" />
+
+                <EditText
+                    android:id="@+id/edit_daily_limit_value"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/hint_daily_limit_value"
+                    android:inputType="number"
+                    android:layout_marginBottom="8dp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/text_daily_limit_usage"
+                style="@style/TextAppearance.JRelay.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp" />
+
+            <Button
+                android:id="@+id/button_save_daily_limit"
+                style="@style/Widget.JRelay.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_save_daily_limit"
+                android:layout_marginBottom="10dp" />
+
+            <Button
+                android:id="@+id/button_override_daily_limit"
+                style="@style/Widget.JRelay.Button.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_override_daily_limit"
+                android:visibility="gone"
                 android:layout_marginBottom="24dp" />
 
             <TextView

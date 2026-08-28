@@ -1,6 +1,5 @@
 package com.sh7411usa.jrelay;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -35,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class MembershipActivity extends Activity {
+public class MembershipActivity extends BaseActivity {
 
     private static final int REQUEST_EXPORT_CSV = 1001;
     private static final int REQUEST_IMPORT_CSV = 1002;

@@ -157,6 +157,56 @@ public class MemberRepository {
         db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
     }
 
+    /** Sets a custom per-day relay cap for this member, independent of the shared group pool. */
+    public void setDailyLimitOverride(long id, int value) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("daily_limit_custom", 1);
+        cv.put("daily_limit_value", value);
+        db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
+    }
+
+    /** Reverts this member to drawing only from the shared group pool (no personal cap). */
+    public void clearDailyLimitOverride(long id) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("daily_limit_custom", 0);
+        cv.putNull("daily_limit_value");
+        db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
+    }
+
+    /** Writes `value` as every active member's custom daily cap (enabling it), or only for members without one yet. */
+    public void bulkSetDailyLimit(int value, boolean onlyNonCustomized) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("daily_limit_custom", 1);
+        cv.put("daily_limit_value", value);
+        String selection = onlyNonCustomized ? "active = 1 AND daily_limit_custom = 0" : "active = 1";
+        db.update(DbHelper.TABLE_MEMBERS, cv, selection, null);
+    }
+
+    /** Raw setter for this member's today-bonus (extra allowance added via #override) and the window it belongs to. */
+    public void setDailyLimitBonusState(long id, int bonus, long windowStart) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("daily_limit_bonus", bonus);
+        cv.put("daily_limit_bonus_window_start", windowStart);
+        db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
+    }
+
+    /** Increments this member's cumulative failed-send count and returns the new value. */
+    public int incrementFailedCount(long id) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        db.execSQL("UPDATE " + DbHelper.TABLE_MEMBERS + " SET failed_count = failed_count + 1 WHERE id = ?",
+                new Object[]{id});
+        Member updated = findById(id);
+        return updated != null ? updated.failedCount : 0;
+    }
+
+    public void resetFailedCount(long id) {
+        updateColumn(id, "failed_count", 0);
+    }
+
     private void updateColumn(long id, String column, int value) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues cv = new ContentValues();
@@ -182,6 +232,11 @@ public class MemberRepository {
         m.rateMinWait = getNullableInt(c, "rate_min_wait");
         m.rateMaxWait = getNullableInt(c, "rate_max_wait");
         m.rateInitialDelay = getNullableInt(c, "rate_initial_delay");
+        m.dailyLimitCustom = c.getInt(c.getColumnIndexOrThrow("daily_limit_custom")) != 0;
+        m.dailyLimitValue = getNullableInt(c, "daily_limit_value");
+        m.dailyLimitBonus = c.getInt(c.getColumnIndexOrThrow("daily_limit_bonus"));
+        m.dailyLimitBonusWindowStart = c.getLong(c.getColumnIndexOrThrow("daily_limit_bonus_window_start"));
+        m.failedCount = c.getInt(c.getColumnIndexOrThrow("failed_count"));
         return m;
     }
 

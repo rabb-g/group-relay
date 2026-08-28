@@ -1,6 +1,5 @@
 package com.sh7411usa.jrelay;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
@@ -11,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import com.sh7411usa.jrelay.db.MemberRepository;
@@ -26,7 +26,7 @@ import com.sh7411usa.jrelay.util.UiUtil;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class MainActivity extends Activity {
+public class MainActivity extends BaseActivity {
 
     private static final long QUEUE_STATUS_TICK_MS = 1000;
 
@@ -42,7 +42,9 @@ public class MainActivity extends Activity {
     private TextView statsMutedView;
     private TextView statsMessagesTodayView;
     private TextView statsMessagesTotalView;
+    private TextView statsFailedTodayView;
     private TextView queueCountView;
+    private TextView sendingBadgeView;
     private TextView nextBurstView;
     private LinearLayout recentActivityContainer;
 
@@ -77,19 +79,15 @@ public class MainActivity extends Activity {
         statsMutedView = findViewById(R.id.text_stats_muted);
         statsMessagesTodayView = findViewById(R.id.text_stats_messages_today);
         statsMessagesTotalView = findViewById(R.id.text_stats_messages_total);
+        statsFailedTodayView = findViewById(R.id.text_stats_failed_today);
         queueCountView = findViewById(R.id.text_queue_count);
+        sendingBadgeView = findViewById(R.id.badge_sending);
         nextBurstView = findViewById(R.id.text_next_burst);
         recentActivityContainer = findViewById(R.id.container_recent_activity);
 
-        findViewById(R.id.button_edit_group_name).setOnClickListener(v -> showRenameDialog());
-        findViewById(R.id.button_add_member).setOnClickListener(v ->
-                startActivity(new Intent(this, AddMemberActivity.class)));
+        findViewById(R.id.button_options).setOnClickListener(this::showOptionsMenu);
         findViewById(R.id.button_membership).setOnClickListener(v ->
                 startActivity(new Intent(this, MembershipActivity.class)));
-        findViewById(R.id.button_rate_limit).setOnClickListener(v ->
-                startActivity(new Intent(this, RateLimitActivity.class)));
-        findViewById(R.id.button_send_group_message).setOnClickListener(v ->
-                startActivity(new Intent(this, SendGroupMessageActivity.class)));
     }
 
     @Override
@@ -108,6 +106,29 @@ public class MainActivity extends Activity {
         queueStatusHandler.removeCallbacks(queueStatusTick);
     }
 
+    private void showOptionsMenu(View anchor) {
+        PopupMenu popup = new PopupMenu(this, anchor);
+        popup.getMenuInflater().inflate(R.menu.main_options_menu, popup.getMenu());
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.menu_set_group_name) {
+                showRenameDialog();
+                return true;
+            } else if (id == R.id.menu_add_member) {
+                startActivity(new Intent(this, AddMemberActivity.class));
+                return true;
+            } else if (id == R.id.menu_settings) {
+                startActivity(new Intent(this, SettingsActivity.class));
+                return true;
+            } else if (id == R.id.menu_send_to_group) {
+                startActivity(new Intent(this, SendGroupMessageActivity.class));
+                return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
     private void refresh() {
         List<Member> members = memberRepository.getActiveMembers();
         int adminCount = 0;
@@ -120,13 +141,14 @@ public class MainActivity extends Activity {
                 mutedCount++;
             }
         }
-        statsMembersView.setText(getString(R.string.stats_members, members.size()));
-        statsAdminsView.setText(getString(R.string.stats_admins, adminCount));
-        statsMutedView.setText(getString(R.string.stats_muted, mutedCount));
+        statsMembersView.setText(String.valueOf(members.size()));
+        statsAdminsView.setText(String.valueOf(adminCount));
+        statsMutedView.setText(String.valueOf(mutedCount));
 
         long startOfDay = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1);
-        statsMessagesTodayView.setText(getString(R.string.stats_messages_today, messageRepository.countSince(startOfDay)));
-        statsMessagesTotalView.setText(getString(R.string.stats_messages_total, messageRepository.countAll()));
+        statsMessagesTodayView.setText(String.valueOf(messageRepository.countSince(startOfDay)));
+        statsMessagesTotalView.setText(String.valueOf(messageRepository.countAll()));
+        statsFailedTodayView.setText(String.valueOf(messageRepository.countFailedSince(startOfDay)));
 
         refreshQueueStatus();
         renderRecentActivity();
@@ -134,7 +156,7 @@ public class MainActivity extends Activity {
 
     private void refreshQueueStatus() {
         groupNameView.setText(prefs.getGroupName());
-        queueCountView.setText(getString(R.string.stats_queue_count, outboxRepository.countUnsent()));
+        queueCountView.setText(String.valueOf(outboxRepository.countUnsent()));
 
         long nextBurstAt = SendQueueStatus.getNextBurstAtMillis();
         if (nextBurstAt > 0) {
@@ -142,8 +164,10 @@ public class MainActivity extends Activity {
             nextBurstView.setText(getString(R.string.stats_next_burst,
                     formatDuration(remainingMs), SendQueueStatus.getNextBurstSize()));
             nextBurstView.setVisibility(View.VISIBLE);
+            sendingBadgeView.setVisibility(View.VISIBLE);
         } else {
             nextBurstView.setVisibility(View.GONE);
+            sendingBadgeView.setVisibility(View.GONE);
         }
     }
 

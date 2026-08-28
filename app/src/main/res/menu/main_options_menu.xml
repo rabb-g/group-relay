@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_set_group_name"
+        android:title="@string/menu_set_group_name" />
+    <item
+        android:id="@+id/menu_add_member"
+        android:title="@string/add_member_shortcut" />
+    <item
+        android:id="@+id/menu_settings"
+        android:title="@string/view_rate_limit" />
+    <item
+        android:id="@+id/menu_send_to_group"
+        android:title="@string/send_group_message_shortcut" />
+</menu>

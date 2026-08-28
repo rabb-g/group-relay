@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">jRelay</string>
+
+    <!-- Consent -->
+    <string name="consent_title">לפני שמתחילים</string>
+    <string name="consent_body">jRelay מעביר הודעות טקסט קבוצתיות באמצעות שליחה וקבלה של מסרונים רגילים דרך חבילת הסלולר של מכשיר זה. תעריפי המסרונים והנתונים הרגילים של הספק שלך עשויים לחול על כל הודעה שנשלחת או מתקבלת.\n\nאתה האחראי הבלעדי לעמידה בכל החוקים, התקנות ומדיניות הספק הרלוונטיים בנוגע להודעות אוטומטיות, המוניות או בלתי רצויות (לרבות, אך לא רק, הנחיות TCPA ו-CTIA). אפליקציה זו ניתנת \"כפי שהיא\", ללא כל אחריות, והמפתח מסיר מעצמו כל אחריות לשימוש לרעה, חיובי הודעות, הפרות חוק או נזקים הנובעים משימוש בה.\n\nעליך לאשר תנאים אלה כדי להמשיך.</string>
+    <string name="consent_license_agree">קראתי ואני מסכים/ה לתנאי הרישיון.</string>
+    <string name="consent_agree">אני מסכים/ה</string>
+    <string name="consent_decline">דחייה</string>
+
+    <!-- Dashboard -->
+    <string name="group_name_label">שם הקבוצה</string>
+    <string name="edit_group_name">עריכה</string>
+    <string name="action_options">אפשרויות</string>
+    <string name="menu_set_group_name">הגדרת שם קבוצה</string>
+    <string name="add_member_shortcut">הוספת חבר</string>
+    <string name="view_membership">חברים</string>
+    <string name="view_rate_limit">הגדרות</string>
+    <string name="stats_members">חברים: %1$d</string>
+    <string name="stats_admins">מנהלים: %1$d</string>
+    <string name="stats_muted">מושתקים: %1$d</string>
+    <string name="stats_messages_today">הודעות היום: %1$d</string>
+    <string name="stats_messages_total">סה\"כ הודעות: %1$d</string>
+    <string name="stats_failed_today">נכשלו היום: %1$d</string>
+    <string name="stats_queue_count">הודעות בתור: %1$d</string>
+    <string name="stats_next_burst">המנה הבאה בעוד %1$s (%2$d הודעות)</string>
+    <string name="badge_sending">בשליחה…</string>
+    <string name="send_group_message_shortcut">שליחה לקבוצה</string>
+    <string name="recent_activity">פעילות אחרונה</string>
+    <string name="no_activity_yet">אין פעילות עדיין.</string>
+
+    <!-- Dashboard stat tiles -->
+    <string name="tile_members">חברים</string>
+    <string name="tile_admins">מנהלים</string>
+    <string name="tile_muted">מושתקים</string>
+    <string name="tile_messages_today">הודעות היום</string>
+    <string name="tile_messages_total">סה\"כ הודעות</string>
+    <string name="tile_failed_today">נכשלו היום</string>
+    <string name="tile_queue">בתור</string>
+    <string name="tile_messages_sent">נשלחו</string>
+    <string name="tile_messages_received">התקבלו</string>
+    <string name="tile_activity_level">פעילות</string>
+    <string name="label_member_meta">חבר/ה מאז %1$s</string>
+    <string name="label_member_meta_with_activity">חבר/ה מאז %1$s • פעילות אחרונה %2$s</string>
+
+    <!-- Membership -->
+    <string name="membership_title">חברים</string>
+    <string name="admin_badge">(מנהל)</string>
+    <string name="muted_badge">(מושתק)</string>
+    <string name="no_members_yet">אין חברים עדיין. הקישו על הוספת חבר כדי להתחיל.</string>
+    <string name="menu_button_label">תפריט</string>
+    <string name="menu_export_csv">ייצוא ל-CSV</string>
+    <string name="menu_import_csv">ייבוא מ-CSV</string>
+    <string name="export_success">יוצאו %1$d חברים.</string>
+    <string name="export_failed">הייצוא נכשל.</string>
+    <string name="import_summary">יובאו %1$d חברים. דולגו %2$d.</string>
+    <string name="import_failed">הייבוא נכשל.</string>
+    <string name="hint_membership_search">חיפוש לפי שם, טלפון או \"admin\"</string>
+    <string name="no_search_results">אין חברים התואמים לחיפוש.</string>
+
+    <!-- Add Member -->
+    <string name="add_member_title">הוספת חבר</string>
+    <string name="hint_phone_number">מספר טלפון</string>
+    <string name="hint_nickname">כינוי</string>
+    <string name="action_save">שמירה</string>
+    <string name="action_cancel">ביטול</string>
+    <string name="error_invalid_number">פורמט מספר טלפון לא תקין.</string>
+    <string name="error_duplicate_number">המספר הזה כבר רשום כחבר.</string>
+    <string name="error_empty_nickname">הכינוי לא יכול להיות ריק.</string>
+
+    <!-- Member Detail -->
+    <string name="label_member_since">חבר/ה מאז: %1$s</string>
+    <string name="label_last_activity">פעילות אחרונה: %1$s</string>
+    <string name="label_messages_sent">הודעות שנשלחו: %1$d</string>
+    <string name="label_messages_received">הודעות שהתקבלו: %1$d</string>
+    <string name="label_activity_level">פעילות (7 ימים אחרונים): %1$s</string>
+    <string name="activity_level_high">פעיל/ה מאוד</string>
+    <string name="activity_level_medium">פעיל/ה</string>
+    <string name="activity_level_low">שקט/ה</string>
+    <string name="activity_level_none">לא פעיל/ה</string>
+    <string name="action_make_admin">הפיכה למנהל</string>
+    <string name="action_revoke_admin">ביטול הרשאת מנהל</string>
+    <string name="action_mute">השתקה</string>
+    <string name="action_unmute">ביטול השתקה</string>
+    <string name="action_remove">הסרה מהקבוצה</string>
+    <string name="action_send_dm">שליחת הודעה אישית</string>
+    <string name="action_edit_nickname">עריכת כינוי</string>
+    <string name="action_edit_number">עריכת מספר טלפון</string>
+    <string name="action_export_contact">ייצוא איש קשר</string>
+    <string name="action_call">התקשרות</string>
+    <string name="action_text">שליחת מסרון (אפליקציית ברירת מחדל)</string>
+    <string name="confirm_remove_title">להסיר את החבר?</string>
+    <string name="confirm_remove_message">להסיר את %1$s מהקבוצה? הם יקבלו הודעה על כך.</string>
+
+    <!-- Member Detail: Send Pacing override -->
+    <string name="rate_limit_member_section">קצב שליחה</string>
+    <string name="rate_limit_member_desc">כברירת מחדל חבר זה משתמש בקצב השליחה של הקבוצה. הפעילו כדי להגדיר קצב מותאם אישית לחבר זה בלבד.</string>
+    <string name="checkbox_custom_rate_limit">שימוש בקצב שליחה מותאם אישית לחבר זה</string>
+    <string name="action_save_rate_limit">שמירת קצב שליחה</string>
+    <string name="rate_limit_member_saved">קצב השליחה נשמר.</string>
+
+    <!-- Member Detail: Daily Limit override -->
+    <string name="section_daily_limit">מגבלה יומית</string>
+    <string name="daily_limit_member_desc">כברירת מחדל חבר זה משתמש רק במגבלה היומית המשותפת של הקבוצה. הפעילו כדי להגביל גם את מספר ההודעות היומי שלו.</string>
+    <string name="checkbox_custom_daily_limit">שימוש במגבלה יומית מותאמת אישית לחבר זה</string>
+    <string name="label_daily_limit_value">הודעות ליום</string>
+    <string name="hint_daily_limit_value">הודעות ליום</string>
+    <string name="action_save_daily_limit">שמירת מגבלה יומית</string>
+    <string name="daily_limit_saved">המגבלה היומית נשמרה.</string>
+    <string name="tpl_daily_limit_usage">היום: %1$d מתוך %2$d</string>
+    <string name="daily_limit_not_customized">לא הוגדרה מגבלה אישית לחבר זה (הוא עדיין משתמש במגבלה היומית המשותפת של הקבוצה).</string>
+    <string name="action_override_daily_limit">עקיפה (+1 להיום)</string>
+    <string name="daily_limit_override_done">נוספה הודעה אחת להיום.</string>
+
+    <!-- Settings -->
+    <string name="rate_limit_title">הגדרות</string>
+    <string name="action_view_license">רישיון</string>
+    <string name="section_staggering">פיזור שליחה</string>
+    <string name="staggering_desc">המתנה בין מנות של הודעות יוצאות כך שההודעות לא נשלחות כולן בבת אחת.</string>
+    <string name="checkbox_staggering_enabled">הפעלת פיזור בין מנות שליחה</string>
+    <string name="rate_limit_app_section">קצב שליחה - ברירת מחדל של הקבוצה</string>
+    <string name="rate_limit_app_desc">חל על כל חבר שאין לו קצב מותאם אישית במסך החבר שלו.</string>
+    <string name="label_burst_min">מספר הודעות מינימלי במנה</string>
+    <string name="label_burst_max">מספר הודעות מקסימלי במנה</string>
+    <string name="label_min_wait">המתנה מינימלית בין מנות (שניות)</string>
+    <string name="label_max_wait">המתנה מקסימלית בין מנות (שניות)</string>
+    <string name="hint_burst_min">מינימום הודעות במנה</string>
+    <string name="hint_burst_max">מקסימום הודעות במנה</string>
+    <string name="hint_min_wait">שניות</string>
+    <string name="hint_max_wait">שניות</string>
+    <string name="checkbox_initial_delay">המתנה לפני שליחת המנה הראשונה (לפי טווח ההמתנה שלמעלה)</string>
+
+    <string name="section_burst_configuration">הגדרות מנת שליחה</string>
+    <string name="label_burst_mode">מספר הודעות במנה</string>
+    <string name="burst_mode_random_range">כמות אקראית, בין גבולות</string>
+    <string name="burst_mode_fixed">כמות קבועה</string>
+    <string name="burst_mode_all_at_once">כל ההודעות בבת אחת</string>
+    <string name="label_fixed_burst_size">כמות קבועה של הודעות במנה</string>
+    <string name="hint_fixed_burst_size">הודעות במנה</string>
+
+    <string name="section_microspacing">מרווח מיקרו</string>
+    <string name="microspacing_desc">מפזר הודעות בודדות בתוך מנה אחת, במילישניות.</string>
+    <string name="checkbox_microspacing_enabled">הפעלת מרווח מיקרו בתוך מנה</string>
+    <string name="label_microspacing_mode">כמות המרווח</string>
+    <string name="microspacing_mode_fixed">קבוע</string>
+    <string name="microspacing_mode_random_range">אקראי, בין גבולות</string>
+    <string name="label_microspacing_fixed_ms">מילישניות בין הודעות</string>
+    <string name="hint_microspacing_fixed_ms">מילישניות</string>
+    <string name="label_microspacing_min_ms">מילישניות מינימום</string>
+    <string name="label_microspacing_max_ms">מילישניות מקסימום</string>
+
+    <string name="section_delivery_shuffle">ערבוב סדר המשלוח</string>
+    <string name="delivery_shuffle_desc">שולח הודעות לחברים בסדר אקראי בכל מחזור, במקום בסדר חוזר.</string>
+    <string name="checkbox_delivery_shuffle">ערבוב סדר המשלוח</string>
+
+    <string name="section_message_content">תוכן ההודעה</string>
+    <string name="checkbox_append_sender_number">הוספת מספר השולח להודעות מועברות</string>
+    <string name="append_sender_number_desc">מוסיף את מספר הטלפון של השולח (ספרות בלבד, למשל 2345678910) בסוף כל הודעה מועברת.</string>
+    <string name="checkbox_strip_phone_numbers">הסרת מספרי טלפון מהודעות מועברות</string>
+    <string name="strip_phone_numbers_desc">מסיר כל דבר שנראה כמו מספר טלפון מהודעת החבר לפני העברתה.</string>
+
+    <string name="section_salting">מליחה</string>
+    <string name="salting_desc">הופך כל הודעה מועברת לייחודית, למשל כדי להימנע מסינון הודעות כפולות אצל הספק. כברירת מחדל הכול כבוי.</string>
+    <string name="checkbox_salt_timestamp">הוספת חותמת זמן ייחודית</string>
+    <string name="label_salt_timestamp_format">פורמט חותמת הזמן</string>
+    <string name="salt_format_time">שעה (HH:mm:ss)</string>
+    <string name="salt_format_unix_seconds">שניות יוניקס</string>
+    <string name="salt_format_hex_seconds">שניות בהקסדצימלי (קצר)</string>
+    <string name="salt_format_hex_millis">מילישניות בהקסדצימלי (קצר וייחודי)</string>
+    <string name="checkbox_salt_hex">הוספת קוד הקסדצימלי אקראי בן 3 ספרות</string>
+    <string name="label_salt_hex_position">מיקום</string>
+    <string name="salt_position_append">בסוף</string>
+    <string name="salt_position_prepend">בתחילה</string>
+    <string name="checkbox_salt_zwsp">הוספת רווחים בלתי נראים אקראיים בין מילים</string>
+
+    <string name="section_failures_retries">כשלים וניסיונות חוזרים</string>
+    <string name="label_retry_limit">מגבלת ניסיונות חוזרים</string>
+    <string name="hint_retry_limit">ניסיונות חוזרים</string>
+    <string name="retry_limit_desc">כמה פעמים לנסות שוב הודעה שנכשלה. 1 פירושו ניסיון חוזר אחד לאחר הניסיון הראשוני (סה\"כ 2 ניסיונות, לעולם לא יותר).</string>
+    <string name="label_failure_alert_threshold">סף התראת כשלים</string>
+    <string name="hint_failure_alert_threshold">כשלים</string>
+    <string name="failure_alert_threshold_desc">התראה למנהלים כאשר מספר הכשלים של חבר מגיע לכפולה של מספר זה.</string>
+
+    <string name="section_group_daily_limit">מגבלה יומית לקבוצה</string>
+    <string name="label_daily_limit_reset_time">המגבלות מתאפסות בשעה</string>
+    <string name="checkbox_group_daily_limit_enabled">הפעלת מגבלה יומית משותפת לקבוצה</string>
+    <string name="group_daily_limit_desc">המספר הכולל של הודעות שהאפליקציה רשאית להעביר ביום עבור כל הקבוצה. גובר על המגבלה האישית של כל חבר.</string>
+    <string name="label_group_daily_limit_value">מגבלה יומית לקבוצה</string>
+    <string name="hint_group_daily_limit_value">הודעות ליום</string>
+    <string name="tpl_group_daily_limit_status">היום: %1$d מתוך %2$d נוצלו. מתאפס בשעה %3$s.</string>
+    <string name="group_daily_limit_status_disabled">המגבלה היומית לקבוצה כבויה כעת.</string>
+    <string name="label_default_individual_limit">מגבלה אישית ברירת מחדל</string>
+    <string name="default_individual_limit_desc">מגבלה נפרדת לכל חבר. הזינו מספר למטה, ולאחר מכן החילו אותו על מגבלות החברים באמצעות הכפתורים - פעולה זו אינה נוגעת במאגר המשותף של הקבוצה שלמעלה.</string>
+    <string name="hint_default_individual_limit">הודעות ליום</string>
+    <string name="action_apply_to_all">החלה על כל החברים</string>
+    <string name="action_apply_to_non_customized">החלה על חברים ללא מגבלה מותאמת אישית</string>
+    <string name="individual_limit_applied">הוחל על %1$d חברים.</string>
+
+    <string name="rate_limit_system_section">מגבלת המסרונים היוצאים של Android</string>
+    <string name="rate_limit_system_desc">מערכת Android עצמה מזהירה/חוסמת אפליקציה ששולחת יותר מדי מסרונים מהר מדי. אלו הם הספים ברמת המערכת.</string>
+    <string name="label_system_max_count">מספר הודעות מקסימלי לפני אזהרה</string>
+    <string name="label_system_interval_minutes">מרווח זמן (דקות)</string>
+    <string name="hint_system_max_count">כמות</string>
+    <string name="hint_system_interval_minutes">דקות</string>
+    <string name="rate_limit_permission_missing">ל-jRelay אין הרשאה לשנות הגדרת מערכת זו. הריצו פקודה זו ממחשב עם ADB, כשהמכשיר מחובר:</string>
+    <string name="rate_limit_value_unavailable">לא זמין במכשיר זה</string>
+
+    <string name="section_language">שפה</string>
+    <string name="label_language">שפת האפליקציה</string>
+    <!-- Each shown in its own language, not translated per-locale -->
+    <string name="language_system">System Default</string>
+    <string name="language_english">English</string>
+    <string name="language_hebrew">עברית</string>
+    <string name="language_yiddish">יידיש</string>
+
+    <string name="section_appearance">מראה</string>
+    <string name="label_theme">ערכת נושא</string>
+    <string name="theme_system">ברירת מחדל של המערכת</string>
+    <string name="theme_light">בהיר</string>
+    <string name="theme_dark">כהה</string>
+
+    <string name="section_miscellaneous">שונות</string>
+
+    <!-- Clear History -->
+    <string name="action_clear_history">ניקוי היסטוריה (%1$s)</string>
+    <string name="clear_history_title">לנקות היסטוריה?</string>
+    <string name="clear_history_warning">פעולה זו תמחק לצמיתות את היסטוריית ההודעות שמאחורי לוח הבקרה, פיד הפעילות של החברים והנתונים הסטטיסטיים. חברים והגדרות לא יושפעו, ואף אחד לא יקבל הודעה. לא ניתן לבטל פעולה זו.</string>
+    <string name="clear_history_done">ההיסטוריה נוקתה.</string>
+    <string name="action_continue">המשך</string>
+
+    <!-- Disband Group -->
+    <string name="action_disband_group">פירוק הקבוצה</string>
+    <string name="disband_group_title">לפרק את הקבוצה?</string>
+    <string name="disband_group_warning">פעולה זו תמחק לצמיתות את כל החברים ואת כל היסטוריית ההודעות. אף אחד לא יקבל הודעה. לא ניתן לבטל פעולה זו.\n\nלאישור, הזינו את קוד ה-PIN המוצג למטה.</string>
+    <string name="hint_disband_pin">הזינו PIN</string>
+    <string name="disband_pin_mismatch">קוד ה-PIN אינו תואם. הקבוצה לא פורקה.</string>
+    <string name="disband_group_done">הקבוצה פורקה.</string>
+
+    <!-- Send to Group -->
+    <string name="send_group_message_title">שליחה לקבוצה</string>
+    <string name="hint_group_message">הודעה לשליחה לכל חבר פעיל</string>
+    <string name="action_send">שליחה</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_admin">הודעות מנהלים</string>
+    <string name="notification_admin_title">הודעת מנהל</string>
+
+    <!-- Command reply / broadcast templates -->
+    <string name="tpl_added_you">%1$s הוסיף/ה אותך לקבוצת %2$s. השיבו #stop בכל עת כדי לצאת.</string>
+    <string name="tpl_added_other">%1$s הוסיף/ה את %2$s לקבוצה.</string>
+    <string name="tpl_removed_you">הוסרת מקבוצת %1$s. לא תקבל/י יותר הודעות מקבוצה זו.</string>
+    <string name="tpl_removed_other">%1$s הסיר/ה את %2$s מהקבוצה.</string>
+    <string name="tpl_left_other">%1$s עזב/ה את הקבוצה.</string>
+    <string name="tpl_muted_confirm">את/ה מושתק/ת כעת. השיבו #unmute כדי לחדש קבלת הודעות.</string>
+    <string name="tpl_unmuted_confirm">ההשתקה בוטלה. תחזור/י לקבל הודעות.</string>
+    <string name="tpl_name_changed_confirm">שמך שונה ל-%1$s.</string>
+    <string name="tpl_name_changed_self_other">%1$s שינה/תה את שמו/ה ל-%2$s.</string>
+    <string name="tpl_name_changed_admin_other">%1$s שינה/תה את שמו/ה של %2$s ל-%3$s.</string>
+    <string name="tpl_group_name_changed">%1$s שינה/תה את שם הקבוצה ל-%2$s.</string>
+    <string name="tpl_unauthorized">רק מנהלים יכולים להשתמש בפקודה זו.</string>
+    <string name="tpl_unknown_command">פקודה לא מוכרת. השיבו #commands לרשימת הפקודות.</string>
+    <string name="tpl_invalid_number">פורמט מספר טלפון לא תקין.</string>
+    <string name="tpl_relay_prefix">%1$s: %2$s</string>
+    <string name="tpl_admin_relay_prefix">[הודעה למנהלים בלבד מאת %1$s]: %2$s</string>
+    <string name="tpl_dm_prefix">[מנהל]: %1$s</string>
+    <string name="tpl_commands_list_common">פקודות זמינות:\n#commands - הצגת רשימה זו\n#mute - השתקת הודעות\n#unmute - ביטול השתקה\n#stop - עזיבת הקבוצה\n#list - רשימת חברים\n#name &lt;כינוי חדש&gt; - שינוי הכינוי שלך\n#admin &lt;הודעה&gt; - הודעה למנהלים בלבד</string>
+    <string name="tpl_commands_list_admin_extra">\n(מנהלים) #add &lt;מספר&gt; &lt;כינוי&gt; - הוספת חבר\n(מנהלים) #remove &lt;כינוי או מספר&gt; - הסרת חבר\n(מנהלים) #topic &lt;שם חדש&gt; - שינוי שם הקבוצה\n(מנהלים) #limits - הצגת מצב המגבלה היומית של הקבוצה\n(מנהלים) #override [כינוי או מספר] - הוספת הודעה אחת למגבלת הקבוצה, או למגבלה האישית של חבר</string>
+    <string name="tpl_list_you">(את/ה)</string>
+    <string name="tpl_list_admin">(מנהל)</string>
+    <string name="default_added_by_admin">מנהל</string>
+
+    <!-- Daily limit templates -->
+    <string name="tpl_group_limit_blocked">מגבלת הקבוצה מוצתה: %1$d מתוך %2$d הודעות נוצלו היום. מתאפס בשעה %3$s. פנו למנהל לקבלת עקיפה.</string>
+    <string name="tpl_individual_limit_blocked">המגבלה האישית מוצתה: %1$d מתוך %2$d הודעות נוצלו היום. מתאפס בשעה %3$s. פנו למנהל לקבלת עקיפה.</string>
+    <string name="tpl_limits_status">מגבלת הקבוצה: %1$d מתוך %2$d הודעות נוצלו היום (%3$d נותרו). מתאפס בשעה %4$s.</string>
+    <string name="tpl_limits_disabled">המגבלה היומית לקבוצה אינה פעילה.</string>
+    <string name="tpl_override_group_done">נוספה הודעה אחת למגבלת הקבוצה להיום.</string>
+    <string name="tpl_override_member_done">נוספה הודעה אחת למגבלה של %1$s להיום.</string>
+    <string name="tpl_override_member_no_limit">ל-%1$s אין מגבלה אישית מוגדרת. השתמשו ב-#override ללא שם כדי להוסיף למגבלת הקבוצה.</string>
+
+    <!-- Failure alert -->
+    <string name="tpl_failure_alert">@system: ל-%1$s היו %2$d הודעות שנכשלו.</string>
+</resources>

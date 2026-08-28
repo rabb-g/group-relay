@@ -144,4 +144,45 @@
         <item name="android:textStyle">bold</item>
     </style>
 
+    <!-- Small colored pill shown on the dashboard while a send is active/scheduled -->
+    <style name="Widget.JRelay.Badge.Live">
+        <item name="android:background">@drawable/bg_badge_live</item>
+        <item name="android:textColor">@color/success</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Dropdown selector (Spinner) styled to match text inputs -->
+    <style name="Widget.JRelay.Spinner" parent="android:Widget.DeviceDefault.Spinner">
+        <item name="android:background">@drawable/bg_edittext</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <!-- Flat, non-elevated stat tile used in the dashboard/member-detail grid -->
+    <style name="Widget.JRelay.Tile">
+        <item name="android:background">@drawable/bg_stat_tile</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">10dp</item>
+    </style>
+
+    <style name="TextAppearance.JRelay.TileValue">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="TextAppearance.JRelay.TileLabel">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
 </resources>

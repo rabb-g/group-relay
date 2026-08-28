@@ -1,7 +1,6 @@
 package com.sh7411usa.jrelay;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -14,7 +13,7 @@ import com.sh7411usa.jrelay.util.Prefs;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ConsentActivity extends Activity {
+public class ConsentActivity extends BaseActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 100;
 

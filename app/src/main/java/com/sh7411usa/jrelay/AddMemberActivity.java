@@ -1,6 +1,5 @@
 package com.sh7411usa.jrelay;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
@@ -11,7 +10,7 @@ import com.sh7411usa.jrelay.model.Member;
 import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.PhoneNumberUtils;
 
-public class AddMemberActivity extends Activity {
+public class AddMemberActivity extends BaseActivity {
 
     private EditText numberInput;
     private EditText nicknameInput;

@@ -15,6 +15,7 @@ public class OutboxRepository {
         public Long memberId;
         public String phoneE164;
         public String body;
+        public int attempts;
     }
 
     private final DbHelper dbHelper;
@@ -51,6 +52,7 @@ public class OutboxRepository {
                 item.memberId = c.isNull(memberIdx) ? null : c.getLong(memberIdx);
                 item.phoneE164 = c.getString(c.getColumnIndexOrThrow("phone_e164"));
                 item.body = c.getString(c.getColumnIndexOrThrow("body"));
+                item.attempts = c.getInt(c.getColumnIndexOrThrow("attempts"));
                 list.add(item);
             }
             c.close();
@@ -95,6 +97,7 @@ public class OutboxRepository {
                 item.memberId = c.isNull(memberIdx) ? null : c.getLong(memberIdx);
                 item.phoneE164 = c.getString(c.getColumnIndexOrThrow("phone_e164"));
                 item.body = c.getString(c.getColumnIndexOrThrow("body"));
+                item.attempts = c.getInt(c.getColumnIndexOrThrow("attempts"));
                 list.add(item);
             }
             c.close();
@@ -153,6 +156,15 @@ public class OutboxRepository {
 
     public void markFailed(long id) {
         updateStatus(id, "FAILED");
+    }
+
+    /** Sends this item back to PENDING (so it's picked up by a later burst) with its attempt count bumped. */
+    public void requeueForRetry(long id, int attempts) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("status", "PENDING");
+        cv.put("attempts", attempts);
+        db.update(DbHelper.TABLE_OUTBOX, cv, "id = ?", new String[]{String.valueOf(id)});
     }
 
     private void updateStatus(long id, String status) {
