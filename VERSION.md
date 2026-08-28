@@ -1,5 +1,21 @@
 # Version History
 
+## 2.0 - Modern UI Overhaul, Per-Member Send Pacing
+
+- **Visual overhaul across every screen**, still strictly DPAD-compatible (no cards, no overlays, every screen a root `ScrollView` over a vertical `LinearLayout`, `android:clickable`/`focusable` on every interactive element):
+  - New light/dark color system (`values/colors.xml`, `values-night/colors.xml`): a blue accent, neutral surfaces, and semantic tokens for text, borders, and status (success/warning/danger).
+  - New `values/styles.xml` with reusable text appearances (title/subtitle/body/label/caption) and widget styles for buttons (primary / outline / danger), inputs, checkboxes, rows, and badges — applied consistently instead of one-off inline colors/sizes.
+  - New shape-drawable button/input/row backgrounds (`bg_button_primary`, `bg_button_outline`, `bg_button_danger`, `bg_edittext`, redesigned `focus_highlight`) with distinct, clearly visible **focused** and **pressed** states for DPAD navigation — rounded corners and flat color instead of shadows/elevation.
+  - Every screen now opens with a full-width colored header band (title, and subtitle where relevant) instead of a bare title `TextView`.
+  - Admin/muted badges on the Membership screen are now small colored pill chips instead of plain parenthetical text, and are hidden entirely when a member has neither flag.
+  - `themes.xml` / `values-night/themes.xml` set app-wide defaults (button/edit text styles, primary/background/text colors) so every screen picks up the new look consistently.
+- **Per-member send pacing**: each member can now have their own custom burst/wait rate limit, overriding the group default.
+  - Added a **Send Pacing** section to the Member Detail screen: a "Use a custom send pace for this member" toggle plus the same burst-size/wait-time fields as the group setting; unchecked (the default), the member follows the group's pacing.
+  - The Rate Limiting screen's pacing section is now labeled **Group Default Send Pacing** with an explanatory note that members can override it individually.
+  - `members` table gained `rate_limit_custom`, `rate_burst_min`, `rate_burst_max`, `rate_min_wait`, `rate_max_wait`, `rate_initial_delay` columns (`DbHelper` bumped to DB version 2, migrated via non-destructive `ALTER TABLE` — existing members, message history, and queued sends are preserved on upgrade, unlike the previous drop-and-recreate `onUpgrade`).
+  - Added `util/RateLimitConfig`, resolving a member's effective pacing (their override if set, else the group default from `Prefs`).
+  - `SmsSendService` no longer drains the outbox as one global burst/wait loop: it now runs one independent burst/wait cadence per recipient (concurrently, one thread per member with pending mail), each using that member's effective pacing. `SendQueueStatus` now tracks a schedule per member and the dashboard's "next burst" countdown shows whichever member's burst is coming up soonest.
+
 ## 1.12 - In-App License Viewer
 
 - Added `app/src/main/assets/license.html`, an HTML transcription of `LICENSE.md`.

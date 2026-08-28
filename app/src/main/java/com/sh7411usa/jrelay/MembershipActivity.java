@@ -232,10 +232,17 @@ public class MembershipActivity extends Activity {
                 }
                 badge.append(getString(R.string.muted_badge));
             }
-            if (adminMode && member.isAdmin) {
-                setHighlightedText(badgeView, badge.toString(), "admin");
+            if (badge.length() == 0) {
+                badgeView.setVisibility(View.GONE);
             } else {
-                badgeView.setText(badge.toString());
+                badgeView.setVisibility(View.VISIBLE);
+                badgeView.setBackgroundResource(member.isAdmin ? R.drawable.bg_badge_admin : R.drawable.bg_badge_muted);
+                badgeView.setTextColor(getColor(member.isAdmin ? R.color.primary : R.color.warning));
+                if (adminMode && member.isAdmin) {
+                    setHighlightedText(badgeView, badge.toString(), "admin");
+                } else {
+                    badgeView.setText(badge.toString());
+                }
             }
 
             long memberId = member.id;

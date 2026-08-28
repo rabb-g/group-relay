@@ -1,62 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/background">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="vertical">
 
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            style="@style/Widget.JRelay.Header"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="16dp">
+            android:gravity="center_vertical">
 
             <TextView
+                style="@style/TextAppearance.JRelay.HeaderTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/membership_title"
-                android:textSize="22sp"
-                android:textStyle="bold" />
+                android:text="@string/membership_title" />
 
             <Button
                 android:id="@+id/button_membership_options"
+                style="@style/Widget.JRelay.Button.Small.Outline"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/menu_button_label"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginEnd="8dp" />
+                android:text="@string/menu_button_label" />
 
         </LinearLayout>
 
-        <EditText
-            android:id="@+id/edit_search"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/hint_membership_search"
-            android:inputType="text"
-            android:layout_marginBottom="12dp" />
-
-        <Button
-            android:id="@+id/button_add_member"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/add_member_shortcut"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginBottom="16dp" />
-
         <LinearLayout
-            android:id="@+id/container_members"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:orientation="vertical"
+            android:padding="16dp">
 
+            <EditText
+                android:id="@+id/edit_search"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_membership_search"
+                android:inputType="text"
+                android:layout_marginBottom="12dp" />
+
+            <Button
+                android:id="@+id/button_add_member"
+                style="@style/Widget.JRelay.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/add_member_shortcut"
+                android:layout_marginBottom="16dp" />
+
+            <LinearLayout
+                android:id="@+id/container_members"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

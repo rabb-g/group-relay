@@ -1,127 +1,229 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/background">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/text_nickname"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+        <LinearLayout style="@style/Widget.JRelay.Header">
 
-        <TextView
-            android:id="@+id/text_number"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="15sp"
-            android:textColor="#666666"
-            android:layout_marginBottom="16dp" />
+            <TextView
+                android:id="@+id/text_nickname"
+                style="@style/TextAppearance.JRelay.HeaderTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
 
-        <TextView
-            android:id="@+id/text_stats"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
+            <TextView
+                android:id="@+id/text_number"
+                style="@style/TextAppearance.JRelay.HeaderSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp" />
 
-        <Button
-            android:id="@+id/button_toggle_admin"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginBottom="8dp" />
-
-        <Button
-            android:id="@+id/button_toggle_mute"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginBottom="8dp" />
-
-        <Button
-            android:id="@+id/button_send_dm"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/action_send_dm"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginBottom="8dp" />
-
-        <Button
-            android:id="@+id/button_edit_nickname"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/action_edit_nickname"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginBottom="8dp" />
-
-        <Button
-            android:id="@+id/button_edit_number"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/action_edit_number"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginBottom="8dp" />
-
-        <Button
-            android:id="@+id/button_export_contact"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/action_export_contact"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginBottom="8dp" />
-
-        <Button
-            android:id="@+id/button_call"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/action_call"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginBottom="8dp" />
-
-        <Button
-            android:id="@+id/button_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/action_text"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginBottom="16dp" />
-
-        <Button
-            android:id="@+id/button_remove"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/action_remove"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/recent_activity"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
+        </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/container_member_activity"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:orientation="vertical"
+            android:padding="16dp">
 
+            <TextView
+                android:id="@+id/text_stats"
+                style="@style/TextAppearance.JRelay.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp" />
+
+            <Button
+                android:id="@+id/button_toggle_admin"
+                style="@style/Widget.JRelay.Button.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp" />
+
+            <Button
+                android:id="@+id/button_toggle_mute"
+                style="@style/Widget.JRelay.Button.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp" />
+
+            <Button
+                android:id="@+id/button_send_dm"
+                style="@style/Widget.JRelay.Button.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_send_dm"
+                android:layout_marginBottom="10dp" />
+
+            <Button
+                android:id="@+id/button_edit_nickname"
+                style="@style/Widget.JRelay.Button.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_edit_nickname"
+                android:layout_marginBottom="10dp" />
+
+            <Button
+                android:id="@+id/button_edit_number"
+                style="@style/Widget.JRelay.Button.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_edit_number"
+                android:layout_marginBottom="10dp" />
+
+            <Button
+                android:id="@+id/button_export_contact"
+                style="@style/Widget.JRelay.Button.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_export_contact"
+                android:layout_marginBottom="10dp" />
+
+            <Button
+                android:id="@+id/button_call"
+                style="@style/Widget.JRelay.Button.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_call"
+                android:layout_marginBottom="10dp" />
+
+            <Button
+                android:id="@+id/button_text"
+                style="@style/Widget.JRelay.Button.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_text"
+                android:layout_marginBottom="10dp" />
+
+            <Button
+                android:id="@+id/button_remove"
+                style="@style/Widget.JRelay.Button.Danger"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_remove"
+                android:layout_marginBottom="24dp" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/rate_limit_member_section"
+                android:layout_marginBottom="6dp" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/rate_limit_member_desc"
+                android:layout_marginBottom="10dp" />
+
+            <CheckBox
+                android:id="@+id/checkbox_custom_rate_limit"
+                style="@style/Widget.JRelay.CheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/checkbox_custom_rate_limit"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:id="@+id/container_rate_limit_fields"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/TextAppearance.JRelay.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_burst_min" />
+
+                <EditText
+                    android:id="@+id/edit_member_burst_min"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/hint_burst_min"
+                    android:inputType="number"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    style="@style/TextAppearance.JRelay.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_burst_max" />
+
+                <EditText
+                    android:id="@+id/edit_member_burst_max"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/hint_burst_max"
+                    android:inputType="number"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    style="@style/TextAppearance.JRelay.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_min_wait" />
+
+                <EditText
+                    android:id="@+id/edit_member_min_wait"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/hint_min_wait"
+                    android:inputType="number"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    style="@style/TextAppearance.JRelay.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_max_wait" />
+
+                <EditText
+                    android:id="@+id/edit_member_max_wait"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/hint_max_wait"
+                    android:inputType="number"
+                    android:layout_marginBottom="8dp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_member_initial_delay"
+                    style="@style/Widget.JRelay.CheckBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/checkbox_initial_delay"
+                    android:layout_marginBottom="12dp" />
+
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/button_save_rate_limit"
+                style="@style/Widget.JRelay.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_save_rate_limit"
+                android:layout_marginBottom="24dp" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/recent_activity"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:id="@+id/container_member_activity"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

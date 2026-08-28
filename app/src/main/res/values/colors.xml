@@ -2,8 +2,36 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="focus_highlight">#553399FF</color>
-    <color name="disband_red">#B00020</color>
-    <color name="search_highlight">#FFF59D</color>
-    <color name="divider">#CCCCCC</color>
+
+    <!-- Brand -->
+    <color name="primary">#2F5FE0</color>
+    <color name="primary_dark">#1E44B8</color>
+    <color name="primary_light">#E7EDFC</color>
+    <color name="on_primary">#FFFFFF</color>
+
+    <!-- Surfaces -->
+    <color name="background">#F4F5F9</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="outline">#DCDFE8</color>
+    <color name="divider">#E4E6EE</color>
+
+    <!-- Text -->
+    <color name="text_primary">#1B1E27</color>
+    <color name="text_secondary">#6B7080</color>
+    <color name="text_hint">#9AA0B0</color>
+
+    <!-- Status -->
+    <color name="success">#1E9E63</color>
+    <color name="success_light">#E4F6EC</color>
+    <color name="warning">#B26A00</color>
+    <color name="warning_light">#FCEEDA</color>
+    <color name="danger">#C4392F</color>
+    <color name="danger_light">#FBE7E5</color>
+    <color name="on_danger">#FFFFFF</color>
+
+    <color name="disband_red">#C4392F</color>
+    <color name="search_highlight">#FFF1A6</color>
+
+    <!-- Focus / press feedback for rows and other non-button touch targets -->
+    <color name="press_highlight">#4D2F5FE0</color>
 </resources>

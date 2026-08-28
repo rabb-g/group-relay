@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "jrelay.db";
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
 
     public static final String TABLE_MEMBERS = "members";
     public static final String TABLE_MESSAGE_LOG = "message_log";
@@ -37,7 +37,13 @@ public class DbHelper extends SQLiteOpenHelper {
                 "active INTEGER NOT NULL DEFAULT 1," +
                 "added_by TEXT," +
                 "created_at INTEGER NOT NULL," +
-                "removed_at INTEGER" +
+                "removed_at INTEGER," +
+                "rate_limit_custom INTEGER NOT NULL DEFAULT 0," +
+                "rate_burst_min INTEGER," +
+                "rate_burst_max INTEGER," +
+                "rate_min_wait INTEGER," +
+                "rate_max_wait INTEGER," +
+                "rate_initial_delay INTEGER" +
                 ")");
 
         db.execSQL("CREATE TABLE " + TABLE_MESSAGE_LOG + " (" +
@@ -59,12 +65,17 @@ public class DbHelper extends SQLiteOpenHelper {
                 ")");
     }
 
+    /** Migrations are additive so existing members, message history, and queued sends survive an app update. */
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_OUTBOX);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_MESSAGE_LOG);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_MEMBERS);
-        onCreate(db);
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN rate_limit_custom INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN rate_burst_min INTEGER");
+            db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN rate_burst_max INTEGER");
+            db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN rate_min_wait INTEGER");
+            db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN rate_max_wait INTEGER");
+            db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN rate_initial_delay INTEGER");
+        }
     }
 
     /** Permanently erases every member, message, and queued outbound message. Used only by "Disband Group". */

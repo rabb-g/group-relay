@@ -75,10 +75,18 @@
     <string name="confirm_remove_title">Remove member?</string>
     <string name="confirm_remove_message">Remove %1$s from the group? They will be notified.</string>
 
+    <!-- Member Detail: Send Pacing override -->
+    <string name="rate_limit_member_section">Send Pacing</string>
+    <string name="rate_limit_member_desc">By default this member uses the group\'s send pacing. Turn this on to set a custom pace for just this member.</string>
+    <string name="checkbox_custom_rate_limit">Use a custom send pace for this member</string>
+    <string name="action_save_rate_limit">Save Send Pacing</string>
+    <string name="rate_limit_member_saved">Send pacing saved.</string>
+
     <!-- Rate limiting -->
     <string name="rate_limit_title">Rate Limiting</string>
     <string name="action_view_license">License</string>
-    <string name="rate_limit_app_section">jRelay Send Pacing</string>
+    <string name="rate_limit_app_section">Group Default Send Pacing</string>
+    <string name="rate_limit_app_desc">Applies to every member unless they have a custom pace set on their own member screen.</string>
     <string name="label_burst_min">Minimum messages per burst</string>
     <string name="label_burst_max">Maximum messages per burst</string>
     <string name="label_min_wait">Minimum wait between bursts (seconds)</string>

@@ -1,201 +1,195 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/background">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="vertical">
 
-        <TextView
+        <LinearLayout style="@style/Widget.JRelay.Header">
+            <TextView
+                style="@style/TextAppearance.JRelay.HeaderTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/rate_limit_title" />
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/rate_limit_title"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="16dp" />
+            android:orientation="vertical"
+            android:padding="16dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/rate_limit_app_section"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                style="@style/TextAppearance.JRelay.Subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/rate_limit_app_section"
+                android:layout_marginBottom="4dp" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_burst_min"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:textColor="#666666" />
+            <TextView
+                style="@style/TextAppearance.JRelay.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/rate_limit_app_desc"
+                android:layout_marginBottom="12dp" />
 
-        <EditText
-            android:id="@+id/edit_burst_min"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/hint_burst_min"
-            android:inputType="number"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                style="@style/TextAppearance.JRelay.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_burst_min" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_burst_max"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:textColor="#666666" />
+            <EditText
+                android:id="@+id/edit_burst_min"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_burst_min"
+                android:inputType="number"
+                android:layout_marginBottom="8dp" />
 
-        <EditText
-            android:id="@+id/edit_burst_max"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/hint_burst_max"
-            android:inputType="number"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                style="@style/TextAppearance.JRelay.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_burst_max" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_min_wait"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:textColor="#666666" />
+            <EditText
+                android:id="@+id/edit_burst_max"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_burst_max"
+                android:inputType="number"
+                android:layout_marginBottom="8dp" />
 
-        <EditText
-            android:id="@+id/edit_min_wait"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/hint_min_wait"
-            android:inputType="number"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                style="@style/TextAppearance.JRelay.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_min_wait" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_max_wait"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:textColor="#666666" />
+            <EditText
+                android:id="@+id/edit_min_wait"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_min_wait"
+                android:inputType="number"
+                android:layout_marginBottom="8dp" />
 
-        <EditText
-            android:id="@+id/edit_max_wait"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/hint_max_wait"
-            android:inputType="number"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                style="@style/TextAppearance.JRelay.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_max_wait" />
 
-        <CheckBox
-            android:id="@+id/checkbox_initial_delay"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/checkbox_initial_delay"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginBottom="16dp" />
+            <EditText
+                android:id="@+id/edit_max_wait"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_max_wait"
+                android:inputType="number"
+                android:layout_marginBottom="8dp" />
 
-        <Button
-            android:id="@+id/button_save"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/action_save"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginBottom="24dp" />
+            <CheckBox
+                android:id="@+id/checkbox_initial_delay"
+                style="@style/Widget.JRelay.CheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/checkbox_initial_delay"
+                android:layout_marginBottom="16dp" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/rate_limit_system_section"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
+            <Button
+                android:id="@+id/button_save"
+                style="@style/Widget.JRelay.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_save"
+                android:layout_marginBottom="28dp" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/rate_limit_system_desc"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                style="@style/TextAppearance.JRelay.Subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/rate_limit_system_section"
+                android:layout_marginBottom="6dp" />
 
-        <TextView
-            android:id="@+id/text_system_permission_notice"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="#CC6600"
-            android:visibility="gone"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                style="@style/TextAppearance.JRelay.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/rate_limit_system_desc"
+                android:layout_marginBottom="8dp" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_system_max_count"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:textColor="#666666" />
+            <TextView
+                android:id="@+id/text_system_permission_notice"
+                style="@style/TextAppearance.JRelay.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/warning"
+                android:visibility="gone"
+                android:layout_marginBottom="8dp" />
 
-        <EditText
-            android:id="@+id/edit_system_max_count"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/hint_system_max_count"
-            android:inputType="number"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                style="@style/TextAppearance.JRelay.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_system_max_count" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/label_system_interval_minutes"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:textColor="#666666" />
+            <EditText
+                android:id="@+id/edit_system_max_count"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_system_max_count"
+                android:inputType="number"
+                android:layout_marginBottom="8dp" />
 
-        <EditText
-            android:id="@+id/edit_system_interval"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/hint_system_interval_minutes"
-            android:inputType="number"
-            android:layout_marginBottom="16dp" />
+            <TextView
+                style="@style/TextAppearance.JRelay.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_system_interval_minutes" />
 
-        <Button
-            android:id="@+id/button_system_save"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/action_save"
-            android:clickable="true"
-            android:focusable="true" />
+            <EditText
+                android:id="@+id/edit_system_interval"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_system_interval_minutes"
+                android:inputType="number"
+                android:layout_marginBottom="16dp" />
 
-        <Button
-            android:id="@+id/button_clear_history"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginTop="32dp" />
+            <Button
+                android:id="@+id/button_system_save"
+                style="@style/Widget.JRelay.Button.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_save" />
 
-        <Button
-            android:id="@+id/button_disband_group"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/action_disband_group"
-            android:backgroundTint="@color/disband_red"
-            android:textColor="@color/white"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginTop="12dp" />
+            <Button
+                android:id="@+id/button_clear_history"
+                style="@style/Widget.JRelay.Button.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp" />
 
-        <Button
-            android:id="@+id/button_view_license"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/action_view_license"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginTop="32dp" />
+            <Button
+                android:id="@+id/button_disband_group"
+                style="@style/Widget.JRelay.Button.Danger"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_disband_group"
+                android:layout_marginTop="12dp" />
 
+            <Button
+                android:id="@+id/button_view_license"
+                style="@style/Widget.JRelay.Button.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_view_license"
+                android:layout_marginTop="28dp" />
+
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>
