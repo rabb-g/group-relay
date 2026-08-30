@@ -131,12 +131,16 @@ public class MemberRepository {
         db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
     }
 
-    /** Sets a custom per-day relay cap for this member, independent of the shared group pool. */
-    public void setDailyLimitOverride(long id, int value) {
+    /** Sets a custom per-day relay cap for this member, independent of the shared group pool. A null value means unlimited. */
+    public void setDailyLimitOverride(long id, Integer value) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put("daily_limit_custom", 1);
-        cv.put("daily_limit_value", value);
+        if (value != null) {
+            cv.put("daily_limit_value", value);
+        } else {
+            cv.putNull("daily_limit_value");
+        }
         db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
     }
 

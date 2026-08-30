@@ -31,10 +31,17 @@ public class MessageRepository {
         db.insert(DbHelper.TABLE_MESSAGE_LOG, null, cv);
     }
 
+    /**
+     * Recent activity across the whole group, collapsed to one row per event: excludes the internal
+     * "RELAYED" quota marker (a duplicate of the "RELAY" row already logged for the same message)
+     * and the per-recipient "OUT"/"RELAY" fan-out copies (one would otherwise show up per member a
+     * relay was delivered to) -- callers only see the single incoming message and who sent it.
+     */
     public List<MessageRecord> getRecent(int limit) {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor c = db.query(DbHelper.TABLE_MESSAGE_LOG, null, null, null, null, null,
-                "timestamp DESC", String.valueOf(limit));
+        Cursor c = db.query(DbHelper.TABLE_MESSAGE_LOG, null,
+                "category != 'RELAYED' AND NOT (direction = 'OUT' AND category = 'RELAY')", null,
+                null, null, "timestamp DESC", String.valueOf(limit));
         List<MessageRecord> list = new ArrayList<>();
         while (c.moveToNext()) {
             list.add(fromCursor(c));
@@ -43,9 +50,10 @@ public class MessageRepository {
         return list;
     }
 
+    /** One member's recent activity; excludes the internal "RELAYED" quota marker (see {@link #getRecent}). */
     public List<MessageRecord> getRecentForMember(long memberId, int limit) {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor c = db.query(DbHelper.TABLE_MESSAGE_LOG, null, "member_id = ?",
+        Cursor c = db.query(DbHelper.TABLE_MESSAGE_LOG, null, "member_id = ? AND category != 'RELAYED'",
                 new String[]{String.valueOf(memberId)}, null, null, "timestamp DESC", String.valueOf(limit));
         List<MessageRecord> list = new ArrayList<>();
         while (c.moveToNext()) {

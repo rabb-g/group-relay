@@ -48,7 +48,7 @@ public class SmsSendService extends Service {
         boolean shuffle = prefs.isDeliveryShuffleEnabled();
 
         try {
-            if (outbox.countPending() <= 0) {
+            if (prefs.isPaused() || outbox.countPending() <= 0) {
                 return;
             }
 

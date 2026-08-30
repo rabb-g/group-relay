@@ -27,6 +27,9 @@
     <string name="stats_next_burst">Next burst in %1$s (%2$d messages)</string>
     <string name="badge_sending">Sending…</string>
     <string name="badge_announcement_mode">Announcement Mode</string>
+    <string name="badge_service_paused">Service Paused</string>
+    <string name="menu_switch_to_announcement">Switch to Announcement Mode</string>
+    <string name="menu_switch_to_group">Switch to Group Mode</string>
     <string name="send_group_message_shortcut">Send to Group</string>
     <string name="recent_activity">Recent Activity</string>
     <string name="no_activity_yet">No activity yet.</string>
@@ -105,11 +108,13 @@
     <string name="section_daily_limit">Daily Limit</string>
     <string name="daily_limit_member_desc">By default this member draws only from the group\'s shared daily limit. Turn this on to also cap their own messages per day.</string>
     <string name="checkbox_custom_daily_limit">Use a custom daily limit for this member</string>
+    <string name="checkbox_daily_limit_unlimited">Unlimited (no individual cap)</string>
     <string name="label_daily_limit_value">Messages per day</string>
     <string name="hint_daily_limit_value">Messages per day</string>
     <string name="action_save_daily_limit">Save Daily Limit</string>
     <string name="daily_limit_saved">Daily limit saved.</string>
     <string name="tpl_daily_limit_usage">Today: %1$d / %2$d</string>
+    <string name="tpl_daily_limit_usage_unlimited">Today: %1$d (unlimited)</string>
     <string name="daily_limit_not_customized">No individual limit set for this member (they still draw from the group\'s shared daily limit).</string>
     <string name="action_override_daily_limit">Override (+1 Today)</string>
     <string name="daily_limit_override_done">Added 1 message for today.</string>
@@ -117,6 +122,24 @@
     <!-- Settings -->
     <string name="rate_limit_title">Settings</string>
     <string name="action_view_license">License</string>
+
+    <string name="section_pause_service">Pause Service</string>
+    <string name="pause_service_desc">Immediately stops all SMS sending and incoming message processing until resumed. Choosing an option below takes effect right away.</string>
+    <string name="pause_option_not_paused">Not Paused</string>
+    <string name="pause_option_10_seconds">Pause for 10 Seconds</string>
+    <string name="pause_option_1_minute">Pause for 1 Minute</string>
+    <string name="pause_option_1_hour">Pause for 1 Hour</string>
+    <string name="pause_option_1_day">Pause for 1 Day</string>
+    <string name="pause_option_until_unpaused">Pause Until Unpaused</string>
+    <string name="pause_status_not_paused">Not paused.</string>
+    <string name="pause_status_indefinite">Paused indefinitely.</string>
+    <string name="pause_status_timed">Paused. Resumes in %1$s.</string>
+
+    <string name="section_group_mode">Group Mode</string>
+    <string name="group_mode_desc">Group mode relays everyone\'s messages as usual. Announcement mode relays only admins\' messages to everyone -- everyone else\'s messages go to admins only. Can also be changed by text with #mode announcement / #mode group.</string>
+    <string name="group_mode_group">Group Mode</string>
+    <string name="group_mode_announcement">Announcement Mode</string>
+
     <string name="section_staggering">Staggering</string>
     <string name="staggering_desc">Waits between bursts of outgoing messages so sends don\'t all fire at once.</string>
     <string name="checkbox_staggering_enabled">Enable staggering between bursts</string>
@@ -235,6 +258,9 @@
 
     <string name="section_miscellaneous">Miscellaneous</string>
 
+    <string name="section_about">About</string>
+    <string name="tpl_app_version">jRelay %1$s (%2$d)</string>
+
     <!-- Clear History -->
     <string name="action_clear_history">Clear History (%1$s)</string>
     <string name="clear_history_title">Clear History?</string>
@@ -275,7 +301,7 @@
     <string name="tpl_unknown_command">Unknown command. Reply #commands for a list of commands.</string>
     <string name="tpl_invalid_number">Invalid phone number format.</string>
     <string name="tpl_relay_prefix">%1$s: %2$s</string>
-    <string name="tpl_admin_relay_prefix">[Admin-only from %1$s]: %2$s</string>
+    <string name="tpl_admin_relay_prefix">@admin %1$s: %2$s</string>
     <string name="tpl_dm_prefix">[Admin]: %1$s</string>
     <string name="tpl_commands_list_common">Available commands:\n#commands - show this list\n#mute - pause messages\n#unmute - resume messages\n#stop - leave the group\n#list - list members\n#name &lt;new nickname&gt; - change your nickname\n#admin &lt;message&gt; - message admins only\n#mode - show the current group mode\n#join &lt;nickname&gt; - request to join (non-members)</string>
     <string name="tpl_commands_list_admin_extra">\n(Admins) #add &lt;number&gt; &lt;nickname&gt; - add a member\n(Admins) #remove &lt;nickname or number&gt; - remove a member\n(Admins) #topic &lt;new name&gt; - change the group name\n(Admins) #limits - show today\'s group limit status\n(Admins) #override [nickname or number] - add 1 message to the group limit, or a member\'s individual limit\n(Admins) #mode announcement|group - switch between Announcement and Group mode</string>

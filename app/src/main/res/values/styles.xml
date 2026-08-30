@@ -152,6 +152,14 @@
         <item name="android:textStyle">bold</item>
     </style>
 
+    <!-- Small colored pill for urgent state, e.g. the dashboard's Service Paused indicator -->
+    <style name="Widget.JRelay.Badge.Danger">
+        <item name="android:background">@drawable/bg_badge_danger</item>
+        <item name="android:textColor">@color/danger</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
     <!-- Dropdown selector (Spinner) styled to match text inputs -->
     <style name="Widget.JRelay.Spinner" parent="android:Widget.DeviceDefault.Spinner">
         <item name="android:background">@drawable/bg_edittext</item>

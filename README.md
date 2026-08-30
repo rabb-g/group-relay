@@ -29,10 +29,10 @@ Below that is a checkbox, "You have read and accept the terms of the license," w
 
 ### Dashboard (Main screen)
 
-- Group name, with an **Options** button opening a dropdown: **Set Group Name**, **Add Member**, **Settings**, and **Send to Group**. A small **Announcement Mode** badge appears next to the group name whenever the group is in that mode (see [Announcement Mode](#announcement-mode)).
+- Group name, with an **Options** button opening a dropdown: **Set Group Name**, **Add Member**, **Settings**, **Send to Group**, and a one-tap **Switch to Announcement Mode**/**Switch to Group Mode** toggle (label reflects the current mode; see [Announcement Mode](#announcement-mode)). A small **Announcement Mode** badge appears next to the group name whenever the group is in that mode, and a **Service Paused** badge appears whenever [Pause Service](#pause-service) is active.
 - A 2-column grid of stat tiles: Members, Admins, Muted, Messages Today, Messages Total, **Failed Today**, and In Queue. The Queue tile shows a small green **Sending…** badge whenever a burst is actively scheduled or in flight.
 - **Next burst in Xs (N messages)** — a live countdown (updates every second) to the next scheduled burst, and how many messages it will contain. Hidden when nothing is scheduled.
-- A scrollable feed of the most recent activity across the whole group, with a thin separator between each entry. Tapping an entry opens that member's detail screen.
+- A scrollable feed of the most recent activity across the whole group, with a thin separator between each entry. Tapping an entry opens that member's detail screen. Shows one row per relayed message (who sent it and what) rather than a copy per recipient it was delivered to.
 - A **Membership** button.
 
 ### Membership
@@ -60,7 +60,7 @@ Tapping a member shows:
 
 - Nickname and phone number.
 - Member-since / last-active caption, and a stat tile grid: Sent, Received, Messages Today, and a color-coded Activity level (Very active / Active / Quiet / Inactive) based on message volume over the last 7 days.
-- A **Daily Limit** section to give this member their own daily cap, independent of the group's shared pool (see [Daily Limits](#daily-limits)) — shows "today: X / Y" usage, and an **Override (+1 Today)** button appears automatically once that cap is hit.
+- A **Daily Limit** section to give this member their own daily cap, independent of the group's shared pool (see [Daily Limits](#daily-limits)) — shows "today: X / Y" usage, an **Unlimited** checkbox to exempt just this member from their own cap (they still respect the shared group pool if that's enabled), and an **Override (+1 Today)** button that appears automatically once a non-unlimited cap is hit.
 - A scrollable feed of that member's recent activity, with a thin separator between each entry (matching the dashboard's Recent Activity feed).
 
 Actions available:
@@ -83,7 +83,21 @@ A simple form (phone number + nickname) for adding a member from within the app.
 
 ### Settings
 
-Everything configurable lives on one scrollable Settings screen (opened from the dashboard's **Options → Settings**), grouped into labeled sections:
+Everything configurable lives on one scrollable Settings screen (opened from the dashboard's **Options → Settings**), grouped into labeled sections. The two most urgent, state-changing controls (Pause Service and Group Mode) are the first two sections, right below the title.
+
+#### Pause Service
+
+An emergency stop. Choosing an option takes effect immediately:
+
+- **Not Paused** (default) — normal operation, or resumes if currently paused.
+- **Pause for 10 Seconds / 1 Minute / 1 Hour / 1 Day** — stops all SMS sending and incoming-message processing for that long, then resumes automatically.
+- **Pause Until Unpaused** — stops indefinitely; only picking **Not Paused** resumes it.
+
+While paused, incoming texts are ignored entirely (not even logged) and the outbox stops draining — anything already queued, or queued by an app action while paused, stays queued and goes out once resumed. A status line under the dropdown shows the live countdown, and the dashboard shows a **Service Paused** badge. Resuming manually flushes the queue immediately; if a timed pause instead expires while the app is in the background, the backlog goes out on the next thing that would normally trigger a send (an incoming message or an app action), since there's no background alarm driving it on a timer alone.
+
+#### Group Mode
+
+A dropdown + Save button to switch between **Group Mode** and **Announcement Mode** from the app — the same setting `#mode announcement`/`#mode group` controls by text (see [Announcement Mode](#announcement-mode)), and also reachable as a one-tap toggle from the dashboard's **Options** menu.
 
 #### Send Pacing
 
@@ -162,6 +176,10 @@ Choose **System Default**, **Light**, or **Dark**. Takes effect immediately, ind
 - **Disband Group** — a red button. Tapping it shows a warning that this will **permanently erase every member and all message history, and that nobody will be notified** — then, to confirm, you have to type back a random 4-digit PIN shown right there in the dialog (a fresh one each time). Get the PIN wrong (or cancel) and nothing happens. Get it right and jRelay wipes its entire database, resets the group name back to the default "jRelay", and returns to the dashboard. There's no undo, and nothing is sent to anyone as part of it.
 - **License** — opens the same in-app license viewer as the link on the first-run screen (see [License](#license) below).
 
+#### About
+
+Shows the installed version as `jRelay <versionName> (<versionCode>)`, read from the app's own package info so it always matches the actual build.
+
 ### Send to Group
 
 A dedicated screen (opened from **Options → Send to Group**) for sending a one-off admin message to every active member at once — regardless of anyone's mute state — formatted the same way as a direct message (`[Admin]: ...`). Useful for group-wide announcements that shouldn't wait on someone muting/unmuting.
@@ -176,7 +194,7 @@ A dedicated screen (opened from **Options → Send to Group**) for sending a one
 | `#stop` | anyone | Leaves the group |
 | `#list` | anyone | Replies with the group name, a blank line, then a newline list of member nicknames only — no phone numbers. Shows `(You)` next to your own entry and `(admin)` next to admins |
 | `#name <new nickname>` | anyone | Changes your own nickname (see below) |
-| `#admin <message>` | anyone | Sends `<message>` to admins only, and pops up a notification on the host device. Non-admins can use this to reach admins directly |
+| `#admin <message>` | anyone | Sends `<message>` to admins only (formatted `@admin <nickname>: <message>`), and pops up a notification on the host device. Non-admins can use this to reach admins directly |
 | `#add <number> <nickname>` | admins only | Adds a new member |
 | `#remove <nickname or number>` | admins only | Removes a member |
 | `#topic <new name>` | admins only | Renames the group (see below) |
@@ -267,12 +285,12 @@ A send that fails is retried (up to the configured retry limit) by requeuing it 
 
 ## Announcement Mode
 
-A group-wide switch between two modes, changed by text (`#mode announcement` / `#mode group`, admins only) and checked by anyone with `#mode`:
+A group-wide switch between two modes. It can be changed three ways: by text (`#mode announcement` / `#mode group`, admins only), from **Settings → Group Mode** (dropdown + Save), or with the one-tap toggle in the dashboard's **Options** menu — anyone can check the current mode by texting `#mode`.
 
 - **Group mode** (default) — everyone's plain-text messages are relayed to the whole group, as usual.
-- **Announcement mode** — only admins' plain-text messages are relayed to everyone. A non-admin's message is instead sent only to admins, the same way `#admin <message>` works, and doesn't count against anyone's daily limit.
+- **Announcement mode** — only admins' plain-text messages are relayed to everyone. A non-admin's message is instead sent only to admins (formatted `@admin <nickname>: <message>`, the same as `#admin <message>`), and doesn't count against anyone's daily limit.
 
-Switching modes broadcasts a notice to the group (attributed to the admin who changed it) and replies to that admin with the new mode's status. The dashboard shows a small **Announcement Mode** badge next to the group name whenever it's active, so it's obvious at a glance.
+However it's changed, switching modes broadcasts a notice to the group (attributed to whichever admin made the change, or "An Admin" when changed from the app) and, if triggered by text, replies to that admin with the new mode's status. The dashboard shows a small **Announcement Mode** badge next to the group name whenever it's active, so it's obvious at a glance.
 
 ## Message Content & Salting
 

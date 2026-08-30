@@ -221,19 +221,34 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <TextView
-                    style="@style/TextAppearance.JRelay.Label"
+                <CheckBox
+                    android:id="@+id/checkbox_daily_limit_unlimited"
+                    style="@style/Widget.JRelay.CheckBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/label_daily_limit_value" />
-
-                <EditText
-                    android:id="@+id/edit_daily_limit_value"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="@string/hint_daily_limit_value"
-                    android:inputType="number"
+                    android:text="@string/checkbox_daily_limit_unlimited"
                     android:layout_marginBottom="8dp" />
+
+                <LinearLayout
+                    android:id="@+id/container_daily_limit_value"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/TextAppearance.JRelay.Label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_daily_limit_value" />
+
+                    <EditText
+                        android:id="@+id/edit_daily_limit_value"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/hint_daily_limit_value"
+                        android:inputType="number"
+                        android:layout_marginBottom="8dp" />
+                </LinearLayout>
             </LinearLayout>
 
             <TextView

@@ -19,6 +19,9 @@ public class Prefs {
 
     public enum JoinPolicy { OFF, ALLOW, REQUIRE_APPROVAL }
 
+    /** Sentinel for {@link #getPauseUntilMillis()}: paused with no scheduled end, until manually resumed. */
+    public static final long PAUSE_INDEFINITE = Long.MAX_VALUE;
+
     public static final String LANGUAGE_SYSTEM = "system";
     public static final String LANGUAGE_ENGLISH = "en";
     public static final String LANGUAGE_HEBREW = "iw";
@@ -68,6 +71,7 @@ public class Prefs {
     private static final String KEY_ADDED_REPORTING_ENABLED = "added_reporting_enabled";
     private static final String KEY_GROUP_MODE = "group_mode";
     private static final String KEY_JOIN_POLICY = "join_policy";
+    private static final String KEY_PAUSE_UNTIL_MILLIS = "pause_until_millis";
 
     private static final String DEFAULT_GROUP_NAME = "jRelay";
     private static final int DEFAULT_BURST_MIN = 3;
@@ -385,6 +389,24 @@ public class Prefs {
 
     public void setJoinPolicy(JoinPolicy policy) {
         prefs.edit().putString(KEY_JOIN_POLICY, policy.name()).apply();
+    }
+
+    /** 0 = not paused. {@link #PAUSE_INDEFINITE} = paused with no scheduled end. Otherwise an epoch-millis resume time. */
+    public long getPauseUntilMillis() {
+        return prefs.getLong(KEY_PAUSE_UNTIL_MILLIS, 0L);
+    }
+
+    public void setPauseUntilMillis(long untilMillis) {
+        prefs.edit().putLong(KEY_PAUSE_UNTIL_MILLIS, untilMillis).apply();
+    }
+
+    /** True while all SMS sending and incoming processing should be suppressed. */
+    public boolean isPaused() {
+        long until = getPauseUntilMillis();
+        if (until == 0) {
+            return false;
+        }
+        return until == PAUSE_INDEFINITE || System.currentTimeMillis() < until;
     }
 
     private <E extends Enum<E>> E parseEnum(String stored, Class<E> type, E defaultValue) {

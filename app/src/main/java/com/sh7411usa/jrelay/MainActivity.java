@@ -38,6 +38,7 @@ public class MainActivity extends BaseActivity {
 
     private TextView groupNameView;
     private TextView announcementBadgeView;
+    private TextView pausedBadgeView;
     private TextView statsMembersView;
     private TextView statsAdminsView;
     private TextView statsMutedView;
@@ -76,6 +77,7 @@ public class MainActivity extends BaseActivity {
 
         groupNameView = findViewById(R.id.text_group_name);
         announcementBadgeView = findViewById(R.id.badge_announcement_mode);
+        pausedBadgeView = findViewById(R.id.badge_service_paused);
         statsMembersView = findViewById(R.id.text_stats_members);
         statsAdminsView = findViewById(R.id.text_stats_admins);
         statsMutedView = findViewById(R.id.text_stats_muted);
@@ -111,6 +113,9 @@ public class MainActivity extends BaseActivity {
     private void showOptionsMenu(View anchor) {
         PopupMenu popup = new PopupMenu(this, anchor);
         popup.getMenuInflater().inflate(R.menu.main_options_menu, popup.getMenu());
+        boolean announcement = prefs.getGroupMode() == Prefs.GroupMode.ANNOUNCEMENT;
+        popup.getMenu().findItem(R.id.menu_toggle_group_mode).setTitle(
+                announcement ? R.string.menu_switch_to_group : R.string.menu_switch_to_announcement);
         popup.setOnMenuItemClickListener(item -> {
             int id = item.getItemId();
             if (id == R.id.menu_set_group_name) {
@@ -125,10 +130,20 @@ public class MainActivity extends BaseActivity {
             } else if (id == R.id.menu_send_to_group) {
                 startActivity(new Intent(this, SendGroupMessageActivity.class));
                 return true;
+            } else if (id == R.id.menu_toggle_group_mode) {
+                toggleGroupMode();
+                return true;
             }
             return false;
         });
         popup.show();
+    }
+
+    private void toggleGroupMode() {
+        Prefs.GroupMode newMode = prefs.getGroupMode() == Prefs.GroupMode.ANNOUNCEMENT
+                ? Prefs.GroupMode.GROUP : Prefs.GroupMode.ANNOUNCEMENT;
+        commandProcessor.setGroupMode(newMode, getString(R.string.default_added_by_admin), -1);
+        refreshQueueStatus();
     }
 
     private void refresh() {
@@ -160,6 +175,7 @@ public class MainActivity extends BaseActivity {
         groupNameView.setText(prefs.getGroupName());
         announcementBadgeView.setVisibility(
                 prefs.getGroupMode() == Prefs.GroupMode.ANNOUNCEMENT ? View.VISIBLE : View.GONE);
+        pausedBadgeView.setVisibility(prefs.isPaused() ? View.VISIBLE : View.GONE);
         queueCountView.setText(String.valueOf(outboxRepository.countUnsent()));
 
         long nextBurstAt = SendQueueStatus.getNextBurstAtMillis();

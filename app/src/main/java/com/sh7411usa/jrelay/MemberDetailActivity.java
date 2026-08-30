@@ -53,6 +53,8 @@ public class MemberDetailActivity extends BaseActivity {
 
     private CheckBox customDailyLimitCheckbox;
     private LinearLayout dailyLimitFieldsContainer;
+    private CheckBox dailyLimitUnlimitedCheckbox;
+    private LinearLayout dailyLimitValueContainer;
     private EditText dailyLimitValueInput;
     private TextView dailyLimitUsageView;
     private Button overrideDailyLimitButton;
@@ -81,6 +83,8 @@ public class MemberDetailActivity extends BaseActivity {
 
         customDailyLimitCheckbox = findViewById(R.id.checkbox_custom_daily_limit);
         dailyLimitFieldsContainer = findViewById(R.id.container_daily_limit_fields);
+        dailyLimitUnlimitedCheckbox = findViewById(R.id.checkbox_daily_limit_unlimited);
+        dailyLimitValueContainer = findViewById(R.id.container_daily_limit_value);
         dailyLimitValueInput = findViewById(R.id.edit_daily_limit_value);
         dailyLimitUsageView = findViewById(R.id.text_daily_limit_usage);
         overrideDailyLimitButton = findViewById(R.id.button_override_daily_limit);
@@ -103,6 +107,8 @@ public class MemberDetailActivity extends BaseActivity {
 
         customDailyLimitCheckbox.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) ->
                 dailyLimitFieldsContainer.setVisibility(isChecked ? View.VISIBLE : View.GONE));
+        dailyLimitUnlimitedCheckbox.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) ->
+                dailyLimitValueContainer.setVisibility(isChecked ? View.GONE : View.VISIBLE));
         findViewById(R.id.button_save_daily_limit).setOnClickListener(v -> saveDailyLimit());
         overrideDailyLimitButton.setOnClickListener(v -> overrideDailyLimit());
     }
@@ -171,6 +177,10 @@ public class MemberDetailActivity extends BaseActivity {
     private void populateDailyLimitFields() {
         customDailyLimitCheckbox.setChecked(member.dailyLimitCustom);
         dailyLimitFieldsContainer.setVisibility(member.dailyLimitCustom ? View.VISIBLE : View.GONE);
+
+        boolean unlimited = member.dailyLimitCustom && member.dailyLimitValue == null;
+        dailyLimitUnlimitedCheckbox.setChecked(unlimited);
+        dailyLimitValueContainer.setVisibility(unlimited ? View.GONE : View.VISIBLE);
         dailyLimitValueInput.setText(String.valueOf(
                 member.dailyLimitValue != null ? member.dailyLimitValue : prefs.getDefaultIndividualLimitSeed()));
 
@@ -181,7 +191,9 @@ public class MemberDetailActivity extends BaseActivity {
         }
 
         DailyLimitManager.Status status = new DailyLimitManager(this).memberStatus(member);
-        dailyLimitUsageView.setText(getString(R.string.tpl_daily_limit_usage, status.used, status.limit));
+        dailyLimitUsageView.setText(status.unlimited
+                ? getString(R.string.tpl_daily_limit_usage_unlimited, status.used)
+                : getString(R.string.tpl_daily_limit_usage, status.used, status.limit));
         overrideDailyLimitButton.setVisibility(status.isExhausted() ? View.VISIBLE : View.GONE);
     }
 
@@ -193,8 +205,12 @@ public class MemberDetailActivity extends BaseActivity {
             return;
         }
 
-        int value = Math.max(0, parseOrDefault(dailyLimitValueInput, prefs.getDefaultIndividualLimitSeed()));
-        memberRepository.setDailyLimitOverride(member.id, value);
+        if (dailyLimitUnlimitedCheckbox.isChecked()) {
+            memberRepository.setDailyLimitOverride(member.id, null);
+        } else {
+            int value = Math.max(0, parseOrDefault(dailyLimitValueInput, prefs.getDefaultIndividualLimitSeed()));
+            memberRepository.setDailyLimitOverride(member.id, value);
+        }
         refresh();
         Toast.makeText(this, R.string.daily_limit_saved, Toast.LENGTH_SHORT).show();
     }

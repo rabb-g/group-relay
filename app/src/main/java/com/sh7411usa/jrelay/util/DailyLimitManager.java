@@ -20,23 +20,25 @@ public class DailyLimitManager {
 
     public static class Status {
         public final boolean enabled;
+        public final boolean unlimited;
         public final int used;
         public final int limit;
         public final long resetAtMillis;
 
-        Status(boolean enabled, int used, int limit, long resetAtMillis) {
+        Status(boolean enabled, boolean unlimited, int used, int limit, long resetAtMillis) {
             this.enabled = enabled;
+            this.unlimited = unlimited;
             this.used = used;
             this.limit = limit;
             this.resetAtMillis = resetAtMillis;
         }
 
         public int remaining() {
-            return enabled ? Math.max(0, limit - used) : Integer.MAX_VALUE;
+            return (enabled && !unlimited) ? Math.max(0, limit - used) : Integer.MAX_VALUE;
         }
 
         public boolean isExhausted() {
-            return enabled && remaining() <= 0;
+            return enabled && !unlimited && remaining() <= 0;
         }
     }
 
@@ -76,15 +78,17 @@ public class DailyLimitManager {
         int bonus = lazyGroupBonus(windowStart);
         int used = messageRepository.countRelayedSince(windowStart);
         int limit = prefs.getGroupDailyLimitValue() + bonus;
-        return new Status(prefs.isGroupDailyLimitEnabled(), used, limit, nextResetAtMillis());
+        return new Status(prefs.isGroupDailyLimitEnabled(), false, used, limit, nextResetAtMillis());
     }
 
+    /** A member with a custom cap but no value set (null) is unlimited: their own cap never blocks them. */
     public Status memberStatus(Member member) {
         long windowStart = currentWindowStart();
+        boolean unlimited = member.dailyLimitCustom && member.dailyLimitValue == null;
         int bonus = lazyMemberBonus(member, windowStart);
         int used = messageRepository.countRelayedForMemberSince(member.id, windowStart);
-        int limit = (member.dailyLimitValue != null ? member.dailyLimitValue : 0) + bonus;
-        return new Status(member.dailyLimitCustom, used, limit, nextResetAtMillis());
+        int limit = unlimited ? 0 : (member.dailyLimitValue != null ? member.dailyLimitValue : 0) + bonus;
+        return new Status(member.dailyLimitCustom, unlimited, used, limit, nextResetAtMillis());
     }
 
     /** Adds one message of headroom to the group pool for the current window. */

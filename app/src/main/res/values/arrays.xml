@@ -48,4 +48,20 @@
         <item>@string/join_policy_allow</item>
         <item>@string/join_policy_require_approval</item>
     </string-array>
+
+    <!-- Order matches Prefs.GroupMode -->
+    <string-array name="group_mode_options">
+        <item>@string/group_mode_group</item>
+        <item>@string/group_mode_announcement</item>
+    </string-array>
+
+    <!-- Positions 1-4 map to a fixed duration from now; position 5 is indefinite. Position 0 resumes. -->
+    <string-array name="pause_options">
+        <item>@string/pause_option_not_paused</item>
+        <item>@string/pause_option_10_seconds</item>
+        <item>@string/pause_option_1_minute</item>
+        <item>@string/pause_option_1_hour</item>
+        <item>@string/pause_option_1_day</item>
+        <item>@string/pause_option_until_unpaused</item>
+    </string-array>
 </resources>

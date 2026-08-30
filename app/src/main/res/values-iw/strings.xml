@@ -27,6 +27,9 @@
     <string name="stats_next_burst">המנה הבאה בעוד %1$s (%2$d הודעות)</string>
     <string name="badge_sending">בשליחה…</string>
     <string name="badge_announcement_mode">מצב הכרזה</string>
+    <string name="badge_service_paused">השירות מושהה</string>
+    <string name="menu_switch_to_announcement">מעבר למצב הכרזה</string>
+    <string name="menu_switch_to_group">מעבר למצב קבוצה</string>
     <string name="send_group_message_shortcut">שליחה לקבוצה</string>
     <string name="recent_activity">פעילות אחרונה</string>
     <string name="no_activity_yet">אין פעילות עדיין.</string>
@@ -105,11 +108,13 @@
     <string name="section_daily_limit">מגבלה יומית</string>
     <string name="daily_limit_member_desc">כברירת מחדל חבר זה משתמש רק במגבלה היומית המשותפת של הקבוצה. הפעילו כדי להגביל גם את מספר ההודעות היומי שלו.</string>
     <string name="checkbox_custom_daily_limit">שימוש במגבלה יומית מותאמת אישית לחבר זה</string>
+    <string name="checkbox_daily_limit_unlimited">ללא הגבלה (אין מגבלה אישית)</string>
     <string name="label_daily_limit_value">הודעות ליום</string>
     <string name="hint_daily_limit_value">הודעות ליום</string>
     <string name="action_save_daily_limit">שמירת מגבלה יומית</string>
     <string name="daily_limit_saved">המגבלה היומית נשמרה.</string>
     <string name="tpl_daily_limit_usage">היום: %1$d מתוך %2$d</string>
+    <string name="tpl_daily_limit_usage_unlimited">היום: %1$d (ללא הגבלה)</string>
     <string name="daily_limit_not_customized">לא הוגדרה מגבלה אישית לחבר זה (הוא עדיין משתמש במגבלה היומית המשותפת של הקבוצה).</string>
     <string name="action_override_daily_limit">עקיפה (+1 להיום)</string>
     <string name="daily_limit_override_done">נוספה הודעה אחת להיום.</string>
@@ -117,6 +122,24 @@
     <!-- Settings -->
     <string name="rate_limit_title">הגדרות</string>
     <string name="action_view_license">רישיון</string>
+
+    <string name="section_pause_service">השהיית השירות</string>
+    <string name="pause_service_desc">עוצר מיד כל שליחה וכל עיבוד הודעות נכנסות עד לחידוש. בחירת אפשרות למטה נכנסת לתוקף מיד.</string>
+    <string name="pause_option_not_paused">לא מושהה</string>
+    <string name="pause_option_10_seconds">השהיה ל-10 שניות</string>
+    <string name="pause_option_1_minute">השהיה לדקה אחת</string>
+    <string name="pause_option_1_hour">השהיה לשעה אחת</string>
+    <string name="pause_option_1_day">השהיה ליום אחד</string>
+    <string name="pause_option_until_unpaused">השהיה עד לביטול</string>
+    <string name="pause_status_not_paused">לא מושהה.</string>
+    <string name="pause_status_indefinite">מושהה ללא הגבלת זמן.</string>
+    <string name="pause_status_timed">מושהה. מתחדש בעוד %1$s.</string>
+
+    <string name="section_group_mode">מצב קבוצה</string>
+    <string name="group_mode_desc">מצב קבוצה מעביר את הודעות כולם כרגיל. מצב הכרזה מעביר לכולם רק הודעות מנהלים - הודעות כל האחרים מגיעות רק למנהלים. ניתן לשנות גם באמצעות מסרון עם #mode announcement / #mode group.</string>
+    <string name="group_mode_group">מצב קבוצה</string>
+    <string name="group_mode_announcement">מצב הכרזה</string>
+
     <string name="section_staggering">פיזור שליחה</string>
     <string name="staggering_desc">המתנה בין מנות של הודעות יוצאות כך שההודעות לא נשלחות כולן בבת אחת.</string>
     <string name="checkbox_staggering_enabled">הפעלת פיזור בין מנות שליחה</string>
@@ -235,6 +258,9 @@
 
     <string name="section_miscellaneous">שונות</string>
 
+    <string name="section_about">אודות</string>
+    <string name="tpl_app_version">jRelay %1$s (%2$d)</string>
+
     <!-- Clear History -->
     <string name="action_clear_history">ניקוי היסטוריה (%1$s)</string>
     <string name="clear_history_title">לנקות היסטוריה?</string>
@@ -275,7 +301,7 @@
     <string name="tpl_unknown_command">פקודה לא מוכרת. השיבו #commands לרשימת הפקודות.</string>
     <string name="tpl_invalid_number">פורמט מספר טלפון לא תקין.</string>
     <string name="tpl_relay_prefix">%1$s: %2$s</string>
-    <string name="tpl_admin_relay_prefix">[הודעה למנהלים בלבד מאת %1$s]: %2$s</string>
+    <string name="tpl_admin_relay_prefix">@admin %1$s: %2$s</string>
     <string name="tpl_dm_prefix">[מנהל]: %1$s</string>
     <string name="tpl_commands_list_common">פקודות זמינות:\n#commands - הצגת רשימה זו\n#mute - השתקת הודעות\n#unmute - ביטול השתקה\n#stop - עזיבת הקבוצה\n#list - רשימת חברים\n#name &lt;כינוי חדש&gt; - שינוי הכינוי שלך\n#admin &lt;הודעה&gt; - הודעה למנהלים בלבד\n#mode - הצגת מצב הקבוצה הנוכחי\n#join &lt;כינוי&gt; - בקשה להצטרף (למי שאינם חברים)</string>
     <string name="tpl_commands_list_admin_extra">\n(מנהלים) #add &lt;מספר&gt; &lt;כינוי&gt; - הוספת חבר\n(מנהלים) #remove &lt;כינוי או מספר&gt; - הסרת חבר\n(מנהלים) #topic &lt;שם חדש&gt; - שינוי שם הקבוצה\n(מנהלים) #limits - הצגת מצב המגבלה היומית של הקבוצה\n(מנהלים) #override [כינוי או מספר] - הוספת הודעה אחת למגבלת הקבוצה, או למגבלה האישית של חבר\n(מנהלים) #mode announcement|group - מעבר בין מצב הכרזה למצב קבוצה</string>

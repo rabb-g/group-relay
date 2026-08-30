@@ -5,7 +5,12 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.format.DateFormat;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -21,6 +26,8 @@ import com.sh7411usa.jrelay.db.DbHelper;
 import com.sh7411usa.jrelay.db.MemberRepository;
 import com.sh7411usa.jrelay.db.MessageRepository;
 import com.sh7411usa.jrelay.model.Member;
+import com.sh7411usa.jrelay.sms.CommandProcessor;
+import com.sh7411usa.jrelay.sms.SmsSendService;
 import com.sh7411usa.jrelay.util.DailyLimitManager;
 import com.sh7411usa.jrelay.util.Prefs;
 import com.sh7411usa.jrelay.util.RateLimitSettings;
@@ -35,9 +42,41 @@ public class SettingsActivity extends BaseActivity {
             Prefs.LANGUAGE_SYSTEM, Prefs.LANGUAGE_ENGLISH, Prefs.LANGUAGE_HEBREW, Prefs.LANGUAGE_YIDDISH
     };
 
+    /** Index 0 ("Not Paused") is handled separately; indexes 1-5 map one-to-one here. */
+    private static final long[] PAUSE_DURATIONS_MS = {
+            0L, 10_000L, 60_000L, 3_600_000L, 86_400_000L, Prefs.PAUSE_INDEFINITE
+    };
+
+    private static final long PAUSE_STATUS_TICK_MS = 1000;
+
     private Prefs prefs;
     private MessageRepository messageRepository;
     private MemberRepository memberRepository;
+
+    // Pause Service
+    private Spinner pauseSpinner;
+    private TextView pauseStatusView;
+    private final AdapterView.OnItemSelectedListener pauseSpinnerListener = new AdapterView.OnItemSelectedListener() {
+        @Override
+        public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+            applyPauseSelection(position);
+        }
+
+        @Override
+        public void onNothingSelected(AdapterView<?> parent) {
+        }
+    };
+    private final Handler pauseStatusHandler = new Handler(Looper.getMainLooper());
+    private final Runnable pauseStatusTick = new Runnable() {
+        @Override
+        public void run() {
+            refreshPauseStatus();
+            pauseStatusHandler.postDelayed(this, PAUSE_STATUS_TICK_MS);
+        }
+    };
+
+    // Group Mode
+    private Spinner groupModeSpinner;
 
     // Staggering / Burst / Microspacing
     private CheckBox staggeringEnabledCheckbox;
@@ -96,6 +135,7 @@ public class SettingsActivity extends BaseActivity {
     private Spinner themeSpinner;
 
     private Button clearHistoryButton;
+    private TextView appVersionView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -116,9 +156,21 @@ public class SettingsActivity extends BaseActivity {
         loadSystemSettings();
         updateClearHistoryButtonLabel();
         refreshGroupDailyLimitStatus();
+        pauseStatusHandler.post(pauseStatusTick);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        pauseStatusHandler.removeCallbacks(pauseStatusTick);
     }
 
     private void bindViews() {
+        pauseSpinner = findViewById(R.id.spinner_pause);
+        pauseStatusView = findViewById(R.id.text_pause_status);
+        groupModeSpinner = findViewById(R.id.spinner_group_mode);
+        appVersionView = findViewById(R.id.text_app_version);
+
         staggeringEnabledCheckbox = findViewById(R.id.checkbox_staggering_enabled);
         minWaitInput = findViewById(R.id.edit_min_wait);
         maxWaitInput = findViewById(R.id.edit_max_wait);
@@ -171,6 +223,11 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private void populateFromPrefs() {
+        pauseSpinner.setSelection(0);
+        refreshPauseStatus();
+        groupModeSpinner.setSelection(prefs.getGroupMode().ordinal());
+        appVersionView.setText(getVersionLabel());
+
         staggeringEnabledCheckbox.setChecked(prefs.isStaggeringEnabled());
         minWaitInput.setText(String.valueOf(prefs.getMinWaitSeconds()));
         maxWaitInput.setText(String.valueOf(prefs.getMaxWaitSeconds()));
@@ -216,6 +273,8 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private void wireListeners() {
+        pauseSpinner.setOnItemSelectedListener(pauseSpinnerListener);
+        findViewById(R.id.button_save_group_mode).setOnClickListener(v -> saveGroupMode());
         findViewById(R.id.button_save).setOnClickListener(v -> savePacingSettings());
         findViewById(R.id.button_save_reporting).setOnClickListener(v -> saveReportingSettings());
         findViewById(R.id.button_save_content).setOnClickListener(v -> saveContentSettings());
@@ -281,6 +340,76 @@ public class SettingsActivity extends BaseActivity {
             public void onNothingSelected(AdapterView<?> parent) {
             }
         });
+    }
+
+    /** Position 0 resumes (if paused); positions 1-5 pause starting now, for a duration or indefinitely. */
+    private void applyPauseSelection(int position) {
+        if (position == 0) {
+            if (prefs.getPauseUntilMillis() != 0) {
+                prefs.setPauseUntilMillis(0);
+                SmsSendService.start(this);
+            }
+        } else {
+            long duration = PAUSE_DURATIONS_MS[position];
+            long until = duration == Prefs.PAUSE_INDEFINITE ? Prefs.PAUSE_INDEFINITE : System.currentTimeMillis() + duration;
+            prefs.setPauseUntilMillis(until);
+        }
+        refreshPauseStatus();
+        resetPauseSpinnerToIdle();
+    }
+
+    /** Springs the spinner back to "Not Paused" after applying a real selection, without re-triggering the listener. */
+    private void resetPauseSpinnerToIdle() {
+        pauseSpinner.setOnItemSelectedListener(null);
+        pauseSpinner.setSelection(0);
+        pauseSpinner.post(() -> pauseSpinner.setOnItemSelectedListener(pauseSpinnerListener));
+    }
+
+    private void refreshPauseStatus() {
+        long until = prefs.getPauseUntilMillis();
+        if (until == 0 || (until != Prefs.PAUSE_INDEFINITE && System.currentTimeMillis() >= until)) {
+            pauseStatusView.setText(R.string.pause_status_not_paused);
+        } else if (until == Prefs.PAUSE_INDEFINITE) {
+            pauseStatusView.setText(R.string.pause_status_indefinite);
+        } else {
+            long remainingMs = Math.max(0, until - System.currentTimeMillis());
+            pauseStatusView.setText(getString(R.string.pause_status_timed, formatPauseDuration(remainingMs)));
+        }
+    }
+
+    private String formatPauseDuration(long millis) {
+        long totalSeconds = millis / 1000;
+        if (totalSeconds < 60) {
+            return totalSeconds + "s";
+        }
+        long minutes = totalSeconds / 60;
+        if (minutes < 60) {
+            return minutes + "m " + (totalSeconds % 60) + "s";
+        }
+        long hours = minutes / 60;
+        if (hours < 24) {
+            return hours + "h " + (minutes % 60) + "m";
+        }
+        long days = hours / 24;
+        return days + "d " + (hours % 24) + "h";
+    }
+
+    private void saveGroupMode() {
+        Prefs.GroupMode newMode = Prefs.GroupMode.values()[groupModeSpinner.getSelectedItemPosition()];
+        if (newMode != prefs.getGroupMode()) {
+            new CommandProcessor(this).setGroupMode(newMode, getString(R.string.default_added_by_admin), -1);
+        }
+        Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
+    }
+
+    private String getVersionLabel() {
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            long code = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? info.getLongVersionCode() : info.versionCode;
+            return getString(R.string.tpl_app_version, info.versionName, code);
+        } catch (PackageManager.NameNotFoundException e) {
+            return "";
+        }
     }
 
     private void updateBurstModeVisibility(Prefs.BurstMode mode) {

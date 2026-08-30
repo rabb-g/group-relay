@@ -33,6 +33,10 @@ public class CommandProcessor {
 
     /** Entry point for an inbound SMS from an already-normalized sender number. */
     public void handleIncoming(String senderE164, String body) {
+        if (prefs.isPaused()) {
+            return;
+        }
+
         String trimmed = body == null ? "" : body.trim();
 
         // #join is the one command a non-member can use, so it's checked before the member lookup below.
@@ -383,9 +387,7 @@ public class CommandProcessor {
     }
 
     private void handleModeQuery(Member requester) {
-        boolean announcement = prefs.getGroupMode() == Prefs.GroupMode.ANNOUNCEMENT;
-        reply(requester, context.getString(announcement
-                ? R.string.tpl_mode_status_announcement : R.string.tpl_mode_status_group));
+        reply(requester, context.getString(modeStatusStringRes(prefs.getGroupMode())));
     }
 
     private void handleModeChange(Member sender, String text) {
@@ -404,14 +406,28 @@ public class CommandProcessor {
             return;
         }
 
+        setGroupMode(newMode, sender.nickname, sender.id);
+        reply(sender, context.getString(modeStatusStringRes(newMode)));
+    }
+
+    /**
+     * Changes the group mode and notifies members. changedByLabel is either an admin's nickname or
+     * "An Admin". excludeId skips that member (the acting admin, who already knows via their own
+     * reply); pass -1 to notify every active member, e.g. when changed from the app's Settings
+     * screen or dashboard.
+     */
+    public void setGroupMode(Prefs.GroupMode newMode, String changedByLabel, long excludeId) {
         prefs.setGroupMode(newMode);
         boolean announcement = newMode == Prefs.GroupMode.ANNOUNCEMENT;
         String changeNotice = context.getString(announcement
-                ? R.string.tpl_mode_changed_announcement : R.string.tpl_mode_changed_group, sender.nickname);
-        broadcastExcept(sender.id, changeNotice, "SYSTEM");
-        reply(sender, context.getString(announcement
-                ? R.string.tpl_mode_status_announcement : R.string.tpl_mode_status_group));
+                ? R.string.tpl_mode_changed_announcement : R.string.tpl_mode_changed_group, changedByLabel);
+        broadcastExcept(excludeId, changeNotice, "SYSTEM");
         SmsSendService.start(context);
+    }
+
+    private int modeStatusStringRes(Prefs.GroupMode mode) {
+        return mode == Prefs.GroupMode.ANNOUNCEMENT
+                ? R.string.tpl_mode_status_announcement : R.string.tpl_mode_status_group;
     }
 
     private void handleJoinRequest(String senderE164, String text) {

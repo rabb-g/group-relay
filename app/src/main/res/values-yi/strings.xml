@@ -27,6 +27,9 @@
     <string name="stats_next_burst">די קומענדיקע פארזאמלונג אין %1$s (%2$d ידיעות)</string>
     <string name="badge_sending">שיקט…</string>
     <string name="badge_announcement_mode">אָנזאָג-מאָדוס</string>
+    <string name="badge_service_paused">סערוויס אָפּגעשטעלט</string>
+    <string name="menu_switch_to_announcement">אריבערגיין צו אָנזאָג-מאָדוס</string>
+    <string name="menu_switch_to_group">אריבערגיין צו גרופע-מאָדוס</string>
     <string name="send_group_message_shortcut">שיקן צו דער גרופע</string>
     <string name="recent_activity">לעצטע אקטיוויטעט</string>
     <string name="no_activity_yet">נאך קיין אקטיוויטעט נישטא.</string>
@@ -105,11 +108,13 @@
     <string name="section_daily_limit">טעגליכע גרענעץ</string>
     <string name="daily_limit_member_desc">בדרך-כלל ניצט דער מיטגליד נאר דער גרופעס געטיילטע טעגליכע גרענעץ. שאלטס דאס אן צו באגרענעצן אויך זיינע אייגענע ידיעות א טאג.</string>
     <string name="checkbox_custom_daily_limit">ניצן א באזונדער טעגליכע גרענעץ פאר דעם מיטגליד</string>
+    <string name="checkbox_daily_limit_unlimited">אומבאגרענעצט (קיין באזונדער גרענעץ נישטא)</string>
     <string name="label_daily_limit_value">ידיעות א טאג</string>
     <string name="hint_daily_limit_value">ידיעות א טאג</string>
     <string name="action_save_daily_limit">אָפּהיטן די טעגליכע גרענעץ</string>
     <string name="daily_limit_saved">די טעגליכע גרענעץ איז אָפּגעהיט געוואָרן.</string>
     <string name="tpl_daily_limit_usage">היינט: %1$d פון %2$d</string>
+    <string name="tpl_daily_limit_usage_unlimited">היינט: %1$d (אומבאגרענעצט)</string>
     <string name="daily_limit_not_customized">קיין באזונדער גרענעץ איז נישט געשטעלט פאר דעם מיטגליד (ער ניצט נאך אלץ דער גרופעס געטיילטע טעגליכע גרענעץ).</string>
     <string name="action_override_daily_limit">איבערשרייבן (+1 פאר היינט)</string>
     <string name="daily_limit_override_done">איין ידיעה איז צוגעלייגט געוואָרן פאר היינט.</string>
@@ -117,6 +122,24 @@
     <!-- Settings -->
     <string name="rate_limit_title">אײנשטעלונגען</string>
     <string name="action_view_license">ליצענץ</string>
+
+    <string name="section_pause_service">אָפּשטעלן דעם סערוויס</string>
+    <string name="pause_service_desc">שטעלט תיכף אָפּ אלע שיקן און אלע פראצעסירונג פון אריינקומענדיקע ידיעות ביז מ\'שטעלט עס ווידער אָן. אן אויסקלייב אונטן ווערט תיכף גילטיק.</string>
+    <string name="pause_option_not_paused">נישט אָפּגעשטעלט</string>
+    <string name="pause_option_10_seconds">אָפּשטעלן פאר 10 סעקונדעס</string>
+    <string name="pause_option_1_minute">אָפּשטעלן פאר איין מינוט</string>
+    <string name="pause_option_1_hour">אָפּשטעלן פאר איין שעה</string>
+    <string name="pause_option_1_day">אָפּשטעלן פאר איין טאג</string>
+    <string name="pause_option_until_unpaused">אָפּשטעלן ביז מ\'שטעלט ווידער אָן</string>
+    <string name="pause_status_not_paused">נישט אָפּגעשטעלט.</string>
+    <string name="pause_status_indefinite">אָפּגעשטעלט אָן א צייט-גרענעץ.</string>
+    <string name="pause_status_timed">אָפּגעשטעלט. שטעלט זיך ווידער אָן אין %1$s.</string>
+
+    <string name="section_group_mode">גרופע-מאָדוס</string>
+    <string name="group_mode_desc">גרופע-מאָדוס שיקט אריבער אלעמענס ידיעות ווי געוויינטליך. אָנזאָג-מאָדוס שיקט אריבער צו אלעמען נאר אדמין-ידיעות - אלע אנדערע\'ס ידיעות גייען נאר צו אדמינען. קען אויך ווערן געביטן דורך א מעסעדזש מיט #mode announcement / #mode group.</string>
+    <string name="group_mode_group">גרופע-מאָדוס</string>
+    <string name="group_mode_announcement">אָנזאָג-מאָדוס</string>
+
     <string name="section_staggering">צעטיילן דאס שיקן</string>
     <string name="staggering_desc">וואַרט צווישן פארזאמלונגען פון ארויסגייענדיקע ידיעות, אזוי אז ידיעות ווערן נישט אלע געשיקט אויף איין מאל.</string>
     <string name="checkbox_staggering_enabled">אָנשאלטן צעטיילן צווישן פארזאמלונגען</string>
@@ -235,6 +258,9 @@
 
     <string name="section_miscellaneous">פארשידענע</string>
 
+    <string name="section_about">וועגן</string>
+    <string name="tpl_app_version">jRelay %1$s (%2$d)</string>
+
     <!-- Clear History -->
     <string name="action_clear_history">אויסמעקן היסטאריע (%1$s)</string>
     <string name="clear_history_title">אויסמעקן היסטאריע?</string>
@@ -275,7 +301,7 @@
     <string name="tpl_unknown_command">אומבאקאנטער באפעל. ענטפערט #commands פאר א רשימה פון באפעלן.</string>
     <string name="tpl_invalid_number">דער טעלעפאן נומער איז נישט גילטיק.</string>
     <string name="tpl_relay_prefix">%1$s: %2$s</string>
-    <string name="tpl_admin_relay_prefix">[נאר פאר אדמינען, פון %1$s]: %2$s</string>
+    <string name="tpl_admin_relay_prefix">@admin %1$s: %2$s</string>
     <string name="tpl_dm_prefix">[אדמין]: %1$s</string>
     <string name="tpl_commands_list_common">פאראנע באפעלן:\n#commands - ווייזן די רשימה\n#mute - פארשטומען ידיעות\n#unmute - אָפּנעמען דעם שטום\n#stop - פארלאזן די גרופע\n#list - רשימה פון מיטגלידער\n#name &lt;נייער צונאמען&gt; - טוישן אייער צונאמען\n#admin &lt;ידיעה&gt; - א ידיעה נאר פאר אדמינען\n#mode - ווייזן דעם איצטיקן גרופע-מאָדוס\n#join &lt;צונאמען&gt; - בעטן זיך אנצושליסן (פאר נישט-מיטגלידער)</string>
     <string name="tpl_commands_list_admin_extra">\n(אדמינען) #add &lt;נומער&gt; &lt;צונאמען&gt; - צולייגן א מיטגליד\n(אדמינען) #remove &lt;צונאמען אָדער נומער&gt; - אַרויסנעמען א מיטגליד\n(אדמינען) #topic &lt;נייער נאמען&gt; - טוישן דעם נאמען פון דער גרופע\n(אדמינען) #limits - ווייזן דעם היינטיקן סטאטוס פון דער גרופעס גרענעץ\n(אדמינען) #override [צונאמען אָדער נומער] - צולייגן איין ידיעה צו דער גרופעס גרענעץ, אָדער צו א מיטגליד\'ס באזונדער גרענעץ\n(אדמינען) #mode announcement|group - טוישן צווישן אָנזאָג-מאָדוס און גרופע-מאָדוס</string>
