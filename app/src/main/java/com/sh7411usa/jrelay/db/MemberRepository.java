@@ -131,32 +131,6 @@ public class MemberRepository {
         db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
     }
 
-    /** Sets a custom send pace for this member, overriding the group default until cleared. */
-    public void setRateLimitOverride(long id, int burstMin, int burstMax, int minWait, int maxWait, boolean initialDelay) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues cv = new ContentValues();
-        cv.put("rate_limit_custom", 1);
-        cv.put("rate_burst_min", burstMin);
-        cv.put("rate_burst_max", burstMax);
-        cv.put("rate_min_wait", minWait);
-        cv.put("rate_max_wait", maxWait);
-        cv.put("rate_initial_delay", initialDelay ? 1 : 0);
-        db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
-    }
-
-    /** Reverts this member to the group's default send pacing. */
-    public void clearRateLimitOverride(long id) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues cv = new ContentValues();
-        cv.put("rate_limit_custom", 0);
-        cv.putNull("rate_burst_min");
-        cv.putNull("rate_burst_max");
-        cv.putNull("rate_min_wait");
-        cv.putNull("rate_max_wait");
-        cv.putNull("rate_initial_delay");
-        db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
-    }
-
     /** Sets a custom per-day relay cap for this member, independent of the shared group pool. */
     public void setDailyLimitOverride(long id, int value) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
@@ -226,12 +200,6 @@ public class MemberRepository {
         m.createdAt = c.getLong(c.getColumnIndexOrThrow("created_at"));
         int removedIdx = c.getColumnIndexOrThrow("removed_at");
         m.removedAt = c.isNull(removedIdx) ? null : c.getLong(removedIdx);
-        m.rateLimitCustom = c.getInt(c.getColumnIndexOrThrow("rate_limit_custom")) != 0;
-        m.rateBurstMin = getNullableInt(c, "rate_burst_min");
-        m.rateBurstMax = getNullableInt(c, "rate_burst_max");
-        m.rateMinWait = getNullableInt(c, "rate_min_wait");
-        m.rateMaxWait = getNullableInt(c, "rate_max_wait");
-        m.rateInitialDelay = getNullableInt(c, "rate_initial_delay");
         m.dailyLimitCustom = c.getInt(c.getColumnIndexOrThrow("daily_limit_custom")) != 0;
         m.dailyLimitValue = getNullableInt(c, "daily_limit_value");
         m.dailyLimitBonus = c.getInt(c.getColumnIndexOrThrow("daily_limit_bonus"));

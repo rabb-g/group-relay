@@ -37,6 +37,7 @@ public class MainActivity extends BaseActivity {
     private CommandProcessor commandProcessor;
 
     private TextView groupNameView;
+    private TextView announcementBadgeView;
     private TextView statsMembersView;
     private TextView statsAdminsView;
     private TextView statsMutedView;
@@ -74,6 +75,7 @@ public class MainActivity extends BaseActivity {
         commandProcessor = new CommandProcessor(this);
 
         groupNameView = findViewById(R.id.text_group_name);
+        announcementBadgeView = findViewById(R.id.badge_announcement_mode);
         statsMembersView = findViewById(R.id.text_stats_members);
         statsAdminsView = findViewById(R.id.text_stats_admins);
         statsMutedView = findViewById(R.id.text_stats_muted);
@@ -156,6 +158,8 @@ public class MainActivity extends BaseActivity {
 
     private void refreshQueueStatus() {
         groupNameView.setText(prefs.getGroupName());
+        announcementBadgeView.setVisibility(
+                prefs.getGroupMode() == Prefs.GroupMode.ANNOUNCEMENT ? View.VISIBLE : View.GONE);
         queueCountView.setText(String.valueOf(outboxRepository.countUnsent()));
 
         long nextBurstAt = SendQueueStatus.getNextBurstAtMillis();

@@ -15,6 +15,10 @@ public class Prefs {
 
     public enum ThemeChoice { SYSTEM, LIGHT, DARK }
 
+    public enum GroupMode { GROUP, ANNOUNCEMENT }
+
+    public enum JoinPolicy { OFF, ALLOW, REQUIRE_APPROVAL }
+
     public static final String LANGUAGE_SYSTEM = "system";
     public static final String LANGUAGE_ENGLISH = "en";
     public static final String LANGUAGE_HEBREW = "iw";
@@ -60,6 +64,10 @@ public class Prefs {
 
     private static final String KEY_LANGUAGE_CODE = "language_code";
     private static final String KEY_THEME_CHOICE = "theme_choice";
+
+    private static final String KEY_ADDED_REPORTING_ENABLED = "added_reporting_enabled";
+    private static final String KEY_GROUP_MODE = "group_mode";
+    private static final String KEY_JOIN_POLICY = "join_policy";
 
     private static final String DEFAULT_GROUP_NAME = "jRelay";
     private static final int DEFAULT_BURST_MIN = 3;
@@ -352,6 +360,31 @@ public class Prefs {
 
     public void setThemeChoice(ThemeChoice choice) {
         prefs.edit().putString(KEY_THEME_CHOICE, choice.name()).apply();
+    }
+
+    /** Whether adding a member (via #add or Add Member) sends the usual welcome/broadcast texts. CSV import always asks separately. */
+    public boolean isAddedReportingEnabled() {
+        return prefs.getBoolean(KEY_ADDED_REPORTING_ENABLED, true);
+    }
+
+    public void setAddedReportingEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_ADDED_REPORTING_ENABLED, enabled).apply();
+    }
+
+    public GroupMode getGroupMode() {
+        return parseEnum(prefs.getString(KEY_GROUP_MODE, null), GroupMode.class, GroupMode.GROUP);
+    }
+
+    public void setGroupMode(GroupMode mode) {
+        prefs.edit().putString(KEY_GROUP_MODE, mode.name()).apply();
+    }
+
+    public JoinPolicy getJoinPolicy() {
+        return parseEnum(prefs.getString(KEY_JOIN_POLICY, null), JoinPolicy.class, JoinPolicy.OFF);
+    }
+
+    public void setJoinPolicy(JoinPolicy policy) {
+        prefs.edit().putString(KEY_JOIN_POLICY, policy.name()).apply();
     }
 
     private <E extends Enum<E>> E parseEnum(String stored, Class<E> type, E defaultValue) {

@@ -26,6 +26,7 @@
     <string name="stats_queue_count">ידיעות אין ריי: %1$d</string>
     <string name="stats_next_burst">די קומענדיקע פארזאמלונג אין %1$s (%2$d ידיעות)</string>
     <string name="badge_sending">שיקט…</string>
+    <string name="badge_announcement_mode">אָנזאָג-מאָדוס</string>
     <string name="send_group_message_shortcut">שיקן צו דער גרופע</string>
     <string name="recent_activity">לעצטע אקטיוויטעט</string>
     <string name="no_activity_yet">נאך קיין אקטיוויטעט נישטא.</string>
@@ -58,6 +59,10 @@
     <string name="import_failed">דער אימפּאָרט איז נישט געלונגען.</string>
     <string name="hint_membership_search">זוכט לויט נאמען, טעלעפאן, אָדער \"admin\"</string>
     <string name="no_search_results">קיין מיטגלידער שטימען נישט צו דעם זוכן.</string>
+    <string name="csv_import_report_title">מודעה וועגן די אימפּאָרטירטע מיטגלידער?</string>
+    <string name="csv_import_report_usual">געוויינטליך (מודעה צו אלעמען, ווי מ\'לייגט צו איינציקווייז)</string>
+    <string name="csv_import_report_streamlined">פארקירצט (זאָגן די אלטע מיטגלידער נאר ווי פיל האבן זיך אנגעשלאסן)</string>
+    <string name="csv_import_report_none">אָן מודעה (צולייגן שטיל)</string>
 
     <!-- Add Member -->
     <string name="add_member_title">צולייגן א מיטגליד</string>
@@ -93,12 +98,8 @@
     <string name="confirm_remove_title">אַרויסנעמען דעם מיטגליד?</string>
     <string name="confirm_remove_message">אַרויסנעמען %1$s פון דער גרופע? זיי וועלן באקומען א מודעה.</string>
 
-    <!-- Member Detail: Send Pacing override -->
-    <string name="rate_limit_member_section">שיקן-טעמפּא</string>
-    <string name="rate_limit_member_desc">בדרך-כלל ניצט דער מיטגליד דער גרופעס שיקן-טעמפּא. שאלטס דאס אן צו שטעלן א באזונדער טעמפּא נאר פאר דעם מיטגליד.</string>
-    <string name="checkbox_custom_rate_limit">ניצן א באזונדער שיקן-טעמפּא פאר דעם מיטגליד</string>
-    <string name="action_save_rate_limit">אָפּהיטן דעם שיקן-טעמפּא</string>
-    <string name="rate_limit_member_saved">דער שיקן-טעמפּא איז אָפּגעהיט געוואָרן.</string>
+    <!-- Generic settings-saved confirmation, reused across several Settings sections -->
+    <string name="rate_limit_member_saved">אָפּגעהיט.</string>
 
     <!-- Member Detail: Daily Limit override -->
     <string name="section_daily_limit">טעגליכע גרענעץ</string>
@@ -119,8 +120,8 @@
     <string name="section_staggering">צעטיילן דאס שיקן</string>
     <string name="staggering_desc">וואַרט צווישן פארזאמלונגען פון ארויסגייענדיקע ידיעות, אזוי אז ידיעות ווערן נישט אלע געשיקט אויף איין מאל.</string>
     <string name="checkbox_staggering_enabled">אָנשאלטן צעטיילן צווישן פארזאמלונגען</string>
-    <string name="rate_limit_app_section">גרופעס גרונט-שיקן-טעמפּא</string>
-    <string name="rate_limit_app_desc">גילט פאר יעדן מיטגליד וואס האט נישט קיין באזונדער טעמפּא געשטעלט אויף זיין אייגענעם בלאט.</string>
+    <string name="rate_limit_app_section">שיקן-טעמפּא</string>
+    <string name="rate_limit_app_desc">גילט גלאבאל פאר יעדער איבערגעשיקטער ידיעה. קען נישט זיין באזונדער פאר יעדן מיטגליד.</string>
     <string name="label_burst_min">מינימום ידיעות א פארזאמלונג</string>
     <string name="label_burst_max">מאקסימום ידיעות א פארזאמלונג</string>
     <string name="label_min_wait">מינימום וואַרטן צווישן פארזאמלונגען (סעקונדעס)</string>
@@ -153,6 +154,17 @@
     <string name="section_delivery_shuffle">צעמישן די סדר פון שיקן</string>
     <string name="delivery_shuffle_desc">שיקט ידיעות צו מיטגלידער אין א צופעליקער סדר יעדעס מאל, אנשטאט אן איבערחזרנדיקע סדר.</string>
     <string name="checkbox_delivery_shuffle">צעמישן די סדר פון שיקן</string>
+
+    <string name="section_member_reporting">מודעה וועגן נייע מיטגלידער</string>
+    <string name="member_reporting_desc">גילט פאר #add און פארן \"צולייגן א מיטגליד\" בלאט. אימפּאָרטירן פון CSV פרעגט תמיד באזונדער.</string>
+    <string name="checkbox_added_reporting_enabled">מודעה צו דער גרופע ווען א מיטגליד ווערט צוגעלייגט</string>
+
+    <string name="section_join_requests">בקשות זיך אנצושליסן</string>
+    <string name="join_requests_desc">לאזט יעדן שיקן #join &lt;צונאמען&gt; צו דעם נומער כדי צו בעטן זיך אנצושליסן צו דער גרופע. בדרך-כלל אָפּגעשאלטן.</string>
+    <string name="label_join_policy">דערלויבן זיך אנצושליסן דורך א מעסעדזש</string>
+    <string name="join_policy_off">אָפּגעשאלטן</string>
+    <string name="join_policy_allow">דערלויבט</string>
+    <string name="join_policy_require_approval">פארלאנגט באשטעטיקונג</string>
 
     <string name="section_message_content">אינהאלט פון דער ידיעה</string>
     <string name="checkbox_append_sender_number">צולייגן דעם שיקערס נומער צו איבערגעשיקטע ידיעות</string>
@@ -203,8 +215,9 @@
     <string name="label_system_interval_minutes">אינטערוואל (מינוט)</string>
     <string name="hint_system_max_count">צאל</string>
     <string name="hint_system_interval_minutes">מינוט</string>
-    <string name="rate_limit_permission_missing">jRelay האט נישט קיין רשות צו טוישן די סיסטעם-אײנשטעלונג. פירט אויס דעם באפעל פון א קאמפיוטער מיט ADB, בעת דער מכשיר איז פארבונדן:</string>
+    <string name="rate_limit_permission_missing">jRelay האט נישט קיין רשות צו טוישן די סיסטעם-אײנשטעלונג. פירט אויס דעם באפעל פון א קאמפיוטער מיט ADB, בעת דער מכשיר איז פארבונדן. דריקט צו קאפירן:</string>
     <string name="rate_limit_value_unavailable">נישט פאראן אויף דעם מכשיר</string>
+    <string name="toast_adb_command_copied">דער באפעל איז קאפירט געוואָרן.</string>
 
     <string name="section_language">שפראך</string>
     <string name="label_language">אפליקאציע שפראך</string>
@@ -264,8 +277,8 @@
     <string name="tpl_relay_prefix">%1$s: %2$s</string>
     <string name="tpl_admin_relay_prefix">[נאר פאר אדמינען, פון %1$s]: %2$s</string>
     <string name="tpl_dm_prefix">[אדמין]: %1$s</string>
-    <string name="tpl_commands_list_common">פאראנע באפעלן:\n#commands - ווייזן די רשימה\n#mute - פארשטומען ידיעות\n#unmute - אָפּנעמען דעם שטום\n#stop - פארלאזן די גרופע\n#list - רשימה פון מיטגלידער\n#name &lt;נייער צונאמען&gt; - טוישן אייער צונאמען\n#admin &lt;ידיעה&gt; - א ידיעה נאר פאר אדמינען</string>
-    <string name="tpl_commands_list_admin_extra">\n(אדמינען) #add &lt;נומער&gt; &lt;צונאמען&gt; - צולייגן א מיטגליד\n(אדמינען) #remove &lt;צונאמען אָדער נומער&gt; - אַרויסנעמען א מיטגליד\n(אדמינען) #topic &lt;נייער נאמען&gt; - טוישן דעם נאמען פון דער גרופע\n(אדמינען) #limits - ווייזן דעם היינטיקן סטאטוס פון דער גרופעס גרענעץ\n(אדמינען) #override [צונאמען אָדער נומער] - צולייגן איין ידיעה צו דער גרופעס גרענעץ, אָדער צו א מיטגליד\'ס באזונדער גרענעץ</string>
+    <string name="tpl_commands_list_common">פאראנע באפעלן:\n#commands - ווייזן די רשימה\n#mute - פארשטומען ידיעות\n#unmute - אָפּנעמען דעם שטום\n#stop - פארלאזן די גרופע\n#list - רשימה פון מיטגלידער\n#name &lt;נייער צונאמען&gt; - טוישן אייער צונאמען\n#admin &lt;ידיעה&gt; - א ידיעה נאר פאר אדמינען\n#mode - ווייזן דעם איצטיקן גרופע-מאָדוס\n#join &lt;צונאמען&gt; - בעטן זיך אנצושליסן (פאר נישט-מיטגלידער)</string>
+    <string name="tpl_commands_list_admin_extra">\n(אדמינען) #add &lt;נומער&gt; &lt;צונאמען&gt; - צולייגן א מיטגליד\n(אדמינען) #remove &lt;צונאמען אָדער נומער&gt; - אַרויסנעמען א מיטגליד\n(אדמינען) #topic &lt;נייער נאמען&gt; - טוישן דעם נאמען פון דער גרופע\n(אדמינען) #limits - ווייזן דעם היינטיקן סטאטוס פון דער גרופעס גרענעץ\n(אדמינען) #override [צונאמען אָדער נומער] - צולייגן איין ידיעה צו דער גרופעס גרענעץ, אָדער צו א מיטגליד\'ס באזונדער גרענעץ\n(אדמינען) #mode announcement|group - טוישן צווישן אָנזאָג-מאָדוס און גרופע-מאָדוס</string>
     <string name="tpl_list_you">(איר)</string>
     <string name="tpl_list_admin">(אדמין)</string>
     <string name="default_added_by_admin">אן אדמין</string>
@@ -281,4 +294,21 @@
 
     <!-- Failure alert -->
     <string name="tpl_failure_alert">@system: %1$s האט געהאט %2$d נישט-געלונגענע ידיעות.</string>
+
+    <!-- Announcement / Group mode -->
+    <string name="tpl_mode_status_announcement">אָנזאָג-מאָדוס איז אָנגעשאלטן: נאר אדמין-ידיעות ווערן איבערגעשיקט צו אלעמען. אלע אנדערע\'ס ידיעות גייען נאר צו אדמינען.</string>
+    <string name="tpl_mode_status_group">גרופע-מאָדוס איז אָנגעשאלטן: אלעמענס ידיעות ווערן איבערגעשיקט צו דער גרופע.</string>
+    <string name="tpl_mode_invalid">ניצן: #mode announcement אָדער #mode group</string>
+    <string name="tpl_mode_changed_announcement">%1$s האט אריבערגעשטעלט די גרופע אויף אָנזאָג-מאָדוס. פון איצט אן וועלן נאר אדמין-ידיעות ווערן איבערגעשיקט צו אלעמען.</string>
+    <string name="tpl_mode_changed_group">%1$s האט צוריקגעשטעלט די גרופע אויף גרופע-מאָדוס. אלעמענס ידיעות וועלן ווידער ווערן איבערגעשיקט.</string>
+
+    <!-- Joining by text (#join) -->
+    <string name="tpl_added_you_self">איר האט זיך אנגעשלאסן צו דער %1$s גרופע. ענטפערט #stop כדי אַרויסצוטרעטן.</string>
+    <string name="tpl_joined_other">%1$s האט זיך אנגעשלאסן צו דער גרופע.</string>
+    <string name="tpl_join_already_member">איר זענט שוין א מיטגליד פון דער גרופע.</string>
+    <string name="tpl_join_request_admin">%1$s (%2$s) וויל זיך אנשליסן. ענטפערט: %3$s</string>
+    <string name="tpl_join_request_sent">אייער בקשה זיך אנצושליסן איז געשיקט געוואָרן צו די אדמינען.</string>
+
+    <!-- CSV import reporting -->
+    <string name="tpl_csv_import_streamlined_notice">%1$s האט צוגעלייגט %2$d נייע מיטגלידער.</string>
 </resources>

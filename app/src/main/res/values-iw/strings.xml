@@ -26,6 +26,7 @@
     <string name="stats_queue_count">הודעות בתור: %1$d</string>
     <string name="stats_next_burst">המנה הבאה בעוד %1$s (%2$d הודעות)</string>
     <string name="badge_sending">בשליחה…</string>
+    <string name="badge_announcement_mode">מצב הכרזה</string>
     <string name="send_group_message_shortcut">שליחה לקבוצה</string>
     <string name="recent_activity">פעילות אחרונה</string>
     <string name="no_activity_yet">אין פעילות עדיין.</string>
@@ -58,6 +59,10 @@
     <string name="import_failed">הייבוא נכשל.</string>
     <string name="hint_membership_search">חיפוש לפי שם, טלפון או \"admin\"</string>
     <string name="no_search_results">אין חברים התואמים לחיפוש.</string>
+    <string name="csv_import_report_title">לדווח על החברים המיובאים?</string>
+    <string name="csv_import_report_usual">רגיל (הודעה לכולם, כמו הוספה אחת בכל פעם)</string>
+    <string name="csv_import_report_streamlined">מקוצר (לספר לחברים הוותיקים כמה הצטרפו)</string>
+    <string name="csv_import_report_none">ללא דיווח (הוספה שקטה)</string>
 
     <!-- Add Member -->
     <string name="add_member_title">הוספת חבר</string>
@@ -93,12 +98,8 @@
     <string name="confirm_remove_title">להסיר את החבר?</string>
     <string name="confirm_remove_message">להסיר את %1$s מהקבוצה? הם יקבלו הודעה על כך.</string>
 
-    <!-- Member Detail: Send Pacing override -->
-    <string name="rate_limit_member_section">קצב שליחה</string>
-    <string name="rate_limit_member_desc">כברירת מחדל חבר זה משתמש בקצב השליחה של הקבוצה. הפעילו כדי להגדיר קצב מותאם אישית לחבר זה בלבד.</string>
-    <string name="checkbox_custom_rate_limit">שימוש בקצב שליחה מותאם אישית לחבר זה</string>
-    <string name="action_save_rate_limit">שמירת קצב שליחה</string>
-    <string name="rate_limit_member_saved">קצב השליחה נשמר.</string>
+    <!-- Generic settings-saved confirmation, reused across several Settings sections -->
+    <string name="rate_limit_member_saved">נשמר.</string>
 
     <!-- Member Detail: Daily Limit override -->
     <string name="section_daily_limit">מגבלה יומית</string>
@@ -119,8 +120,8 @@
     <string name="section_staggering">פיזור שליחה</string>
     <string name="staggering_desc">המתנה בין מנות של הודעות יוצאות כך שההודעות לא נשלחות כולן בבת אחת.</string>
     <string name="checkbox_staggering_enabled">הפעלת פיזור בין מנות שליחה</string>
-    <string name="rate_limit_app_section">קצב שליחה - ברירת מחדל של הקבוצה</string>
-    <string name="rate_limit_app_desc">חל על כל חבר שאין לו קצב מותאם אישית במסך החבר שלו.</string>
+    <string name="rate_limit_app_section">קצב שליחה</string>
+    <string name="rate_limit_app_desc">חל גלובלית על כל הודעה מועברת. לא ניתן להגדיר בנפרד לכל חבר.</string>
     <string name="label_burst_min">מספר הודעות מינימלי במנה</string>
     <string name="label_burst_max">מספר הודעות מקסימלי במנה</string>
     <string name="label_min_wait">המתנה מינימלית בין מנות (שניות)</string>
@@ -153,6 +154,17 @@
     <string name="section_delivery_shuffle">ערבוב סדר המשלוח</string>
     <string name="delivery_shuffle_desc">שולח הודעות לחברים בסדר אקראי בכל מחזור, במקום בסדר חוזר.</string>
     <string name="checkbox_delivery_shuffle">ערבוב סדר המשלוח</string>
+
+    <string name="section_member_reporting">דיווח על חברים חדשים</string>
+    <string name="member_reporting_desc">חל על #add ועל מסך הוספת חבר. ייבוא CSV תמיד שואל בנפרד.</string>
+    <string name="checkbox_added_reporting_enabled">הודעה לקבוצה כשמתווסף חבר</string>
+
+    <string name="section_join_requests">בקשות הצטרפות</string>
+    <string name="join_requests_desc">מאפשר לכל אחד לשלוח #join &lt;כינוי&gt; למספר זה כדי לבקש להצטרף לקבוצה. כברירת מחדל כבוי.</string>
+    <string name="label_join_policy">אפשור הצטרפות באמצעות מסרון</string>
+    <string name="join_policy_off">כבוי</string>
+    <string name="join_policy_allow">מותר</string>
+    <string name="join_policy_require_approval">דורש אישור</string>
 
     <string name="section_message_content">תוכן ההודעה</string>
     <string name="checkbox_append_sender_number">הוספת מספר השולח להודעות מועברות</string>
@@ -203,8 +215,9 @@
     <string name="label_system_interval_minutes">מרווח זמן (דקות)</string>
     <string name="hint_system_max_count">כמות</string>
     <string name="hint_system_interval_minutes">דקות</string>
-    <string name="rate_limit_permission_missing">ל-jRelay אין הרשאה לשנות הגדרת מערכת זו. הריצו פקודה זו ממחשב עם ADB, כשהמכשיר מחובר:</string>
+    <string name="rate_limit_permission_missing">ל-jRelay אין הרשאה לשנות הגדרת מערכת זו. הריצו פקודה זו ממחשב עם ADB, כשהמכשיר מחובר. הקישו כדי להעתיק:</string>
     <string name="rate_limit_value_unavailable">לא זמין במכשיר זה</string>
+    <string name="toast_adb_command_copied">הפקודה הועתקה ללוח.</string>
 
     <string name="section_language">שפה</string>
     <string name="label_language">שפת האפליקציה</string>
@@ -264,8 +277,8 @@
     <string name="tpl_relay_prefix">%1$s: %2$s</string>
     <string name="tpl_admin_relay_prefix">[הודעה למנהלים בלבד מאת %1$s]: %2$s</string>
     <string name="tpl_dm_prefix">[מנהל]: %1$s</string>
-    <string name="tpl_commands_list_common">פקודות זמינות:\n#commands - הצגת רשימה זו\n#mute - השתקת הודעות\n#unmute - ביטול השתקה\n#stop - עזיבת הקבוצה\n#list - רשימת חברים\n#name &lt;כינוי חדש&gt; - שינוי הכינוי שלך\n#admin &lt;הודעה&gt; - הודעה למנהלים בלבד</string>
-    <string name="tpl_commands_list_admin_extra">\n(מנהלים) #add &lt;מספר&gt; &lt;כינוי&gt; - הוספת חבר\n(מנהלים) #remove &lt;כינוי או מספר&gt; - הסרת חבר\n(מנהלים) #topic &lt;שם חדש&gt; - שינוי שם הקבוצה\n(מנהלים) #limits - הצגת מצב המגבלה היומית של הקבוצה\n(מנהלים) #override [כינוי או מספר] - הוספת הודעה אחת למגבלת הקבוצה, או למגבלה האישית של חבר</string>
+    <string name="tpl_commands_list_common">פקודות זמינות:\n#commands - הצגת רשימה זו\n#mute - השתקת הודעות\n#unmute - ביטול השתקה\n#stop - עזיבת הקבוצה\n#list - רשימת חברים\n#name &lt;כינוי חדש&gt; - שינוי הכינוי שלך\n#admin &lt;הודעה&gt; - הודעה למנהלים בלבד\n#mode - הצגת מצב הקבוצה הנוכחי\n#join &lt;כינוי&gt; - בקשה להצטרף (למי שאינם חברים)</string>
+    <string name="tpl_commands_list_admin_extra">\n(מנהלים) #add &lt;מספר&gt; &lt;כינוי&gt; - הוספת חבר\n(מנהלים) #remove &lt;כינוי או מספר&gt; - הסרת חבר\n(מנהלים) #topic &lt;שם חדש&gt; - שינוי שם הקבוצה\n(מנהלים) #limits - הצגת מצב המגבלה היומית של הקבוצה\n(מנהלים) #override [כינוי או מספר] - הוספת הודעה אחת למגבלת הקבוצה, או למגבלה האישית של חבר\n(מנהלים) #mode announcement|group - מעבר בין מצב הכרזה למצב קבוצה</string>
     <string name="tpl_list_you">(את/ה)</string>
     <string name="tpl_list_admin">(מנהל)</string>
     <string name="default_added_by_admin">מנהל</string>
@@ -281,4 +294,21 @@
 
     <!-- Failure alert -->
     <string name="tpl_failure_alert">@system: ל-%1$s היו %2$d הודעות שנכשלו.</string>
+
+    <!-- Announcement / Group mode -->
+    <string name="tpl_mode_status_announcement">מצב הכרזה פעיל: רק הודעות מנהלים מועברות לכולם. הודעות של כל האחרים מגיעות רק למנהלים.</string>
+    <string name="tpl_mode_status_group">מצב קבוצה פעיל: הודעות כולם מועברות לקבוצה.</string>
+    <string name="tpl_mode_invalid">שימוש: #mode announcement או #mode group</string>
+    <string name="tpl_mode_changed_announcement">%1$s העביר/ה את הקבוצה למצב הכרזה. מעתה רק הודעות מנהלים יועברו לכולם.</string>
+    <string name="tpl_mode_changed_group">%1$s החזיר/ה את הקבוצה למצב קבוצה. הודעות כולם יועברו שוב.</string>
+
+    <!-- Joining by text (#join) -->
+    <string name="tpl_added_you_self">הצטרפת לקבוצת %1$s. השיבו #stop בכל עת כדי לצאת.</string>
+    <string name="tpl_joined_other">%1$s הצטרף/ה לקבוצה.</string>
+    <string name="tpl_join_already_member">אתם כבר חברים בקבוצה זו.</string>
+    <string name="tpl_join_request_admin">%1$s (%2$s) מבקש/ת להצטרף. השיבו: %3$s</string>
+    <string name="tpl_join_request_sent">בקשת ההצטרפות שלך נשלחה למנהלים.</string>
+
+    <!-- CSV import reporting -->
+    <string name="tpl_csv_import_streamlined_notice">%1$s הוסיף/ה %2$d חברים חדשים.</string>
 </resources>

@@ -41,4 +41,11 @@
         <item>@string/language_hebrew</item>
         <item>@string/language_yiddish</item>
     </string-array>
+
+    <!-- Order matches Prefs.JoinPolicy -->
+    <string-array name="join_policy_options">
+        <item>@string/join_policy_off</item>
+        <item>@string/join_policy_allow</item>
+        <item>@string/join_policy_require_approval</item>
+    </string-array>
 </resources>

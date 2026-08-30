@@ -33,6 +33,15 @@ public class CommandProcessor {
 
     /** Entry point for an inbound SMS from an already-normalized sender number. */
     public void handleIncoming(String senderE164, String body) {
+        String trimmed = body == null ? "" : body.trim();
+
+        // #join is the one command a non-member can use, so it's checked before the member lookup below.
+        if (trimmed.toLowerCase().startsWith("#join")) {
+            handleJoinRequest(senderE164, trimmed);
+            SmsSendService.start(context);
+            return;
+        }
+
         Member sender = memberRepository.findByPhone(senderE164);
         if (sender == null || !sender.active) {
             return;
@@ -40,7 +49,6 @@ public class CommandProcessor {
 
         messageRepository.log(sender.id, "IN", "RELAY", body);
 
-        String trimmed = body == null ? "" : body.trim();
         if (trimmed.startsWith("#")) {
             handleCommand(sender, trimmed);
         } else if (!sender.isMuted) {
@@ -78,6 +86,10 @@ public class CommandProcessor {
             handleLimits(sender);
         } else if (lower.startsWith("#override")) {
             handleOverride(sender, text);
+        } else if (lower.equals("#mode")) {
+            handleModeQuery(sender);
+        } else if (lower.startsWith("#mode")) {
+            handleModeChange(sender, text);
         } else {
             reply(sender, context.getString(R.string.tpl_unknown_command));
         }
@@ -148,6 +160,11 @@ public class CommandProcessor {
         if (message.isEmpty()) {
             return;
         }
+        sendToAdminsOnly(sender, message);
+    }
+
+    /** Formats `message` as coming from `sender` and delivers it only to admins (used by #admin and Announcement mode). */
+    private void sendToAdminsOnly(Member sender, String message) {
         String formatted = context.getString(R.string.tpl_admin_relay_prefix, sender.nickname, message);
         List<Member> admins = memberRepository.getActiveAdmins();
         for (Member admin : admins) {
@@ -191,22 +208,69 @@ public class CommandProcessor {
         addMember(normalized, nickname, sender.nickname);
     }
 
-    /** Adds a member and sends the standard welcome/broadcast messages. addedByLabel is either an admin's nickname or "An Admin". */
-    public void addMember(String normalizedPhone, String nickname, String addedByLabel) {
+    private Member insertOrReactivateMember(String normalizedPhone, String nickname, String addedBy) {
         Member existing = memberRepository.findByPhone(normalizedPhone);
         long id;
         if (existing != null && !existing.active) {
-            memberRepository.reactivate(existing.id, nickname, addedByLabel);
+            memberRepository.reactivate(existing.id, nickname, addedBy);
             id = existing.id;
         } else {
-            id = memberRepository.insert(normalizedPhone, nickname, false, addedByLabel);
+            id = memberRepository.insert(normalizedPhone, nickname, false, addedBy);
         }
-        Member newMember = memberRepository.findById(id);
-        String groupName = prefs.getGroupName();
-        enqueue(newMember, context.getString(R.string.tpl_added_you, addedByLabel, groupName), "SYSTEM");
-        broadcastExcept(id, context.getString(R.string.tpl_added_other, addedByLabel, nickname));
+        return memberRepository.findById(id);
+    }
+
+    /**
+     * Adds a member and, if member-added reporting is enabled, sends the standard welcome/broadcast
+     * messages. addedByLabel is either an admin's nickname or "An Admin". CSV import uses
+     * {@link #importMembers} instead, which always asks the caller for a reporting mode rather than
+     * following this toggle.
+     */
+    public void addMember(String normalizedPhone, String nickname, String addedByLabel) {
+        Member newMember = insertOrReactivateMember(normalizedPhone, nickname, addedByLabel);
+        if (prefs.isAddedReportingEnabled()) {
+            String groupName = prefs.getGroupName();
+            enqueue(newMember, context.getString(R.string.tpl_added_you, addedByLabel, groupName), "SYSTEM");
+            broadcastExcept(newMember.id, context.getString(R.string.tpl_added_other, addedByLabel, nickname));
+        }
         SmsSendService.start(context);
     }
+
+    /**
+     * Adds every (phone, nickname) pair as a member in one go (CSV import), with an explicit
+     * reporting style chosen by the caller for this import: USUAL notifies exactly as an individual
+     * #add would per row, STREAMLINED tells only the new members individually plus one combined
+     * notice to everyone who was already a member, NONE adds everyone silently. Returns how many
+     * rows were added.
+     */
+    public int importMembers(List<String[]> phoneNicknamePairs, String addedByLabel, ImportReportingMode mode) {
+        List<Member> preExistingMembers = memberRepository.getActiveMembers();
+        int count = 0;
+        for (String[] pair : phoneNicknamePairs) {
+            Member newMember = insertOrReactivateMember(pair[0], pair[1], addedByLabel);
+            count++;
+            if (mode == ImportReportingMode.USUAL) {
+                String groupName = prefs.getGroupName();
+                enqueue(newMember, context.getString(R.string.tpl_added_you, addedByLabel, groupName), "SYSTEM");
+                broadcastExcept(newMember.id, context.getString(R.string.tpl_added_other, addedByLabel, pair[1]));
+            } else if (mode == ImportReportingMode.STREAMLINED) {
+                String groupName = prefs.getGroupName();
+                enqueue(newMember, context.getString(R.string.tpl_added_you, addedByLabel, groupName), "SYSTEM");
+            }
+        }
+        if (mode == ImportReportingMode.STREAMLINED && count > 0) {
+            String message = context.getString(R.string.tpl_csv_import_streamlined_notice, addedByLabel, count);
+            for (Member m : preExistingMembers) {
+                if (!m.isMuted) {
+                    enqueue(m, message, "SYSTEM");
+                }
+            }
+        }
+        SmsSendService.start(context);
+        return count;
+    }
+
+    public enum ImportReportingMode { USUAL, STREAMLINED, NONE }
 
     private void handleRemove(Member sender, String text) {
         if (!sender.isAdmin) {
@@ -318,6 +382,96 @@ public class CommandProcessor {
         return DateFormat.format("h:mm a", resetAtMillis).toString();
     }
 
+    private void handleModeQuery(Member requester) {
+        boolean announcement = prefs.getGroupMode() == Prefs.GroupMode.ANNOUNCEMENT;
+        reply(requester, context.getString(announcement
+                ? R.string.tpl_mode_status_announcement : R.string.tpl_mode_status_group));
+    }
+
+    private void handleModeChange(Member sender, String text) {
+        if (!sender.isAdmin) {
+            reply(sender, context.getString(R.string.tpl_unauthorized));
+            return;
+        }
+        String arg = stripLeadingWord(text).trim().toLowerCase();
+        Prefs.GroupMode newMode;
+        if (arg.equals("announcement")) {
+            newMode = Prefs.GroupMode.ANNOUNCEMENT;
+        } else if (arg.equals("group")) {
+            newMode = Prefs.GroupMode.GROUP;
+        } else {
+            reply(sender, context.getString(R.string.tpl_mode_invalid));
+            return;
+        }
+
+        prefs.setGroupMode(newMode);
+        boolean announcement = newMode == Prefs.GroupMode.ANNOUNCEMENT;
+        String changeNotice = context.getString(announcement
+                ? R.string.tpl_mode_changed_announcement : R.string.tpl_mode_changed_group, sender.nickname);
+        broadcastExcept(sender.id, changeNotice, "SYSTEM");
+        reply(sender, context.getString(announcement
+                ? R.string.tpl_mode_status_announcement : R.string.tpl_mode_status_group));
+        SmsSendService.start(context);
+    }
+
+    private void handleJoinRequest(String senderE164, String text) {
+        Member existing = memberRepository.findByPhone(senderE164);
+        if (existing != null && existing.active) {
+            reply(existing, context.getString(R.string.tpl_join_already_member));
+            return;
+        }
+
+        messageRepository.log(null, "IN", "SYSTEM", text);
+
+        Prefs.JoinPolicy policy = prefs.getJoinPolicy();
+        if (policy == Prefs.JoinPolicy.OFF) {
+            return;
+        }
+
+        String nickname = stripLeadingWord(text).trim();
+        if (nickname.isEmpty()) {
+            nickname = MessageSalt.localDigits(senderE164);
+        }
+
+        if (policy == Prefs.JoinPolicy.ALLOW) {
+            selfJoin(senderE164, nickname);
+        } else {
+            requestJoinApproval(senderE164, nickname);
+        }
+    }
+
+    /** A non-member added themselves via #join with JoinPolicy.ALLOW. */
+    public void selfJoin(String normalizedPhone, String nickname) {
+        Member newMember = insertOrReactivateMember(normalizedPhone, nickname, nickname);
+        if (prefs.isAddedReportingEnabled()) {
+            String groupName = prefs.getGroupName();
+            enqueue(newMember, context.getString(R.string.tpl_added_you_self, groupName), "SYSTEM");
+            broadcastExcept(newMember.id, context.getString(R.string.tpl_joined_other, nickname));
+        }
+        SmsSendService.start(context);
+    }
+
+    /** JoinPolicy.REQUIRE_APPROVAL: no membership is created; admins get a ready-to-forward #add command. */
+    private void requestJoinApproval(String senderE164, String nickname) {
+        String suggestedCommand = "#add " + senderE164 + " " + nickname;
+        String adminMessage = context.getString(R.string.tpl_join_request_admin, nickname, senderE164, suggestedCommand);
+        List<Member> admins = memberRepository.getActiveAdmins();
+        for (Member admin : admins) {
+            if (admin.isMuted) {
+                continue;
+            }
+            enqueue(admin, adminMessage, "SYSTEM");
+        }
+        NotificationHelper.showAdminMessage(context, adminMessage);
+        replyToNumber(senderE164, context.getString(R.string.tpl_join_request_sent));
+    }
+
+    /** Replies to a phone number that isn't (yet) a member, so it can't go through enqueue(Member, ...). */
+    private void replyToNumber(String phoneE164, String message) {
+        outboxRepository.enqueue(null, phoneE164, message);
+        messageRepository.log(null, "OUT", "SYSTEM", message);
+    }
+
     /** Notifies admins that a member has repeatedly failed to receive messages, e.g. their number may be bad. */
     public void alertAdminsOfFailures(Member target, int failedCount) {
         String formatted = context.getString(R.string.tpl_failure_alert, target.nickname, failedCount);
@@ -350,6 +504,11 @@ public class CommandProcessor {
     }
 
     private void relayPlainMessage(Member sender, String body) {
+        if (prefs.getGroupMode() == Prefs.GroupMode.ANNOUNCEMENT && !sender.isAdmin) {
+            sendToAdminsOnly(sender, body);
+            return;
+        }
+
         DailyLimitManager limitManager = new DailyLimitManager(context);
 
         DailyLimitManager.Status groupStatus = limitManager.groupStatus();

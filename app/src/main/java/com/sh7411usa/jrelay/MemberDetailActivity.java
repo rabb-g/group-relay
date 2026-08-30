@@ -24,6 +24,7 @@ import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.PhoneNumberUtils;
 import com.sh7411usa.jrelay.util.DailyLimitManager;
 import com.sh7411usa.jrelay.util.Prefs;
+import com.sh7411usa.jrelay.util.UiUtil;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -49,14 +50,6 @@ public class MemberDetailActivity extends BaseActivity {
     private LinearLayout activityContainer;
     private Button adminButton;
     private Button muteButton;
-
-    private CheckBox customRateLimitCheckbox;
-    private LinearLayout rateLimitFieldsContainer;
-    private EditText rateBurstMinInput;
-    private EditText rateBurstMaxInput;
-    private EditText rateMinWaitInput;
-    private EditText rateMaxWaitInput;
-    private CheckBox rateInitialDelayCheckbox;
 
     private CheckBox customDailyLimitCheckbox;
     private LinearLayout dailyLimitFieldsContainer;
@@ -86,14 +79,6 @@ public class MemberDetailActivity extends BaseActivity {
         adminButton = findViewById(R.id.button_toggle_admin);
         muteButton = findViewById(R.id.button_toggle_mute);
 
-        customRateLimitCheckbox = findViewById(R.id.checkbox_custom_rate_limit);
-        rateLimitFieldsContainer = findViewById(R.id.container_rate_limit_fields);
-        rateBurstMinInput = findViewById(R.id.edit_member_burst_min);
-        rateBurstMaxInput = findViewById(R.id.edit_member_burst_max);
-        rateMinWaitInput = findViewById(R.id.edit_member_min_wait);
-        rateMaxWaitInput = findViewById(R.id.edit_member_max_wait);
-        rateInitialDelayCheckbox = findViewById(R.id.checkbox_member_initial_delay);
-
         customDailyLimitCheckbox = findViewById(R.id.checkbox_custom_daily_limit);
         dailyLimitFieldsContainer = findViewById(R.id.container_daily_limit_fields);
         dailyLimitValueInput = findViewById(R.id.edit_daily_limit_value);
@@ -115,10 +100,6 @@ public class MemberDetailActivity extends BaseActivity {
         findViewById(R.id.button_export_contact).setOnClickListener(v -> exportContact());
         findViewById(R.id.button_call).setOnClickListener(v -> callMember());
         findViewById(R.id.button_text).setOnClickListener(v -> textMember());
-
-        customRateLimitCheckbox.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) ->
-                rateLimitFieldsContainer.setVisibility(isChecked ? View.VISIBLE : View.GONE));
-        findViewById(R.id.button_save_rate_limit).setOnClickListener(v -> saveRateLimit());
 
         customDailyLimitCheckbox.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) ->
                 dailyLimitFieldsContainer.setVisibility(isChecked ? View.VISIBLE : View.GONE));
@@ -163,7 +144,6 @@ public class MemberDetailActivity extends BaseActivity {
         statTodayView.setText(String.valueOf(todayCount));
         setActivityLevel(recentCount);
 
-        populateRateLimitFields();
         populateDailyLimitFields();
         renderActivity();
     }
@@ -186,36 +166,6 @@ public class MemberDetailActivity extends BaseActivity {
         }
         statActivityLevelView.setText(labelRes);
         statActivityLevelView.setTextColor(getColor(colorRes));
-    }
-
-    private void populateRateLimitFields() {
-        customRateLimitCheckbox.setChecked(member.rateLimitCustom);
-        rateLimitFieldsContainer.setVisibility(member.rateLimitCustom ? View.VISIBLE : View.GONE);
-
-        rateBurstMinInput.setText(String.valueOf(member.rateBurstMin != null ? member.rateBurstMin : prefs.getBurstMin()));
-        rateBurstMaxInput.setText(String.valueOf(member.rateBurstMax != null ? member.rateBurstMax : prefs.getBurstMax()));
-        rateMinWaitInput.setText(String.valueOf(member.rateMinWait != null ? member.rateMinWait : prefs.getMinWaitSeconds()));
-        rateMaxWaitInput.setText(String.valueOf(member.rateMaxWait != null ? member.rateMaxWait : prefs.getMaxWaitSeconds()));
-        rateInitialDelayCheckbox.setChecked(member.rateInitialDelay != null ? member.rateInitialDelay != 0 : prefs.isInitialDelayEnabled());
-    }
-
-    private void saveRateLimit() {
-        if (!customRateLimitCheckbox.isChecked()) {
-            memberRepository.clearRateLimitOverride(member.id);
-            refresh();
-            Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        int burstMin = Math.max(1, parseOrDefault(rateBurstMinInput, prefs.getBurstMin()));
-        int burstMax = Math.max(burstMin, parseOrDefault(rateBurstMaxInput, prefs.getBurstMax()));
-        int minWait = Math.max(0, parseOrDefault(rateMinWaitInput, prefs.getMinWaitSeconds()));
-        int maxWait = Math.max(minWait, parseOrDefault(rateMaxWaitInput, prefs.getMaxWaitSeconds()));
-
-        memberRepository.setRateLimitOverride(member.id, burstMin, burstMax, minWait, maxWait,
-                rateInitialDelayCheckbox.isChecked());
-        refresh();
-        Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
     }
 
     private void populateDailyLimitFields() {
@@ -267,13 +217,17 @@ public class MemberDetailActivity extends BaseActivity {
         activityContainer.removeAllViews();
         List<MessageRecord> recent = messageRepository.getRecentForMember(member.id, 20);
         LayoutInflater inflater = LayoutInflater.from(this);
-        for (MessageRecord record : recent) {
+        for (int i = 0; i < recent.size(); i++) {
+            MessageRecord record = recent.get(i);
             View row = inflater.inflate(R.layout.row_message, activityContainer, false);
             TextView bodyView = row.findViewById(R.id.text_message_body);
             TextView metaView = row.findViewById(R.id.text_message_meta);
             bodyView.setText(record.body);
             metaView.setText(DateFormat.format("MMM d, h:mm a", record.timestamp));
             activityContainer.addView(row);
+            if (i < recent.size() - 1) {
+                activityContainer.addView(UiUtil.createDivider(this, R.color.divider));
+            }
         }
     }
 

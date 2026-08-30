@@ -1,5 +1,6 @@
 package com.sh7411usa.jrelay;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -31,8 +32,10 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class MembershipActivity extends BaseActivity {
 
@@ -123,8 +126,26 @@ public class MembershipActivity extends BaseActivity {
         if (requestCode == REQUEST_EXPORT_CSV) {
             exportCsv(uri);
         } else if (requestCode == REQUEST_IMPORT_CSV) {
-            importCsv(uri);
+            promptImportReportingMode(uri);
         }
+    }
+
+    private void promptImportReportingMode(Uri uri) {
+        CharSequence[] options = {
+                getString(R.string.csv_import_report_usual),
+                getString(R.string.csv_import_report_streamlined),
+                getString(R.string.csv_import_report_none)
+        };
+        CommandProcessor.ImportReportingMode[] modes = {
+                CommandProcessor.ImportReportingMode.USUAL,
+                CommandProcessor.ImportReportingMode.STREAMLINED,
+                CommandProcessor.ImportReportingMode.NONE
+        };
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.csv_import_report_title)
+                .setItems(options, (dialog, which) -> importCsv(uri, modes[which]))
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
     }
 
     private void exportCsv(Uri uri) {
@@ -142,8 +163,9 @@ public class MembershipActivity extends BaseActivity {
         }
     }
 
-    private void importCsv(Uri uri) {
-        int imported = 0;
+    private void importCsv(Uri uri, CommandProcessor.ImportReportingMode mode) {
+        List<String[]> toImport = new ArrayList<>();
+        Set<String> stagedPhones = new HashSet<>();
         int skipped = 0;
         boolean firstLine = true;
         try (InputStream in = getContentResolver().openInputStream(uri);
@@ -173,13 +195,14 @@ public class MembershipActivity extends BaseActivity {
                     continue;
                 }
                 Member existing = memberRepository.findByPhone(normalized);
-                if (existing != null && existing.active) {
+                if ((existing != null && existing.active) || stagedPhones.contains(normalized)) {
                     skipped++;
                     continue;
                 }
-                commandProcessor.addMember(normalized, nickname, getString(R.string.default_added_by_admin));
-                imported++;
+                stagedPhones.add(normalized);
+                toImport.add(new String[]{normalized, nickname});
             }
+            int imported = commandProcessor.importMembers(toImport, getString(R.string.default_added_by_admin), mode);
             Toast.makeText(this, getString(R.string.import_summary, imported, skipped), Toast.LENGTH_LONG).show();
             renderMembers();
         } catch (IOException e) {

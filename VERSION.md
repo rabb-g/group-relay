@@ -1,5 +1,20 @@
 # Version History
 
+## 4.0 - Announcement Mode, Join Requests, Member Reporting Controls, Global Send Pacing
+
+- **Send pacing reverted to global (not per-member)**: removed the per-member Send Pacing override entirely — the UI section on Member Detail, `MemberRepository.setRateLimitOverride`/`clearRateLimitOverride`, and the `rate*` fields on `Member`. `RateLimitConfig` no longer takes a `Member`; it's always resolved once from `Prefs`. `SmsSendService` no longer spawns one thread per recipient — `drainAll()` is back to a single shared burst/wait/microspacing loop over the whole outbox, matching "send pacing, bursts, and queuing are global." `OutboxRepository.takeBurst(limit, shuffle)` replaces the per-member `takeBurstForMember`/`countPendingForMember`/`getDistinctPendingMemberIds`; Delivery Queue Shuffling now shuffles which pending rows a burst draws from (`Collections.shuffle`) instead of shuffling per-member thread order. `SendQueueStatus` is back to a single global schedule instead of a per-member map. (The now-unused `rate_limit_custom`/`rate_burst_*`/`rate_initial_delay` columns are left in place in the `members` table rather than risking a `DROP COLUMN` migration on older bundled SQLite versions — they're simply no longer read or written.)
+- **Member Detail** recent-activity feed now has the same thin separators between entries as the dashboard's Recent Activity feed (`UiUtil.createDivider`).
+- **Member Reporting** (new Settings section): a **"Notify group when a member is added"** toggle (on by default) gating the usual welcome/broadcast texts for `#add`, Add Member, and `#join` self-adds. Off adds a member completely silently.
+- **CSV import reporting modes**: importing now prompts for **Usual** (notify everyone, per row, exactly like an individual `#add`), **Streamlined** (each new member still gets their own welcome text, but every pre-existing member gets one combined "An Admin added N new members" notice instead of N broadcasts), or **No reporting** (add silently) — independent of the Member Reporting toggle above. `CommandProcessor.importMembers(List<String[]>, addedByLabel, ImportReportingMode)` replaces the per-row `addMember` loop in `MembershipActivity`.
+- **Announcement Mode** (new `Prefs.GroupMode`, default `GROUP`): admins toggle it by texting `#mode announcement` / `#mode group`; anyone can check the current mode with `#mode`. In Announcement mode, only admins' plain-text messages are relayed to the whole group — everyone else's messages are instead routed to admins only (reusing the same delivery path as `#admin`) and don't count against daily limits. Switching modes broadcasts a notice and replies with the new status. The dashboard shows a colored **Announcement Mode** badge next to the group name whenever it's active.
+- **Join Requests** (new `Prefs.JoinPolicy`, default `OFF`): lets a non-member text `#join <nickname>` (or bare `#join`, falling back to their phone number as the nickname) to the group number.
+  - `OFF` — silently ignored.
+  - `ALLOW` — added immediately (`CommandProcessor.selfJoin`), subject to the Member Reporting toggle, with a dedicated "you joined" / "X joined the group" template pair distinct from admin-added wording.
+  - `REQUIRE_APPROVAL` — nobody is added automatically; admins get a notice with a ready-to-forward `#add <number> <nickname>` command, and the requester gets a brief "sent to the admins" acknowledgment. No pending-request state is tracked — an admin approves by simply sending the suggested `#add` back.
+  - An existing member sending `#join` is just told they're already a member.
+- **Settings**: ADB `WRITE_SECURE_SETTINGS` grant command notice is now tappable (`ClipboardManager`) to copy it directly instead of retyping it.
+- Updated `README.md` and `VERSION.md` with all of the above; `rate_limit_app_desc` and related Settings copy updated to reflect global (not per-member) send pacing.
+
 ## 3.0 - Pacing Engine, Salting, Daily Limits, Settings Page, Localization, Theming
 
 - **Send pacing engine overhaul** (`SmsSendService`, `RateLimitConfig`, new `sms/MicroSpacer`):

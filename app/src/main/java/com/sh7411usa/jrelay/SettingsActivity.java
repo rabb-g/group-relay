@@ -1,6 +1,9 @@
 package com.sh7411usa.jrelay;
 
 import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.format.DateFormat;
@@ -57,6 +60,10 @@ public class SettingsActivity extends BaseActivity {
 
     // Delivery shuffle
     private CheckBox deliveryShuffleCheckbox;
+
+    // Member reporting / Join requests
+    private CheckBox addedReportingEnabledCheckbox;
+    private Spinner joinPolicySpinner;
 
     // Message content / Salting
     private CheckBox appendSenderNumberCheckbox;
@@ -132,6 +139,9 @@ public class SettingsActivity extends BaseActivity {
 
         deliveryShuffleCheckbox = findViewById(R.id.checkbox_delivery_shuffle);
 
+        addedReportingEnabledCheckbox = findViewById(R.id.checkbox_added_reporting_enabled);
+        joinPolicySpinner = findViewById(R.id.spinner_join_policy);
+
         appendSenderNumberCheckbox = findViewById(R.id.checkbox_append_sender_number);
         stripPhoneNumbersCheckbox = findViewById(R.id.checkbox_strip_phone_numbers);
         saltTimestampCheckbox = findViewById(R.id.checkbox_salt_timestamp);
@@ -181,6 +191,9 @@ public class SettingsActivity extends BaseActivity {
 
         deliveryShuffleCheckbox.setChecked(prefs.isDeliveryShuffleEnabled());
 
+        addedReportingEnabledCheckbox.setChecked(prefs.isAddedReportingEnabled());
+        joinPolicySpinner.setSelection(prefs.getJoinPolicy().ordinal());
+
         appendSenderNumberCheckbox.setChecked(prefs.isAppendSenderNumberEnabled());
         stripPhoneNumbersCheckbox.setChecked(prefs.isStripPhoneNumbersEnabled());
         saltTimestampCheckbox.setChecked(prefs.isSaltTimestampEnabled());
@@ -204,6 +217,7 @@ public class SettingsActivity extends BaseActivity {
 
     private void wireListeners() {
         findViewById(R.id.button_save).setOnClickListener(v -> savePacingSettings());
+        findViewById(R.id.button_save_reporting).setOnClickListener(v -> saveReportingSettings());
         findViewById(R.id.button_save_content).setOnClickListener(v -> saveContentSettings());
         findViewById(R.id.button_save_failures).setOnClickListener(v -> saveFailureSettings());
         findViewById(R.id.button_save_group_limit).setOnClickListener(v -> saveGroupLimitSettings());
@@ -214,6 +228,7 @@ public class SettingsActivity extends BaseActivity {
         findViewById(R.id.button_disband_group).setOnClickListener(v -> confirmDisbandGroup());
         findViewById(R.id.button_view_license).setOnClickListener(v ->
                 startActivity(new Intent(this, LicenseActivity.class)));
+        systemPermissionNotice.setOnClickListener(v -> copyAdbCommandToClipboard());
 
         burstModeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -303,6 +318,12 @@ public class SettingsActivity extends BaseActivity {
 
         prefs.setDeliveryShuffleEnabled(deliveryShuffleCheckbox.isChecked());
 
+        Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
+    }
+
+    private void saveReportingSettings() {
+        prefs.setAddedReportingEnabled(addedReportingEnabledCheckbox.isChecked());
+        prefs.setJoinPolicy(Prefs.JoinPolicy.values()[joinPolicySpinner.getSelectedItemPosition()]);
         Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
     }
 
@@ -412,6 +433,15 @@ public class SettingsActivity extends BaseActivity {
         systemSaveButton.setEnabled(hasPermission);
         systemPermissionNotice.setVisibility(hasPermission ? View.GONE : View.VISIBLE);
         systemPermissionNotice.setText(getString(R.string.rate_limit_permission_missing) + "\n" + RateLimitSettings.ADB_GRANT_COMMAND);
+    }
+
+    private void copyAdbCommandToClipboard() {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard == null) {
+            return;
+        }
+        clipboard.setPrimaryClip(ClipData.newPlainText("adb command", RateLimitSettings.ADB_GRANT_COMMAND));
+        Toast.makeText(this, R.string.toast_adb_command_copied, Toast.LENGTH_SHORT).show();
     }
 
     private void saveSystemSettings() {

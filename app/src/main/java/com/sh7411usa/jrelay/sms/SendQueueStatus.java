@@ -1,67 +1,35 @@
 package com.sh7411usa.jrelay.sms;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 /**
- * In-memory snapshot of each member's outbox drain schedule, published by {@link SmsSendService}
- * (one independent burst/wait cadence per recipient, since each member can have their own send
- * pacing) and read by the dashboard to show a live "next burst in..." countdown for whichever
- * member's burst is coming up soonest. Not persisted: it only describes the currently-running
- * (or just-finished) drain within this process.
+ * In-memory snapshot of the outbox drain's current schedule, published by {@link SmsSendService}
+ * and read by the dashboard to show a live "next burst in..." countdown. Not persisted: it only
+ * describes the currently-running (or just-finished) drain within this process. Sending is global
+ * (one shared cadence for the whole outbox), so there is only ever one schedule to track.
  */
 public class SendQueueStatus {
 
-    private static class Burst {
-        final long atMillis;
-        final int size;
-
-        Burst(long atMillis, int size) {
-            this.atMillis = atMillis;
-            this.size = size;
-        }
-    }
-
-    private static final Long NULL_MEMBER_KEY = -1L;
-    private static final Map<Long, Burst> scheduled = new ConcurrentHashMap<>();
+    private static volatile long nextBurstAtMillis = 0;
+    private static volatile int nextBurstSize = 0;
 
     private SendQueueStatus() {
     }
 
-    public static void setNextBurst(Long memberId, long atMillis, int size) {
-        scheduled.put(key(memberId), new Burst(atMillis, size));
+    public static void setNextBurst(long atMillis, int size) {
+        nextBurstAtMillis = atMillis;
+        nextBurstSize = size;
     }
 
-    public static void clear(Long memberId) {
-        scheduled.remove(key(memberId));
+    public static void clear() {
+        nextBurstAtMillis = 0;
+        nextBurstSize = 0;
     }
 
-    public static void clearAll() {
-        scheduled.clear();
-    }
-
-    /** 0 if no burst is currently scheduled/waiting for any member. */
+    /** 0 if no burst is currently scheduled/waiting. */
     public static long getNextBurstAtMillis() {
-        Burst soonest = soonest();
-        return soonest != null ? soonest.atMillis : 0;
+        return nextBurstAtMillis;
     }
 
     public static int getNextBurstSize() {
-        Burst soonest = soonest();
-        return soonest != null ? soonest.size : 0;
-    }
-
-    private static Long key(Long memberId) {
-        return memberId != null ? memberId : NULL_MEMBER_KEY;
-    }
-
-    private static Burst soonest() {
-        Burst best = null;
-        for (Burst burst : scheduled.values()) {
-            if (best == null || burst.atMillis < best.atMillis) {
-                best = burst;
-            }
-        }
-        return best;
+        return nextBurstSize;
     }
 }

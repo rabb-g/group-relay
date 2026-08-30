@@ -11,14 +11,6 @@ public class Member {
     public long createdAt;
     public Long removedAt;
 
-    /** When true, the rate* fields below override the group's default send pacing for this member. */
-    public boolean rateLimitCustom;
-    public Integer rateBurstMin;
-    public Integer rateBurstMax;
-    public Integer rateMinWait;
-    public Integer rateMaxWait;
-    public Integer rateInitialDelay;
-
     /** When true, dailyLimitValue caps this member's own relayed messages per day, independent of the group pool. */
     public boolean dailyLimitCustom;
     public Integer dailyLimitValue;

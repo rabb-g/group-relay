@@ -9,9 +9,9 @@ Built as a vanilla Android Java app (no Kotlin, no Jetpack/androidx) with a loca
 There is no group MMS thread and no third-party service involved. jRelay only uses standard SMS:
 
 1. A member texts the host device's number.
-2. jRelay reads the message, checks the sender against its member list, and either runs a command or relays the message (after checking daily limits — see [Daily Limits](#daily-limits)).
+2. jRelay reads the message, checks the sender against its member list, and either runs a command or relays the message (after checking Announcement mode and daily limits — see [Announcement Mode](#announcement-mode) and [Daily Limits](#daily-limits)).
 3. A relayed message is optionally transformed (see [Message Content & Salting](#message-content--salting)), then queued and sent out individually to every other active, unmuted member, prefixed with the sender's nickname (e.g. `Alex: on my way`).
-4. Sending itself is paced per recipient (see [Send Pacing](#send-pacing)) — each member's queue drains on its own independent burst/wait/microspacing schedule, in a shuffled order, with automatic retries and failure tracking.
+4. Sending itself is paced globally (see [Send Pacing](#send-pacing)) — the whole outbox drains on one shared burst/wait/microspacing schedule, in a shuffled order, with automatic retries and failure tracking.
 
 Because everything rides on regular carrier SMS, standard messaging and data rates apply to every message sent and received, and you are responsible for complying with all applicable laws and carrier policies around automated/bulk messaging. This is disclosed and must be accepted the first time the app is opened.
 
@@ -29,9 +29,9 @@ Below that is a checkbox, "You have read and accept the terms of the license," w
 
 ### Dashboard (Main screen)
 
-- Group name, with an **Options** button opening a dropdown: **Set Group Name**, **Add Member**, **Settings**, and **Send to Group**.
+- Group name, with an **Options** button opening a dropdown: **Set Group Name**, **Add Member**, **Settings**, and **Send to Group**. A small **Announcement Mode** badge appears next to the group name whenever the group is in that mode (see [Announcement Mode](#announcement-mode)).
 - A 2-column grid of stat tiles: Members, Admins, Muted, Messages Today, Messages Total, **Failed Today**, and In Queue. The Queue tile shows a small green **Sending…** badge whenever a burst is actively scheduled or in flight.
-- **Next burst in Xs (N messages)** — a live countdown (updates every second) to the soonest upcoming burst across every member's independent send schedule, and how many messages that burst will contain. Hidden when nothing is scheduled.
+- **Next burst in Xs (N messages)** — a live countdown (updates every second) to the next scheduled burst, and how many messages it will contain. Hidden when nothing is scheduled.
 - A scrollable feed of the most recent activity across the whole group, with a thin separator between each entry. Tapping an entry opens that member's detail screen.
 - A **Membership** button.
 
@@ -46,8 +46,13 @@ Below that is a checkbox, "You have read and accept the terms of the license," w
 #### Import/Export membership CSV
 
 - **Export to CSV** opens the system "save file" picker (no storage permission needed) and writes every active member as `phone,nickname` rows (with a header row), one file you choose the name/location for.
-- **Import from CSV** opens the system file picker, reads whichever CSV you choose, and adds a member for each valid `phone,nickname` row — reusing the exact same "added" flow as `#add`/Add Member, so the new member gets the welcome text and everyone else gets the usual "An Admin added ... " notice. A header row, blank lines, an unparseable phone number, an empty nickname, or a number that's already an active member are all skipped rather than failing the whole import; you get a summary of how many were imported vs. skipped.
-- Since import re-runs the normal add flow per row, bulk-importing many contacts at once queues a lot of outbound SMS (welcome + broadcast per new member) — it's paced by the same send-pacing settings as everything else, so a big CSV will take a while to fully go out, by design.
+- **Import from CSV** opens the system file picker, reads whichever CSV you choose, and adds a member for each valid `phone,nickname` row. Before importing, you're asked to choose how to notify the group about it:
+  - **Usual** — every new member gets the welcome text and everyone else gets the usual "An Admin added ..." notice, exactly as if each had been added one at a time.
+  - **Streamlined** — new members still get their individual welcome text, but everyone who was already a member just gets one combined notice: "An Admin added N new members."
+  - **No reporting** — every row is added silently; nobody is notified anything happened.
+  - This choice is independent of the **Notify group when a member is added** toggle in Settings (see [Member Reporting](#member-reporting)), which only governs individual `#add`/Add Member additions.
+  - A header row, blank lines, an unparseable phone number, an empty nickname, or a number that's already an active member (including a duplicate within the same file) are all skipped rather than failing the whole import; you get a summary of how many were imported vs. skipped.
+- Bulk-importing many contacts at once queues a lot of outbound SMS — it's paced by the same send-pacing settings as everything else, so a big CSV will take a while to fully go out, by design.
 
 ### Member Detail
 
@@ -55,9 +60,8 @@ Tapping a member shows:
 
 - Nickname and phone number.
 - Member-since / last-active caption, and a stat tile grid: Sent, Received, Messages Today, and a color-coded Activity level (Very active / Active / Quiet / Inactive) based on message volume over the last 7 days.
-- A **Send Pacing** section to override this member's own burst/wait pace (see [Send Pacing](#send-pacing)).
 - A **Daily Limit** section to give this member their own daily cap, independent of the group's shared pool (see [Daily Limits](#daily-limits)) — shows "today: X / Y" usage, and an **Override (+1 Today)** button appears automatically once that cap is hit.
-- A scrollable feed of that member's recent activity.
+- A scrollable feed of that member's recent activity, with a thin separator between each entry (matching the dashboard's Recent Activity feed).
 
 Actions available:
 
@@ -89,11 +93,25 @@ Everything configurable lives on one scrollable Settings screen (opened from the
   - **Fixed amount** — every burst is exactly the size you set.
   - **All messages at once** — no bursting at all; everything currently queued for a recipient goes out together.
 - **Microspacing** — paces the individual messages *inside* one burst apart from each other, in milliseconds (default 350ms, on by default). Can be a fixed gap or randomized between bounds. This is intentionally not built on `Thread.sleep`: gaps are computed as a fractional-millisecond deadline and enforced with a self-correcting loop of short `LockSupport.parkNanos` calls, so short waits stay precise instead of drifting.
-- Every member can override their own burst/wait/initial-delay pace independently from their Member Detail screen; burst mode and microspacing are group-wide settings.
+- Send pacing is global — one shared burst/wait/microspacing schedule drains the whole outbox. It is not configurable per member.
 
 #### Delivery Queue Shuffling
 
-On by default. Each send cycle, the order recipients are dispatched in is shuffled, so the same member isn't always first (or last) in a repeating pattern.
+On by default. Each burst, the pending messages it's drawn from are shuffled before being picked, so the same member isn't always first (or last) in a repeating pattern.
+
+#### Member Reporting
+
+**Notify group when a member is added** (on by default) — when a member is added via `#add` or the Add Member screen, this controls whether the usual welcome text (to them) and broadcast (to everyone else) are sent at all. Turning it off adds members completely silently. This does not affect CSV import, which always asks for a reporting style per import (see [Import/Export](#importexport-membership-csv)) — or joins via `#join`, which follow this same toggle (see [Join Requests](#join-requests)).
+
+#### Join Requests
+
+Off by default. Lets people who *aren't* members yet text `#join <nickname>` (or just `#join`, using their phone number as the nickname) to the group number to ask to join:
+
+- **Off** — `#join` from a non-member is silently ignored.
+- **Allow** — they're added immediately, as if an admin had run `#add` for them (subject to the Member Reporting toggle above).
+- **Require Approval** — nobody is added automatically. Admins get a notice naming the requester and a ready-to-forward `#add <number> <nickname>` command; the requester gets a short "sent to the admins" acknowledgment. jRelay doesn't track the request beyond that — an admin approves it by simply sending back the suggested `#add` command (or ignores it to decline).
+
+An existing member who sends `#join` is just told they're already a member.
 
 #### Message Content & Salting
 
@@ -128,7 +146,7 @@ Android itself has a built-in threshold (`sms_outgoing_check_max_count` / `sms_o
 adb shell pm grant com.sh7411usa.jrelay android.permission.WRITE_SECURE_SETTINGS
 ```
 
-Run that from a computer with the device connected over ADB, then reopen the screen to edit the system values.
+Run that from a computer with the device connected over ADB, then reopen the screen to edit the system values. Tapping the notice itself copies the command to the clipboard.
 
 #### Language
 
@@ -165,6 +183,9 @@ A dedicated screen (opened from **Options → Send to Group**) for sending a one
 | `#limits` | admins only | Replies with today's group daily limit status: used/total/remaining and reset time |
 | `#override` | admins only | Adds 1 message of headroom to the group's daily limit for today |
 | `#override <nickname or number>` | admins only | Adds 1 message of headroom to that member's individual daily limit for today (errors if they don't have one set) |
+| `#mode` | anyone | Replies with the current group mode (Group or Announcement) |
+| `#mode announcement` / `#mode group` | admins only | Switches the group mode (see [Announcement Mode](#announcement-mode)) |
+| `#join <nickname>` | non-members | Requests to join the group, if Join Requests is enabled (see [Join Requests](#join-requests)) |
 
 Non-admins attempting an admin-only command get back: `"Only admins can use this command."` An unrecognized `#` command gets: `"Unknown command. Reply #commands for a list of commands."` `#commands` itself only lists the admin-only commands to admins — a regular member's reply omits them entirely.
 
@@ -240,9 +261,18 @@ Sending `#stop` removes you from the group immediately (same soft-delete as an a
 
 ## Send Pacing
 
-Sending is no longer one global burst/wait loop: `SmsSendService` runs one independent burst/wait/microspacing cadence **per recipient**, concurrently, each using that recipient's effective pace (their own Member Detail override if set, otherwise the group default from Settings). See [Settings → Send Pacing](#send-pacing) above for the burst-mode/staggering/microspacing controls, and [Delivery Queue Shuffling](#delivery-queue-shuffling) for how dispatch order is randomized across recipients.
+Sending is global: `SmsSendService` drains the whole outbox on one shared burst/wait/microspacing cadence — it is not configurable per member. See [Settings → Send Pacing](#send-pacing) above for the burst-mode/staggering/microspacing controls, and [Delivery Queue Shuffling](#delivery-queue-shuffling) for how the pending messages a burst draws from are shuffled.
 
 A send that fails is retried (up to the configured retry limit) by requeuing it for a later burst rather than hammering immediately; once retries are exhausted it's logged as failed and counted toward that member's failure-alert threshold (see [Settings → Failures & Retries](#failures--retries)).
+
+## Announcement Mode
+
+A group-wide switch between two modes, changed by text (`#mode announcement` / `#mode group`, admins only) and checked by anyone with `#mode`:
+
+- **Group mode** (default) — everyone's plain-text messages are relayed to the whole group, as usual.
+- **Announcement mode** — only admins' plain-text messages are relayed to everyone. A non-admin's message is instead sent only to admins, the same way `#admin <message>` works, and doesn't count against anyone's daily limit.
+
+Switching modes broadcasts a notice to the group (attributed to the admin who changed it) and replies to that admin with the new mode's status. The dashboard shows a small **Announcement Mode** badge next to the group name whenever it's active, so it's obvious at a glance.
 
 ## Message Content & Salting
 
@@ -275,7 +305,7 @@ jRelay does not need to be set as your default SMS app, and does not request con
 
 ## Data storage
 
-Everything is stored locally in a SQLite database on the device — there is no server or cloud component. Three tables back the app: members (including each member's optional send-pacing and daily-limit overrides), a full message log (used for dashboard/member stats, recent activity, and daily-limit accounting), and an outbox queue (with per-item retry tracking) that `SmsSendService` drains according to your send-pacing settings.
+Everything is stored locally in a SQLite database on the device — there is no server or cloud component. Three tables back the app: members (including each member's optional daily-limit override), a full message log (used for dashboard/member stats, recent activity, and daily-limit accounting), and an outbox queue (with per-item retry tracking) that `SmsSendService` drains globally according to your send-pacing settings.
 
 ## License
 
