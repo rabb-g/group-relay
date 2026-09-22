@@ -16,4 +16,5 @@ local.properties
 CLAUDE.md
 CLAUDE.local.md
 .claude/
+.work/
 Initial Prompt.txt

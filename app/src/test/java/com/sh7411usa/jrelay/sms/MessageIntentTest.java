@@ -76,6 +76,27 @@ public class MessageIntentTest {
         assertNull(MessageIntent.stripPostPrefix(null));
     }
 
+    // These four pin Pattern.DOTALL: without it, "." stops at a newline and a real multi-line
+    // SMS post (or a multi-line non-post) would be parsed differently, so a future refactor that
+    // silently drops DOTALL must fail here instead of silently misrouting posts as private replies.
+
+    @Test
+    public void stripPostPrefix_keepsMultiLineBody() {
+        assertEquals("Meeting tonight\nNew Hope Shul",
+                MessageIntent.stripPostPrefix("#all Meeting tonight\nNew Hope Shul"));
+    }
+
+    @Test
+    public void stripPostPrefix_colonAllKeepsMultiLineBody() {
+        assertEquals("Meeting tonight\n7pm",
+                MessageIntent.stripPostPrefix("all:Meeting tonight\n7pm"));
+    }
+
+    @Test
+    public void stripPostPrefix_newlineSeparatorAfterHashAll() {
+        assertEquals("Meeting tonight", MessageIntent.stripPostPrefix("#all\nMeeting tonight"));
+    }
+
     // ---- canonicalBareKeyword ----
 
     @Test
@@ -110,6 +131,11 @@ public class MessageIntentTest {
     public void canonicalBareKeyword_rejectsEmptyAndNull() {
         assertNull(MessageIntent.canonicalBareKeyword(""));
         assertNull(MessageIntent.canonicalBareKeyword(null));
+    }
+
+    @Test
+    public void canonicalBareKeyword_rejectsMultiLineMessageStartingWithKeyword() {
+        assertNull(MessageIntent.canonicalBareKeyword("STOP\nplease"));
     }
 
     // ---- isWithinReplyWindow ----
