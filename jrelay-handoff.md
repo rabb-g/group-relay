@@ -231,6 +231,38 @@ Today `sendOne` treats "the API call didn't throw" as success; carrier rejection
 
 ---
 
+## Phase 6 — Personal-phone mode / Relay Scope (proposed, not yet scheduled)
+
+### Goal
+Let jRelay run on the host's **everyday personal phone** instead of a dedicated device, without personal texts leaking to the group. Today the app assumes every inbound text from an active member is group traffic; on a personal phone that assumption is wrong and expensive — a member texting "are you around later?" privately would be broadcast to 100 people.
+
+### Why this is even possible
+Because the revised Phase 3 keeps jRelay a **non-default** SMS app, the stock Messages app still receives and displays everything normally. jRelay only ever *observes*. Nothing is hidden or swallowed from the user's own inbox. That single decision is what makes personal-phone hosting viable at all — do not undo it.
+
+### Behavior
+- `Prefs.RelayScope { ALL_MEMBER_TEXTS, TAGGED_ONLY }`, default `ALL_MEMBER_TEXTS` = today's dedicated-device behavior, unchanged.
+- In `TAGGED_ONLY`, an inbound message from an active member is relayed **only** when it is explicitly addressed to the group:
+  - starts with the post prefix (`#all` / `all:`), or
+  - is an explicit `#`-command (`#to`, `#stop`, `#list`, …), or
+  - (once Phase 3 lands) arrived in a **group thread**, which is a structural signal that needs no keyword.
+- Anything else is **ignored completely**: not relayed, not replied to, no notification. It simply sits in the stock Messages app like any other text. Log it as category `IGNORED` (or not at all) so the activity feed does not fill with private conversation.
+- Optional **Group tag** setting (default `#all`) so a host running more than one group can route by tag.
+
+### Hazards this mode must handle — these are the whole point
+1. **Bare keywords must be forced OFF in `TAGGED_ONLY`.** `STOP`, `END`, `QUIT`, `CANCEL`, `HELP` are ordinary English words. On a personal phone, a member texting "stop" or "help" in normal conversation would silently remove them from the group or trigger a command. The Phase 1 setting must be disabled and greyed out (with an explanatory caption) whenever scope is `TAGGED_ONLY`, not merely defaulted off. Carrier opt-out compliance is satisfied by the group thread / `#stop`, and by the fact that members on a personal-phone host are not being cold-messaged.
+2. **Reply Mode's plain-text reply routing is incompatible with `TAGGED_ONLY`** and must be disabled there. A plain text is exactly the thing that cannot be distinguished from a private message. In `TAGGED_ONLY`, Reply Mode routes via `#to` only; Settings must say so.
+3. **Shared carrier budget.** CTIA limits apply to the *number*, not the app. Group relay traffic now competes with the host's personal texting on the same line, so the Group Daily Limit guidance in the pilot parameters must be lowered accordingly.
+4. **Members save the host's personal number** as the group contact, which is hard to walk back later. Surface this as a one-time warning when switching to `TAGGED_ONLY`.
+5. **The Android outgoing-SMS check raise is device-wide**, not app-scoped — raising it affects the host's personal texting too.
+
+### Acceptance
+- `ALL_MEMBER_TEXTS` (default): behavior identical to the previous version in every respect.
+- `TAGGED_ONLY`: a member texting `hey are you around?` produces **zero** outbox rows, zero log noise, and no reply; the same member texting `#all hey everyone` relays normally; `#stop` still removes them.
+- With scope `TAGGED_ONLY`, the Accept-bare-keywords setting is disabled in the UI and a bare `STOP` does **not** remove the sender.
+- A non-member texting the host is ignored exactly as today.
+
+---
+
 ## Operating parameters for the pilot (not code)
 
 - One line, 100 members, Group mode for two weeks, then Reply mode.
