@@ -13,7 +13,8 @@ Place this file at the repo root next to `CLAUDE.md`. Read `CLAUDE.md`, `README.
 - Per CLAUDE.md: git commit before starting each phase, document every change as bullets in `VERSION.md`, bump the version. Suggested plan: Phase 1 → 5.0, Phase 2 → 5.1, Phase 3 → 6.0, Phase 4 → 7.0, Phase 5a → 7.1, Phase 5b → 8.0. If CLAUDE.md's major/minor rule says otherwise, CLAUDE.md wins.
 - Update `README.md` at the end of each phase (new commands in the commands table, new settings in the Settings section, new behavior sections).
 - Windows dev machine. Build with `.\gradlew.bat assembleDebug`. Device commands: `adb install -r app\build\outputs\apk\debug\app-debug.apk`, `adb shell pm grant com.sh7411usa.jrelay android.permission.WRITE_SECURE_SETTINGS`.
-- Phases 1 and 2 both touch `CommandProcessor` and the outbox and must run sequentially. Phase 3 is mostly additive (new receivers, a vendored PDU package, a content provider) and can be developed on its own branch in a second session in parallel, then merged after 1 and 2 land. Phases 4 and 5 come after 3.
+- Phases 1 and 2 both touch `CommandProcessor` and the outbox and must run sequentially. Phase 3 is mostly additive (a wake receiver, an ingest service, a vendored PDU package, a content provider) and can be developed on its own branch in a second session in parallel, then merged after 1 and 2 land. Phases 4 and 5 come after 3.
+- **Phase 3 is gated on a device spike** (see that phase). Do not build Phase 3 until the spike passes on the target device; if it fails, stop and report rather than falling back to the default-SMS-app role.
 
 ## 1. Deployment context (why these phases exist)
 
@@ -29,7 +30,7 @@ Place this file at the repo root next to `CLAUDE.md`. Read `CLAUDE.md`, `README.
 | File | Role | Touched in |
 |---|---|---|
 | `sms/CommandProcessor.java` | `handleIncoming` → `handleCommand` / `relayPlainMessage` → `broadcastExcept` → `enqueue` | 1, 2, 3 |
-| `sms/SmsReceiver.java` | `SMS_RECEIVED_ACTION` → `CommandProcessor.handleIncoming(e164, body)` | 3, 4 |
+| `sms/SmsReceiver.java` | `SMS_RECEIVED_ACTION` → `CommandProcessor.handleIncoming(e164, body)` | 4 |
 | `sms/SmsSendService.java` | `drainAll` → `sendBurst` → `sendOne`; uses `SmsManager.getDefault()`, `sendTextMessage` / `sendMultipartTextMessage` with null intents | 2, 3, 4, 5 |
 | `db/DbHelper.java` | `DB_VERSION = 3`; tables `members`, `message_log`, `outbox` | 1, 2, 3, 4, 5 |
 | `db/OutboxRepository.java` | `enqueue(memberId, phoneE164, body)`, `takeBurst(limit, shuffle)`, `markSent/markFailed/requeueForRetry` | 2, 3, 4, 5 |
@@ -119,45 +120,67 @@ When several posts arrive within a short window, each recipient gets one SMS con
 
 ---
 
-## Phase 3 — MMS relay, opt-in (→ 6.0)
+## Phase 3 — Text-only group MMS delivery, opt-in (→ 6.0)
+
+> **This section was replaced wholesale.** The earlier design (photo relay via the default-SMS-app role) is withdrawn. Ignore any memory of it; what follows is authoritative.
 
 ### Goal
-Photos relay. Requires the default-SMS-app role, so it is an explicit opt-in; with the toggle off the app behaves exactly as today and does not need the role.
+Cut sends per post by delivering to sub-groups instead of to individuals: one text-only group MMS per sub-group, rather than one SMS per member. 100 members at 9 per sub-group becomes 12 sends instead of 100. No photos, no attachments, and jRelay never becomes the default SMS app.
 
-### Role handling
-- Setting **MMS relay** (off by default), new section **MMS**. Turning it on checks role held: API 29+ `RoleManager.isRoleHeld(RoleManager.ROLE_SMS)`, API 24–28 `Telephony.Sms.getDefaultSmsPackage(context)`. If not held, launch the request (`RoleManager.createRequestRoleIntent` / `Telephony.Sms.Intents.ACTION_CHANGE_DEFAULT` with `EXTRA_PACKAGE_NAME`). If the user declines, the toggle stays off. The section shows current role status.
-- Manifest must declare all four default-SMS-app requirements permanently (eligibility is static, the toggle only decides whether we ask):
-  1. receiver for `android.provider.Telephony.SMS_DELIVER` with `android:permission="android.permission.BROADCAST_SMS"`;
-  2. receiver for `android.provider.Telephony.WAP_PUSH_DELIVER` with `android:permission="android.permission.BROADCAST_WAP_PUSH"` and `<data android:mimeType="application/vnd.wap.mms-message" />`;
-  3. service handling `android.intent.action.RESPOND_VIA_MESSAGE` with `android:permission="android.permission.SEND_RESPOND_VIA_MESSAGE"`, schemes `sms`, `smsto`, `mms`, `mmsto` (may be a no-op that logs);
-  4. activity handling `android.intent.action.SENDTO` with the same four schemes (a minimal screen that says jRelay is a relay and offers to open the dashboard).
-- Add permissions `RECEIVE_MMS`, `RECEIVE_WAP_PUSH`, `READ_SMS`; keep `SEND_SMS`, `RECEIVE_SMS`.
-- Inbound SMS de-duplication: when the role is held, SMS arrives via `SMS_DELIVER` and `SmsReceiver` must ignore `SMS_RECEIVED`; when not held, the reverse. Both paths call the same `CommandProcessor.handleIncoming`.
-- As default SMS app the app is not required to write messages to the system SMS provider; do not. jRelay keeps its own log. Note this in README (no other messaging app on the device will see traffic while jRelay holds the role — it is a dedicated device).
-- Verify on device whether the default-SMS-app role changes the outgoing-SMS check behavior; keep the `WRITE_SECURE_SETTINGS` screen regardless.
+### Explicitly out of scope
+- Do **not** request the default-SMS-app role.
+- No `SMS_DELIVER` receiver, no `WAP_PUSH_DELIVER` receiver, no `SENDTO` activity, no `RESPOND_VIA_MESSAGE` service, no inbound SMS de-duplication.
+- No image or attachment handling of any kind: no re-encoding, no max-attachment-KB setting, no media-retention setting, no media storage, no MMS-storage dashboard tile.
+- jRelay never calls `downloadMultimediaMessage`.
+
+### Delivery mode
+- `Prefs.DeliveryMode { INDIVIDUAL_SMS, GROUP_MMS }`, default `INDIVIDUAL_SMS` — today's behavior, unchanged.
+- In `GROUP_MMS`, members are auto-assigned to sub-groups of at most **Members per group** (default **9**; with the host that is 10 participants, AT&T's cap).
+- `members.subgroup_id`. Every member of a sub-group must be on the same line — Phase 4 depends on this.
+- Per-member **Deliver individually** flag: keeps that member out of every sub-group, on 1:1 SMS.
+- **Never rebalance sub-groups** except on an explicit admin command.
 
 ### PDU handling without a library
-- Do **not** add `android-smsmms` or similar; they pull androidx. Vendor the AOSP MMS PDU classes (Apache-2.0, `com.google.android.mms.pdu` from AOSP, commonly vendored as `pdu_alt`) into `com.sh7411usa.jrelay.mms.pdu`: `PduParser`, `PduComposer`, `GenericPdu`, `NotificationInd`, `RetrieveConf`, `SendReq`, `PduBody`, `PduPart`, `PduHeaders`, `EncodedStringValue`, `ContentType`, `CharacterSets`, `QuotedPrintable`, and whatever they transitively need — and nothing more. Add `THIRD_PARTY_LICENSES.md` at the repo root with the Apache-2.0 text and attribution, and link it from the in-app License screen.
-- For the content URI that `SmsManager` reads/writes, implement a minimal `android.content.ContentProvider` subclass (`MmsFileProvider`) serving files from app-private storage via `openFile`, `exported="false"`, `grantUriPermissions="true"`. This is the same pattern the AOSP Messaging app uses; do not use androidx `FileProvider`.
-
-### Inbound
-- `WAP_PUSH_DELIVER` → parse `NotificationInd` → `SmsManager.downloadMultimediaMessage(context, contentLocation, providerUri, null, downloadedIntent)` → on the downloaded intent, parse `RetrieveConf` → sender address, text part, media parts → `CommandProcessor.handleIncomingMms(senderE164, text, List<MediaPart>)`.
-- Text-only MMS (flips often send long texts as MMS) is handled exactly as SMS text: same commands, same routing.
-- Media rules: images (`image/jpeg`, `image/png`, `image/gif`) relay. Setting **Max attachment KB** (default 600): images above it are re-encoded with `android.graphics.Bitmap` (downscale + JPEG quality) before relay. Setting **Relay non-image attachments** (default off): when off, video/audio/vcard/other are dropped and the text relayed reads `<nickname> sent an attachment (not relayed)`; when on, they pass through untouched, subject to the size cap (no transcoding).
-- Storage: media under app-private files; purge a post's media once every recipient row for it is `SENT`, `FAILED`, or `MERGED`, and in any case after **Media retention days** (default 3). Dashboard tile: MMS storage used.
+- Do **not** add `android-smsmms` or similar; they pull androidx. Vendor the AOSP MMS PDU classes (Apache-2.0, `com.google.android.mms.pdu`, commonly vendored as `pdu_alt`) into `com.sh7411usa.jrelay.mms.pdu`: `PduComposer`, `SendReq`, `PduBody`, `PduPart`, `PduHeaders`, `EncodedStringValue`, `ContentType`, `CharacterSets`, and whatever they transitively need — and nothing more. Inbound parsing classes (`PduParser`, `NotificationInd`, `RetrieveConf`) are **not** needed: inbound comes from `content://mms`, not from parsing PDUs. Add `THIRD_PARTY_LICENSES.md` at the repo root with the Apache-2.0 text and attribution, and link it from the in-app License screen.
+- For the content URI `SmsManager` reads, implement a minimal `android.content.ContentProvider` subclass (`MmsFileProvider`) serving files from app-private storage via `openFile`, `exported="false"`, `grantUriPermissions="true"`. Do not use androidx `FileProvider`.
 
 ### Outbound
-- Always one recipient per MMS. Never multi-recipient. Compose a `SendReq` per recipient: text part = the relay text (`<nickname>: <caption>`, or `<nickname> sent a photo` when there is no caption), plus the media parts. Write the PDU to a file, expose via `MmsFileProvider`, `SmsManager.sendMultimediaMessage(context, uri, null, null, sentIntent)`.
-- `outbox` gains `kind TEXT NOT NULL DEFAULT 'SMS'` (`SMS` / `MMS`) and `pdu_path TEXT`. `DB_VERSION = 6`. MMS rows never coalesce.
-- Pacing: MMS rows go through the same burst/wait loop. Setting **MMS minimum spacing (ms)**, default 2000, applied in addition to microspacing when the previous send was MMS.
-- Daily limits: an MMS post counts as 1 relayed message, same as SMS.
-- Salting: the existing text salts apply to the MMS text part exactly as to SMS bodies (send-time, per Phase 2).
-- Reply Mode with media: `#all` at the start of the caption → post to everyone. Any other caption, or no caption, → reply to the last poster with the media attached (same target rules and hint as Phase 1). GROUP mode: every media message is a post. ANNOUNCEMENT mode: admin media → post; member media → admins only.
+- Each outbound relay becomes **one outbox row per sub-group**: `outbox.kind = 'MMS_GROUP'`, `outbox.subgroup_id`.
+- One text-only `SendReq` PDU addressed to **all** of that sub-group's members, written to a file, exposed via `MmsFileProvider`, sent with `SmsManager.sendMultimediaMessage` — which needs only `SEND_SMS`.
+- Coalescing (Phase 2), salting, pacing, retries, and sent status (Phase 5a) apply **per row**, exactly as they do for SMS rows.
+- The per-line daily send counter counts each group MMS as **its recipient count**, not as 1.
+
+### Inbound
+- The stock messaging app **stays the default** on the host: MMS auto-download on, RCS/chat features off, notifications muted. It downloads everything.
+- Add `RECEIVE_MMS` and `READ_SMS`. Add a manifest receiver for `WAP_PUSH_RECEIVED` (`mimeType application/vnd.wap.mms-message`) used **only** to wake a short-lived `MmsIngestService`.
+- `MmsIngestService` polls `content://mms` — a `ContentObserver` while the process is alive, plus a catch-up scan on every existing trigger — for inbox rows (`msg_box = 1`, `m_type = 132`) above a high-water mark `Prefs.lastMmsId`, initialized to the current max when the mode is enabled so history is never relayed.
+- Per row, read the sender (`addr` type = 137), the text parts, and `sub_id`. Ignore any non-text parts.
+- A message with attachments and no text relays nothing; reply to the sender that attachments are not relayed.
+
+### Routing
+- A message arriving in a **group thread** was already delivered to its own sub-group by the carrier → relay it only to the **other** sub-groups and to any Deliver-individually members.
+- A **1:1 SMS or 1:1 MMS** to the host relays to **every** sub-group, including the sender's.
+- Every group-thread message counts as a post against the daily limits.
+- Reply Mode private routing (Phase 1) applies only to **1:1** texts.
+- Announcement Mode: a non-admin's group-thread message still reaches their own sub-group — that cannot be prevented — but is otherwise routed to admins only.
+- Adding or removing a member changes that sub-group's recipient set, which starts a new thread on members' phones: send that sub-group a one-line notice.
+
+### Device spike — REQUIRED BEFORE BUILDING THE REST
+On the target device, confirm:
+1. a multi-recipient `sendMultimediaMessage` from a **non-default** app succeeds, and arrives as **one group thread** on members' phones, **including a flip phone**;
+2. an inbound group MMS's sender and text are readable from `content://mms`.
+
+If either fails, **stop and report**. Do not fall back to the default-SMS-app role.
+
+Also settle during the spike: whether the `WAP_PUSH_RECEIVED` receiver fires for a non-default app without `RECEIVE_WAP_PUSH` (that broadcast is normally permission-gated). If it never fires, ingestion must rest entirely on the `ContentObserver` plus the catch-up scan — which is why both exist; the receiver is an optimization, not the mechanism.
 
 ### Acceptance
-- Toggle off: manifest declares the four components, role not requested, SMS-only behavior identical to 5.1.
-- Toggle on, role granted: a photo with caption `#all found this dog` from A reaches everyone as one MMS each with `A: found this dog` + image; counts 1 toward limits; a 3 MB photo arrives under 600 KB. A photo with no caption from B in REPLY mode reaches A only. A text-only MMS `#stop` removes the sender.
-- Role revoked in system settings while toggle on: section shows "role not held", inbound MMS is not processed, outbound MMS rows wait, SMS keeps working via `SMS_RECEIVED`.
+- `INDIVIDUAL_SMS` (default): behavior identical to 5.1 in every respect.
+- `GROUP_MMS`, 100 members at 9 per group: one post produces **12 outbox rows, not 100**; each sub-group receives one group-thread MMS; the per-line counter increases by 100.
+- A group-thread message from a member reaches the other sub-groups and the Deliver-individually members, but **not** the sender's own sub-group.
+- A 1:1 `#stop` still removes the sender; a 1:1 text in Reply Mode still routes privately.
+- An attachment-only MMS relays nothing, and its sender is told attachments are not relayed.
+- Adding a member sends that one sub-group a one-line notice; no other sub-group is touched and nothing is rebalanced.
 
 ---
 
