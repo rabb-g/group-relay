@@ -302,6 +302,12 @@
     <!-- Notifications -->
     <string name="notification_channel_admin">הודעות מנהלים</string>
     <string name="notification_admin_title">הודעת מנהל</string>
+    <string name="notif_send_title">jRelay מעביר</string>
+    <string name="notif_send_channel_name">פעילות העברה</string>
+    <string name="notif_send_channel_desc">מוצג בזמן שליחת הודעות, כדי שהשירות ימשיך לפעול גם כשהמסך כבוי.</string>
+    <string name="notif_send_idle">בהכנות לשליחה</string>
+    <string name="notif_send_status">%1$d בתור, %2$d מוחזקות</string>
+    <string name="notif_send_status_burst">%1$d בתור, %2$d מוחזקות, מנה מתוזמנת</string>
 
     <!-- Command reply / broadcast templates -->
     <string name="tpl_added_you">%1$s הוסיף/ה אותך לקבוצת %2$s. השיבו #stop בכל עת כדי לצאת.</string>

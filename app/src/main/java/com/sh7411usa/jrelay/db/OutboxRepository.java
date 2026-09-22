@@ -96,6 +96,33 @@ public class OutboxRepository {
         return selected;
     }
 
+    /**
+     * Returns rows stranded in SENDING back to PENDING so they are retried. A row is only ever
+     * SENDING while a drain is actively sending it, so any SENDING row seen at process start is
+     * the remains of a drain that was killed. Returns how many rows were reset.
+     *
+     * <p>Safe to call only when no drain can have rows currently claimed. {@code takeBurst} claims
+     * a whole burst into SENDING in one transaction and then sends those rows one at a time, a
+     * window of seconds; resetting during that window flips a live burst back to PENDING and it
+     * gets sent twice. Exactly two conditions establish that no drain is running:
+     * <ol>
+     *   <li>Immediately after winning the {@code SmsSendService.DRAINING} compare-and-set - no
+     *       other drain is running by definition. This is what {@code SmsSendService}'s drain
+     *       thread relies on.
+     *   <li>While {@code Prefs.isPaused()} is true - {@code drainAll} checks the pause flag before
+     *       ever claiming a burst, so no row can legitimately be SENDING. This is what
+     *       {@code BootReceiver} relies on.
+     * </ol>
+     * A new caller must establish one of these two conditions itself, not assume it: all app
+     * components share one process, so "a drain probably isn't running" is not safe.
+     */
+    public int resetOrphanedSending() {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("status", "PENDING");
+        return db.update(DbHelper.TABLE_OUTBOX, cv, "status = ?", new String[]{"SENDING"});
+    }
+
     /** Messages still waiting to go out: not yet claimed for sending, or currently mid-send. */
     public int countUnsent() {
         return (int) queryScalar("COUNT(*)", "status IN ('PENDING', 'SENDING')", null);

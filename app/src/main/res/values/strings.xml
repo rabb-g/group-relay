@@ -302,6 +302,12 @@
     <!-- Notifications -->
     <string name="notification_channel_admin">Admin Messages</string>
     <string name="notification_admin_title">Admin message</string>
+    <string name="notif_send_title">jRelay is relaying</string>
+    <string name="notif_send_channel_name">Relay activity</string>
+    <string name="notif_send_channel_desc">Shown while messages are being sent, so the relay keeps running when the screen is off.</string>
+    <string name="notif_send_idle">Preparing to send</string>
+    <string name="notif_send_status">%1$d pending, %2$d held</string>
+    <string name="notif_send_status_burst">%1$d pending, %2$d held, burst scheduled</string>
 
     <!-- Command reply / broadcast templates -->
     <string name="tpl_added_you">%1$s added you to %2$s Group. Reply #stop at anytime to opt out.</string>

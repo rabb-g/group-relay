@@ -3,15 +3,18 @@ package com.sh7411usa.jrelay.sms;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.IBinder;
 import android.telephony.SmsManager;
 import android.util.Log;
 
+import com.sh7411usa.jrelay.R;
 import com.sh7411usa.jrelay.db.MemberRepository;
 import com.sh7411usa.jrelay.db.MessageRepository;
 import com.sh7411usa.jrelay.db.OutboxRepository;
 import com.sh7411usa.jrelay.model.Member;
 import com.sh7411usa.jrelay.util.MessageSalt;
+import com.sh7411usa.jrelay.util.NotificationHelper;
 import com.sh7411usa.jrelay.util.Prefs;
 import com.sh7411usa.jrelay.util.RateLimitConfig;
 
@@ -69,11 +72,31 @@ public class SmsSendService extends Service {
     private static volatile int latestStartId;
 
     public static void start(Context context) {
-        context.startService(new Intent(context, SmsSendService.class));
+        Intent intent = new Intent(context, SmsSendService.class);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent);
+            } else {
+                context.startService(intent);
+            }
+        } catch (Exception e) {
+            // Converts a total relay outage into one missed drain trigger: the enqueued rows are
+            // still there and the next inbound message will start a drain. Logged at ERROR because
+            // nothing else would ever surface it on an unattended phone.
+            Log.e(TAG, "Could not start send service", e);
+        }
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Must be the very first thing done on every path, including the suppressed one below:
+        // start() calls startForegroundService on API 26+, which requires startForeground() to be
+        // reached within ~5 seconds or the system kills the app. Calling it again when already
+        // foregrounded is harmless and just refreshes the notification.
+        NotificationHelper.ensureSendChannel(this);
+        startForeground(NotificationHelper.FOREGROUND_NOTIFICATION_ID,
+                NotificationHelper.buildSendNotification(this, getString(R.string.notif_send_idle)));
+
         latestStartId = startId;
         if (!DRAINING.compareAndSet(false, true)) {
             // Do NOT stopSelf here: this id is always the most recent one delivered, so stopping
@@ -84,6 +107,13 @@ public class SmsSendService extends Service {
         }
         new Thread(() -> {
             try {
+                // A prior process death mid-drain leaves rows stuck in SENDING forever, since
+                // nothing else ever moves them back to PENDING. Once per drain-starting
+                // onStartCommand (never on the suppressed path above), before the loop.
+                int resetCount = new OutboxRepository(this).resetOrphanedSending();
+                if (resetCount > 0) {
+                    Log.i(TAG, "Reset " + resetCount + " orphaned SENDING row(s) to PENDING");
+                }
                 boolean again = true;
                 while (again) {
                     try {
@@ -99,8 +129,19 @@ public class SmsSendService extends Service {
             } finally {
                 // Runs exactly once, last, with no drain outstanding — after the loop above has
                 // already released DRAINING for good, so a start landing here starts (or joins)
-                // a fresh drain rather than racing this stopSelf.
-                stopSelf(latestStartId);
+                // a fresh drain rather than racing this stopSelf. stopSelfResult has the same
+                // "only if this is the most recent id" semantics as stopSelf, but reports whether
+                // it actually won, so we test first and demote only if we are really stopping.
+                // It returns false only when a start lands AFTER this volatile read; a start
+                // landing before it has already overwritten latestStartId, so we stop against
+                // that newer id here and the new drain loses foreground standing until its own
+                // start() re-promotes it. That remaining window is known and accepted: it's
+                // microseconds wide, no message is lost or duplicated, and it self-heals on the
+                // next start() — closing it fully would need a teardown handoff owned by whoever
+                // holds DRAINING, out of scope for this fix.
+                if (stopSelfResult(latestStartId)) {
+                    stopForeground(Service.STOP_FOREGROUND_REMOVE);
+                }
             }
         }).start();
         return START_NOT_STICKY;
@@ -138,6 +179,14 @@ public class SmsSendService extends Service {
                 // a "next burst" countdown that can't produce anything.
                 int pending = outbox.countPending();
                 int holding = outbox.countHolding();
+                // Once per loop iteration, not per message: reuses the counts already read above,
+                // no extra DB query. "Burst scheduled" mirrors the gate waitBeforeNextBurst checks
+                // below, without needing burstSize itself.
+                boolean burstScheduled = pending > holding
+                        && config.staggeringEnabled && (!firstBurst || config.initialDelayEnabled);
+                NotificationHelper.updateSendNotification(this, getString(
+                        burstScheduled ? R.string.notif_send_status_burst : R.string.notif_send_status,
+                        pending, holding));
                 if (pending <= holding) {
                     if (holding <= 0) {
                         return;

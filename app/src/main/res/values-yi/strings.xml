@@ -302,6 +302,12 @@
     <!-- Notifications -->
     <string name="notification_channel_admin">אדמין ידיעות</string>
     <string name="notification_admin_title">אן אדמין ידיעה</string>
+    <string name="notif_send_title">jRelay שיקט אריבער</string>
+    <string name="notif_send_channel_name">שיקן-אקטיוויטעט</string>
+    <string name="notif_send_channel_desc">ווערט געוויזן בעת מ\'שיקט ידיעות, כדי דער סערוויס זאל בלייבן אָנגעשאלטן ווען דער עקראן איז פארמאכט.</string>
+    <string name="notif_send_idle">אין הכנות צום שיקן</string>
+    <string name="notif_send_status">%1$d אין ריי, %2$d געהאלטן</string>
+    <string name="notif_send_status_burst">%1$d אין ריי, %2$d געהאלטן, פארזאמלונג באשטימט</string>
 
     <!-- Command reply / broadcast templates -->
     <string name="tpl_added_you">%1$s האט אייך צוגעלייגט צו דער %2$s גרופע. ענטפערט #stop כדי אַרויסצוטרעטן.</string>

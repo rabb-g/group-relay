@@ -375,10 +375,31 @@ Language and theme are applied without any androidx dependency: every screen ext
 |---|---|---|
 | `SEND_SMS` | Sending relayed/command messages | Runtime prompt at first run |
 | `RECEIVE_SMS` | Reading incoming messages to relay | Runtime prompt at first run |
-| `POST_NOTIFICATIONS` (Android 13+) | Notifying you of `#admin` messages and failure alerts | Runtime prompt at first run |
+| `POST_NOTIFICATIONS` (Android 13+) | Notifying you of `#admin` messages and failure alerts, and showing the sending notification | Runtime prompt at first run |
+| `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE` | Keeping the send service alive for the length of a fan-out (see [Staying alive](#staying-alive)) | Granted at install |
+| `RECEIVE_BOOT_COMPLETED` | Resuming the outbox after a reboot | Granted at install |
 | `WRITE_SECURE_SETTINGS` | Editing Android's built-in SMS throttle | Not requestable through a dialog — grant manually via `adb` (see [Settings](#settings)) |
 
 jRelay does not need to be set as your default SMS app, and does not request contacts or call permissions — exporting a contact, calling, and texting outside the relay all hand off to your Contacts/Phone/Messages apps via intents instead.
+
+## Staying alive
+
+Relaying to 100 members takes about three minutes, and [coalescing](#coalescing) can hold messages for a while before that. Android is aggressive about stopping background work on that timescale, and when it does, the only symptom is that messages quietly stop.
+
+**While sending, jRelay runs as a foreground service** and shows a notification saying so. That notification is the thing telling Android not to kill the send, so it cannot be dismissed while a send is in progress — it disappears on its own when the queue empties. It also doubles as a status readout: how many messages are pending, how many are being held for merging, and whether the next burst is scheduled. It is on its own silent channel, so it never makes a sound, and tapping it opens the dashboard.
+
+**A foreground service does not keep the processor awake.** It stops the send being killed; it does not stop the phone sleeping. With the screen off, the pauses between bursts can stretch out, so a fan-out may take longer than your pacing settings predict. Nothing is lost — it catches up — but if you find sends dragging badly with the screen off, that is why.
+
+**After a reboot**, jRelay repairs anything left half-sent and picks the queue back up — but only once the phone has been unlocked a single time. Until first unlock the app's database is encrypted and genuinely unreadable, so there is nothing it can do before then. Worth knowing if the host phone ever restarts unattended; Samsung in particular ships an "auto restart at set times" option that is sometimes on by default.
+
+**Battery settings still matter**, because manufacturer battery managers override the standard rules. On a dedicated relay phone, set jRelay to **Unrestricted** under Settings → Apps → jRelay → Battery, and make sure it is excluded from any "put unused apps to sleep" / "deep sleeping apps" list. These can also be set over `adb`:
+
+```
+adb shell dumpsys deviceidle whitelist +com.sh7411usa.jrelay
+adb shell cmd appops set com.sh7411usa.jrelay RUN_ANY_IN_BACKGROUND allow
+```
+
+Samsung, Xiaomi, Huawei and Oppo add their own protected-app or auto-start lists that `adb` cannot reach; those have to be set by hand on the device.
 
 ## Data storage
 
