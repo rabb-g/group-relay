@@ -140,6 +140,14 @@ Cut sends per post by delivering to sub-groups instead of to individuals: one te
 - Per-member **Deliver individually** flag: keeps that member out of every sub-group, on 1:1 SMS.
 - **Never rebalance sub-groups** except on an explicit admin command.
 
+### Delivery mode wiring (same pattern as Phase 1's Group Mode)
+- Settings gains a new **Delivery** section with the mode selector, alongside **Members per group**. Follows the usual UI rules (`ScrollView`/`LinearLayout`, DPAD-navigable, no cards or overlays).
+- Admin command `#delivery sms` / `#delivery mms`; `#delivery` alone reports the current mode. Admin-only, with the standard "Only admins can use this command." reply for non-admins — same shape as `#mode`.
+- Switching **either way** sends **every member** a one-line notice.
+- Switching back to `INDIVIDUAL_SMS` restores today's behavior **exactly**, and `subgroup_id` assignments stay stored so the next switch to `GROUP_MMS` reuses them rather than re-assigning (consistent with "never rebalance except on an admin command" — a mode round-trip is not a rebalance).
+- As with every other phase, both the Settings path and the text-command path must call one shared method (mirror `CommandProcessor.setGroupMode(newMode, changedByLabel, excludeId)`) so the notice logic cannot drift between them.
+- New user-facing strings go into all three of `values/`, `values-iw/`, `values-yi/`, keeping the counts equal. `#delivery`, like every `#` token, stays untranslated.
+
 ### PDU handling without a library
 - Do **not** add `android-smsmms` or similar; they pull androidx. Vendor the AOSP MMS PDU classes (Apache-2.0, `com.google.android.mms.pdu`, commonly vendored as `pdu_alt`) into `com.sh7411usa.jrelay.mms.pdu`: `PduComposer`, `SendReq`, `PduBody`, `PduPart`, `PduHeaders`, `EncodedStringValue`, `ContentType`, `CharacterSets`, and whatever they transitively need — and nothing more. Inbound parsing classes (`PduParser`, `NotificationInd`, `RetrieveConf`) are **not** needed: inbound comes from `content://mms`, not from parsing PDUs. Add `THIRD_PARTY_LICENSES.md` at the repo root with the Apache-2.0 text and attribution, and link it from the in-app License screen.
 - For the content URI `SmsManager` reads, implement a minimal `android.content.ContentProvider` subclass (`MmsFileProvider`) serving files from app-private storage via `openFile`, `exported="false"`, `grantUriPermissions="true"`. Do not use androidx `FileProvider`.
@@ -181,6 +189,8 @@ Also settle during the spike: whether the `WAP_PUSH_RECEIVED` receiver fires for
 - A 1:1 `#stop` still removes the sender; a 1:1 text in Reply Mode still routes privately.
 - An attachment-only MMS relays nothing, and its sender is told attachments are not relayed.
 - Adding a member sends that one sub-group a one-line notice; no other sub-group is touched and nothing is rebalanced.
+- `#delivery` from an admin reports the current mode; `#delivery mms` switches and every member gets one notice; a non-admin gets the unauthorized reply. The Settings **Delivery** selector produces the identical notice (shared method, no drift).
+- Round-trip `GROUP_MMS` → `INDIVIDUAL_SMS` → `GROUP_MMS`: behavior in `INDIVIDUAL_SMS` is identical to 5.1, and the second switch reuses the stored `subgroup_id` assignments rather than re-assigning them.
 
 ---
 
