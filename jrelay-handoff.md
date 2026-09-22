@@ -185,6 +185,14 @@ Members cannot discover this from behavior — a reply that reaches 9 people loo
 Switching this setting notifies every member with a one-line notice, the same as a mode change.
 - Adding or removing a member changes that sub-group's recipient set, which starts a new thread on members' phones: send that sub-group a one-line notice.
 
+### Carried over into this phase
+
+Small items deferred from earlier phases, to be built with Phase 3 rather than as their own release:
+
+- **`#help` does not work.** Bare `HELP` canonicalizes to `#commands` and works, but `#help` has no branch in `CommandProcessor.handleCommand`, so it falls through to `"Unknown command."` — a member who has learned that commands start with `#` types the most obvious one and gets an error. Live since 5.0.
+- **`#help` should answer a different question from `#commands`.** `#commands` lists commands; `#help` should explain *how to phrase a message* in the current mode — when a plain message reaches everyone versus one person, what `#all` does, what `#to` does, and (in `GROUP_MMS`) that a reply in your group thread always reaches the other members of that thread regardless of any setting. Mode-aware, like `tpl_commands_list_reply_extra` already is. Add `#help` to the `#commands` output too, so it is discoverable.
+- **Consider shortening the default reply window** (`Prefs.getReplyWindowHours`, currently 24). In Reply Mode a plain message inside the window goes to whoever last posted; at 24 hours, a member who forgets `#all` the next day silently messages an unrelated person, with no signal to the sender that it was not a group post. A 1-2 hour default routes most of those to admins with the `#all` hint instead, which is the safe failure. Settings change only, no code.
+
 ### Device spike — REQUIRED BEFORE BUILDING THE REST
 On the target device, confirm:
 1. a multi-recipient `sendMultimediaMessage` from a **non-default** app succeeds, and arrives as **one group thread** on members' phones, **including a flip phone**;
