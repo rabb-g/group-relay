@@ -166,11 +166,23 @@ Cut sends per post by delivering to sub-groups instead of to individuals: one te
 - A message with attachments and no text relays nothing; reply to the sender that attachments are not relayed.
 
 ### Routing
-- A message arriving in a **group thread** was already delivered to its own sub-group by the carrier → relay it only to the **other** sub-groups and to any Deliver-individually members.
-- A **1:1 SMS or 1:1 MMS** to the host relays to **every** sub-group, including the sender's.
-- Every group-thread message counts as a post against the daily limits.
-- Reply Mode private routing (Phase 1) applies only to **1:1** texts.
+**The fact everything here follows from:** a message sent *inside* a group thread is delivered to that thread's other 9 members by the carrier, before jRelay ever sees it. It cannot be intercepted, suppressed or undone. Every rule below decides only what jRelay does *in addition*.
+
+- A message starting with `#all` is a **post**: relay it to every other sub-group and to all Deliver-individually members. Its own sub-group already has it.
+- A message arriving in a group thread **without** `#all` is a **reply**, and routing depends on the new **In-thread replies** setting:
+  - **Everyone** (default) — relay to all other sub-groups, as a post would be. Familiar behavior: the whole group follows the conversation. Costs one send per other sub-group (11 at 100 members).
+  - **Poster only** — relay **only** to the member whose post is being replied to, resolved exactly as Phase 1's Reply Mode does (`members.last_post_received_id`, same window and eligibility rules). Costs **one** send. The replier's own 9 thread-mates still see it for free, so the people most likely to care are covered either way, and the person who asked still gets their answer.
+  - This setting exists because in-thread replies are the dominant traffic. At ~10 posts and ~30 replies a day on 100 members: Everyone ≈ 450 sends/day, Poster only ≈ 150. Same line, three times the headroom.
+- A **1:1 SMS or 1:1 MMS** to the host relays to **every** sub-group, including the sender's — the sender's thread-mates did not see it.
+- A post counts against the daily limits. A **Poster only** reply does not, matching Phase 1, where replies are uncharged.
 - Announcement Mode: a non-admin's group-thread message still reaches their own sub-group — that cannot be prevented — but is otherwise routed to admins only.
+
+### UI requirement for In-thread replies
+Members cannot discover this from behavior — a reply that reaches 9 people looks identical either way from the sender's phone. The Settings section must state plainly, in all three locales:
+1. that a reply always reaches the other members of your own group thread, because the carrier delivers it and the app cannot stop that;
+2. what the setting changes — whether everyone else also gets it, or only the person who posted;
+3. the send cost of each choice at the current member count, so the admin is choosing with the number in front of them.
+Switching this setting notifies every member with a one-line notice, the same as a mode change.
 - Adding or removing a member changes that sub-group's recipient set, which starts a new thread on members' phones: send that sub-group a one-line notice.
 
 ### Device spike — REQUIRED BEFORE BUILDING THE REST
@@ -185,7 +197,9 @@ Also settle during the spike: whether the `WAP_PUSH_RECEIVED` receiver fires for
 ### Acceptance
 - `INDIVIDUAL_SMS` (default): behavior identical to 5.1 in every respect.
 - `GROUP_MMS`, 100 members at 9 per group: one post produces **12 outbox rows, not 100**; each sub-group receives one group-thread MMS; the per-line counter increases by 100.
-- A group-thread message from a member reaches the other sub-groups and the Deliver-individually members, but **not** the sender's own sub-group.
+- With **In-thread replies = Everyone**: a group-thread reply reaches the other sub-groups and the Deliver-individually members, and is not re-sent to the sender's own sub-group.
+- With **In-thread replies = Poster only**: the same reply produces exactly ONE outbound send, to the original poster, and no other sub-group receives it. Confirm the poster actually gets it — that is the case this setting must not break.
+- `#help` returns the reply-phrasing guidance in every mode, and `#help` / `HELP` / `#commands` all work.
 - A 1:1 `#stop` still removes the sender; a 1:1 text in Reply Mode still routes privately.
 - An attachment-only MMS relays nothing, and its sender is told attachments are not relayed.
 - Adding a member sends that one sub-group a one-line notice; no other sub-group is touched and nothing is rebalanced.
