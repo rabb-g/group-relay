@@ -8,11 +8,14 @@ import com.sh7411usa.jrelay.db.MemberRepository;
 import com.sh7411usa.jrelay.db.MessageRepository;
 import com.sh7411usa.jrelay.db.OutboxRepository;
 import com.sh7411usa.jrelay.model.Member;
+import com.sh7411usa.jrelay.model.MessageRecord;
 import com.sh7411usa.jrelay.util.DailyLimitManager;
 import com.sh7411usa.jrelay.util.MessageSalt;
 import com.sh7411usa.jrelay.util.NotificationHelper;
 import com.sh7411usa.jrelay.util.Prefs;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class CommandProcessor {
@@ -53,10 +56,25 @@ public class CommandProcessor {
 
         messageRepository.log(sender.id, "IN", "RELAY", body);
 
-        if (trimmed.startsWith("#")) {
-            handleCommand(sender, trimmed);
+        String effective = trimmed;
+        if (prefs.isBareKeywordsEnabled()) {
+            String canonical = MessageIntent.canonicalBareKeyword(trimmed);
+            if (canonical != null) {
+                effective = canonical;
+            }
+        }
+
+        // Explicit-post prefix (#all / all:) is checked before the "#" dispatch below so #all is
+        // never mistaken for an unknown command, and it applies in every group mode.
+        String postBody = MessageIntent.stripPostPrefix(effective);
+        if (postBody != null) {
+            if (!sender.isMuted) {
+                handleExplicitPost(sender, postBody);
+            }
+        } else if (effective.startsWith("#")) {
+            handleCommand(sender, effective);
         } else if (!sender.isMuted) {
-            relayPlainMessage(sender, trimmed);
+            relayPlainMessage(sender, effective);
         }
 
         SmsSendService.start(context);
@@ -86,6 +104,10 @@ public class CommandProcessor {
             handleRemove(sender, text);
         } else if (lower.startsWith("#topic")) {
             handleTopicChange(sender, text);
+        } else if (lower.equals("#to") || (lower.startsWith("#to") && Character.isWhitespace(lower.charAt(3)))) {
+            // Requires "#to" to be the whole command or followed by whitespace, so "#topic" (checked
+            // above) and other "#to*" words like "#tomorrow"/"#total" don't get misdispatched here.
+            handleToCommand(sender, text);
         } else if (lower.equals("#limits")) {
             handleLimits(sender);
         } else if (lower.startsWith("#override")) {
@@ -103,6 +125,9 @@ public class CommandProcessor {
         StringBuilder sb = new StringBuilder(context.getString(R.string.tpl_commands_list_common));
         if (requester.isAdmin) {
             sb.append(context.getString(R.string.tpl_commands_list_admin_extra));
+        }
+        if (prefs.getGroupMode() == Prefs.GroupMode.REPLY) {
+            sb.append(context.getString(R.string.tpl_commands_list_reply_extra));
         }
         reply(requester, sb.toString());
     }
@@ -234,7 +259,8 @@ public class CommandProcessor {
         Member newMember = insertOrReactivateMember(normalizedPhone, nickname, addedByLabel);
         if (prefs.isAddedReportingEnabled()) {
             String groupName = prefs.getGroupName();
-            enqueue(newMember, context.getString(R.string.tpl_added_you, addedByLabel, groupName), "SYSTEM");
+            String welcome = withReplyHint(context.getString(R.string.tpl_added_you, addedByLabel, groupName));
+            enqueue(newMember, welcome, "SYSTEM");
             broadcastExcept(newMember.id, context.getString(R.string.tpl_added_other, addedByLabel, nickname));
         }
         SmsSendService.start(context);
@@ -255,11 +281,11 @@ public class CommandProcessor {
             count++;
             if (mode == ImportReportingMode.USUAL) {
                 String groupName = prefs.getGroupName();
-                enqueue(newMember, context.getString(R.string.tpl_added_you, addedByLabel, groupName), "SYSTEM");
+                enqueue(newMember, withReplyHint(context.getString(R.string.tpl_added_you, addedByLabel, groupName)), "SYSTEM");
                 broadcastExcept(newMember.id, context.getString(R.string.tpl_added_other, addedByLabel, pair[1]));
             } else if (mode == ImportReportingMode.STREAMLINED) {
                 String groupName = prefs.getGroupName();
-                enqueue(newMember, context.getString(R.string.tpl_added_you, addedByLabel, groupName), "SYSTEM");
+                enqueue(newMember, withReplyHint(context.getString(R.string.tpl_added_you, addedByLabel, groupName)), "SYSTEM");
             }
         }
         if (mode == ImportReportingMode.STREAMLINED && count > 0) {
@@ -285,16 +311,7 @@ public class CommandProcessor {
         if (rest.isEmpty()) {
             return;
         }
-        Member target = memberRepository.findActiveByNickname(rest);
-        if (target == null) {
-            String normalized = PhoneNumberUtils.normalize(rest);
-            if (normalized != null) {
-                Member byPhone = memberRepository.findByPhone(normalized);
-                if (byPhone != null && byPhone.active) {
-                    target = byPhone;
-                }
-            }
-        }
+        Member target = resolveMemberTolerant(rest);
         if (target == null) {
             return;
         }
@@ -361,16 +378,7 @@ public class CommandProcessor {
             return;
         }
 
-        Member target = memberRepository.findActiveByNickname(rest);
-        if (target == null) {
-            String normalized = PhoneNumberUtils.normalize(rest);
-            if (normalized != null) {
-                Member byPhone = memberRepository.findByPhone(normalized);
-                if (byPhone != null && byPhone.active) {
-                    target = byPhone;
-                }
-            }
-        }
+        Member target = resolveMemberTolerant(rest);
         if (target == null) {
             return;
         }
@@ -401,6 +409,8 @@ public class CommandProcessor {
             newMode = Prefs.GroupMode.ANNOUNCEMENT;
         } else if (arg.equals("group")) {
             newMode = Prefs.GroupMode.GROUP;
+        } else if (arg.equals("reply")) {
+            newMode = Prefs.GroupMode.REPLY;
         } else {
             reply(sender, context.getString(R.string.tpl_mode_invalid));
             return;
@@ -418,16 +428,34 @@ public class CommandProcessor {
      */
     public void setGroupMode(Prefs.GroupMode newMode, String changedByLabel, long excludeId) {
         prefs.setGroupMode(newMode);
-        boolean announcement = newMode == Prefs.GroupMode.ANNOUNCEMENT;
-        String changeNotice = context.getString(announcement
-                ? R.string.tpl_mode_changed_announcement : R.string.tpl_mode_changed_group, changedByLabel);
+        int changeNoticeRes;
+        switch (newMode) {
+            case ANNOUNCEMENT:
+                changeNoticeRes = R.string.tpl_mode_changed_announcement;
+                break;
+            case REPLY:
+                changeNoticeRes = R.string.tpl_mode_changed_reply;
+                break;
+            case GROUP:
+            default:
+                changeNoticeRes = R.string.tpl_mode_changed_group;
+                break;
+        }
+        String changeNotice = context.getString(changeNoticeRes, changedByLabel);
         broadcastExcept(excludeId, changeNotice, "SYSTEM");
         SmsSendService.start(context);
     }
 
     private int modeStatusStringRes(Prefs.GroupMode mode) {
-        return mode == Prefs.GroupMode.ANNOUNCEMENT
-                ? R.string.tpl_mode_status_announcement : R.string.tpl_mode_status_group;
+        switch (mode) {
+            case ANNOUNCEMENT:
+                return R.string.tpl_mode_status_announcement;
+            case REPLY:
+                return R.string.tpl_mode_status_reply;
+            case GROUP:
+            default:
+                return R.string.tpl_mode_status_group;
+        }
     }
 
     private void handleJoinRequest(String senderE164, String text) {
@@ -461,7 +489,8 @@ public class CommandProcessor {
         Member newMember = insertOrReactivateMember(normalizedPhone, nickname, nickname);
         if (prefs.isAddedReportingEnabled()) {
             String groupName = prefs.getGroupName();
-            enqueue(newMember, context.getString(R.string.tpl_added_you_self, groupName), "SYSTEM");
+            String welcome = withReplyHint(context.getString(R.string.tpl_added_you_self, groupName));
+            enqueue(newMember, welcome, "SYSTEM");
             broadcastExcept(newMember.id, context.getString(R.string.tpl_joined_other, nickname));
         }
         SmsSendService.start(context);
@@ -502,29 +531,70 @@ public class CommandProcessor {
         SmsSendService.start(context);
     }
 
-    /** Sends a one-off admin direct message to a member, regardless of their mute state. */
+    /**
+     * Sends a one-off admin direct message to a member, regardless of their mute state. Clears
+     * their reply-target pointer: this message didn't come from another member's post, so a Reply
+     * Mode reply to it should fall through to the admin route rather than silently targeting
+     * whoever they last replied to.
+     */
     public void sendDirectMessage(Member target, String body) {
         String formatted = context.getString(R.string.tpl_dm_prefix, body);
         enqueue(target, formatted, "DM");
+        memberRepository.setLastPostReceivedIdForAll(Collections.singletonList(target.id), null);
         SmsSendService.start(context);
     }
 
-    /** Sends an admin message to every active member, regardless of mute state. */
+    /**
+     * Sends an admin message to every active member, regardless of mute state. Clears every
+     * recipient's reply-target pointer for the same reason as {@link #sendDirectMessage}.
+     */
     public void broadcastToGroup(String body) {
         String formatted = context.getString(R.string.tpl_dm_prefix, body);
         List<Member> members = memberRepository.getActiveMembers();
+        List<Long> recipientIds = new ArrayList<>(members.size());
         for (Member m : members) {
             enqueue(m, formatted, "ADMIN");
+            recipientIds.add(m.id);
         }
+        memberRepository.setLastPostReceivedIdForAll(recipientIds, null);
         SmsSendService.start(context);
     }
 
-    private void relayPlainMessage(Member sender, String body) {
+    /** An explicit #all / all: post. Same Announcement-mode gate as a plain relay, otherwise always posts to the group. */
+    private void handleExplicitPost(Member sender, String body) {
         if (prefs.getGroupMode() == Prefs.GroupMode.ANNOUNCEMENT && !sender.isAdmin) {
             sendToAdminsOnly(sender, body);
             return;
         }
+        postToGroup(sender, body);
+    }
 
+    private void relayPlainMessage(Member sender, String body) {
+        Prefs.GroupMode mode = prefs.getGroupMode();
+        if (mode == Prefs.GroupMode.ANNOUNCEMENT && !sender.isAdmin) {
+            sendToAdminsOnly(sender, body);
+            return;
+        }
+        if (mode == Prefs.GroupMode.REPLY) {
+            handleReply(sender, body);
+            return;
+        }
+        postToGroup(sender, body);
+    }
+
+    /**
+     * In Reply Mode, welcome texts gain a sentence explaining #all; every other mode gets the text
+     * unchanged. Shared by #add, #join self-adds and CSV import so a member's first message never
+     * depends on which path added them.
+     */
+    private String withReplyHint(String welcome) {
+        if (prefs.getGroupMode() == Prefs.GroupMode.REPLY) {
+            return welcome + context.getString(R.string.tpl_welcome_reply_hint);
+        }
+        return welcome;
+    }
+
+    private void postToGroup(Member sender, String body) {
         DailyLimitManager limitManager = new DailyLimitManager(context);
 
         DailyLimitManager.Status groupStatus = limitManager.groupStatus();
@@ -543,18 +613,175 @@ public class CommandProcessor {
 
         String formatted = context.getString(R.string.tpl_relay_prefix, sender.nickname, body);
         formatted = MessageSalt.applyAll(prefs, sender.phoneE164, formatted);
-        messageRepository.log(sender.id, "IN", "RELAYED", body);
-        broadcastExcept(sender.id, formatted, "RELAY");
+        long postLogId = messageRepository.log(sender.id, "IN", "RELAYED", body);
+        broadcastExcept(sender.id, formatted, "RELAY", postLogId);
+    }
+
+    /**
+     * Reply Mode: a plain message with no #all/#to prefix. Delivered to the sender's last-received
+     * post's author only, if that target is still eligible; otherwise routed to admins with a
+     * "no target" notice back to the sender (mirrors #admin / Announcement-mode routing).
+     */
+    private void handleReply(Member sender, String body) {
+        Member target = resolveReplyTarget(sender);
+        if (target == null) {
+            sendToAdminsOnly(sender, body);
+            reply(sender, context.getString(R.string.tpl_reply_no_target));
+            return;
+        }
+        deliverReply(sender, target, body);
+    }
+
+    /**
+     * Resolves `sender`'s last-received post to a still-eligible reply target: the post's log row
+     * must still exist, its author must still be an active member other than the sender, and the
+     * post must still be within the configured reply window. Returns null otherwise.
+     */
+    private Member resolveReplyTarget(Member sender) {
+        Long postId = sender.lastPostReceivedId;
+        if (postId == null) {
+            return null;
+        }
+        MessageRecord record = messageRepository.getById(postId);
+        if (record == null || record.memberId == null) {
+            return null;
+        }
+        Member author = memberRepository.findById(record.memberId);
+        if (author == null || !author.active || author.id == sender.id) {
+            return null;
+        }
+        if (!MessageIntent.isWithinReplyWindow(record.timestamp, System.currentTimeMillis(), prefs.getReplyWindowHours())) {
+            return null;
+        }
+        return author;
+    }
+
+    /**
+     * Delivers a resolved Reply Mode message to exactly one target (skipped if muted, same as
+     * sendToAdminsOnly skips muted admins), with no daily-limit charge and no "RELAYED" log entry
+     * (mirrors #admin / Announcement routing). Optionally copies it to admins.
+     */
+    private void deliverReply(Member sender, Member target, String body) {
+        if (!target.isMuted) {
+            enqueue(target, context.getString(R.string.tpl_reply_prefix, sender.nickname, body), "REPLY");
+        }
+        if (prefs.isCopyRepliesToAdmins()) {
+            copyReplyToAdmins(sender, target, body);
+        }
+    }
+
+    /** Copies a delivered reply to active admins, skipping muted admins and the sender/target so nobody gets it twice. */
+    private void copyReplyToAdmins(Member sender, Member target, String body) {
+        String formatted = context.getString(R.string.tpl_reply_copy_admin, sender.nickname, target.nickname, body);
+        List<Member> admins = memberRepository.getActiveAdmins();
+        for (Member admin : admins) {
+            if (admin.isMuted || admin.id == sender.id || admin.id == target.id) {
+                continue;
+            }
+            enqueue(admin, formatted, "ADMIN");
+        }
+    }
+
+    /** #to <nickname> <text>: Reply Mode only, explicit-target reply. */
+    private void handleToCommand(Member sender, String text) {
+        if (prefs.getGroupMode() != Prefs.GroupMode.REPLY) {
+            reply(sender, context.getString(R.string.tpl_to_wrong_mode));
+            return;
+        }
+        String rest = text.substring(3).trim();
+        if (rest.isEmpty()) {
+            reply(sender, context.getString(R.string.tpl_to_usage));
+            return;
+        }
+
+        // Nicknames may contain spaces: try progressively longer word-prefixes of `rest` as the
+        // candidate nickname and keep the longest one that resolves to an active member. Split on
+        // \s+ (not a literal space) so a newline after the nickname, e.g. "#to Bob\nmessage", still
+        // separates it from the message.
+        String[] words = rest.split("\\s+");
+        String bestCandidate = null;
+        Member bestMatch = null;
+        int bestWordCount = 0;
+        StringBuilder candidateBuilder = new StringBuilder();
+        for (int i = 0; i < words.length; i++) {
+            if (i > 0) {
+                candidateBuilder.append(' ');
+            }
+            candidateBuilder.append(words[i]);
+            String candidate = candidateBuilder.toString();
+            Member match = resolveMemberTolerant(candidate);
+            if (match != null) {
+                bestCandidate = candidate;
+                bestMatch = match;
+                bestWordCount = i + 1;
+            }
+        }
+
+        if (bestMatch == null) {
+            reply(sender, context.getString(R.string.tpl_to_not_found, rest));
+            return;
+        }
+
+        StringBuilder messageBuilder = new StringBuilder();
+        for (int i = bestWordCount; i < words.length; i++) {
+            if (messageBuilder.length() > 0) {
+                messageBuilder.append(' ');
+            }
+            messageBuilder.append(words[i]);
+        }
+        String message = messageBuilder.toString().trim();
+        if (message.isEmpty()) {
+            reply(sender, context.getString(R.string.tpl_to_usage));
+            return;
+        }
+        if (bestMatch.id == sender.id) {
+            reply(sender, context.getString(R.string.tpl_to_not_found, bestCandidate));
+            return;
+        }
+
+        deliverReply(sender, bestMatch, message);
+    }
+
+    /**
+     * Resolves a user-typed member reference the tolerant way #remove, #override and #to all share:
+     * an active-member nickname match first, falling back to a normalized phone match. Returns null
+     * when nothing matches.
+     */
+    private Member resolveMemberTolerant(String candidate) {
+        Member target = memberRepository.findActiveByNickname(candidate);
+        if (target != null) {
+            return target;
+        }
+        String normalized = PhoneNumberUtils.normalize(candidate);
+        if (normalized != null) {
+            Member byPhone = memberRepository.findByPhone(normalized);
+            if (byPhone != null && byPhone.active) {
+                return byPhone;
+            }
+        }
+        return null;
     }
 
     private void broadcastExcept(long excludeId, String message) {
-        broadcastExcept(excludeId, message, "SYSTEM");
+        broadcastExcept(excludeId, message, "SYSTEM", null);
     }
 
     private void broadcastExcept(long excludeId, String message, String category) {
+        broadcastExcept(excludeId, message, category, null);
+    }
+
+    private void broadcastExcept(long excludeId, String message, String category, Long postLogId) {
         List<Member> recipients = memberRepository.getActiveRecipientsExcept(excludeId);
+        boolean trackPost = postLogId != null && "RELAY".equals(category);
+        List<Long> postRecipientIds = trackPost ? new ArrayList<>(recipients.size()) : null;
         for (Member m : recipients) {
             enqueue(m, message, category);
+            if (trackPost) {
+                postRecipientIds.add(m.id);
+            }
+        }
+        if (trackPost) {
+            memberRepository.setLastPostReceivedIdForAll(postRecipientIds, postLogId);
         }
     }
 

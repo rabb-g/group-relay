@@ -27,9 +27,11 @@
     <string name="stats_next_burst">Next burst in %1$s (%2$d messages)</string>
     <string name="badge_sending">Sending…</string>
     <string name="badge_announcement_mode">Announcement Mode</string>
+    <string name="badge_reply_mode">Reply Mode</string>
     <string name="badge_service_paused">Service Paused</string>
     <string name="menu_switch_to_announcement">Switch to Announcement Mode</string>
     <string name="menu_switch_to_group">Switch to Group Mode</string>
+    <string name="menu_switch_to_reply">Switch to Reply Mode</string>
     <string name="send_group_message_shortcut">Send to Group</string>
     <string name="recent_activity">Recent Activity</string>
     <string name="no_activity_yet">No activity yet.</string>
@@ -136,9 +138,15 @@
     <string name="pause_status_timed">Paused. Resumes in %1$s.</string>
 
     <string name="section_group_mode">Group Mode</string>
-    <string name="group_mode_desc">Group mode relays everyone\'s messages as usual. Announcement mode relays only admins\' messages to everyone -- everyone else\'s messages go to admins only. Can also be changed by text with #mode announcement / #mode group.</string>
+    <string name="group_mode_desc">Group mode relays everyone\'s messages as usual. Announcement mode relays only admins\' messages to everyone -- everyone else\'s messages go to admins only. Reply mode relays a message to everyone only when it starts with #all; a plain reply goes just to the member who posted. Can also be changed by text with #mode group / #mode announcement / #mode reply.</string>
     <string name="group_mode_group">Group Mode</string>
     <string name="group_mode_announcement">Announcement Mode</string>
+    <string name="group_mode_reply">Reply Mode</string>
+
+    <string name="section_reply_mode">Reply Mode</string>
+    <string name="reply_mode_desc">In Reply mode anyone can post to everyone by starting a message with #all. A plain reply goes only to the member who sent the last post you received. Can also be set by text with #mode reply.</string>
+    <string name="reply_window_hours_label">Reply window (hours; 0 = no limit)</string>
+    <string name="copy_replies_to_admins_label">Copy replies to admins</string>
 
     <string name="section_staggering">Staggering</string>
     <string name="staggering_desc">Waits between bursts of outgoing messages so sends don\'t all fire at once.</string>
@@ -256,6 +264,10 @@
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
 
+    <string name="section_commands">Commands</string>
+    <string name="commands_desc">Accept common opt-out and help words sent on their own, without the leading #.</string>
+    <string name="accept_bare_keywords_label">Accept bare keywords (STOP, HELP, MUTE)</string>
+
     <string name="section_miscellaneous">Miscellaneous</string>
 
     <string name="section_about">About</string>
@@ -287,6 +299,7 @@
 
     <!-- Command reply / broadcast templates -->
     <string name="tpl_added_you">%1$s added you to %2$s Group. Reply #stop at anytime to opt out.</string>
+    <string name="tpl_welcome_reply_hint"> Start a message with #all to post to everyone. A plain reply goes only to the person who posted.</string>
     <string name="tpl_added_other">%1$s added %2$s to the group.</string>
     <string name="tpl_removed_you">You have been removed from %1$s Group. You will no longer receive messages from this Group.</string>
     <string name="tpl_removed_other">%1$s removed %2$s from the group.</string>
@@ -300,11 +313,18 @@
     <string name="tpl_unauthorized">Only admins can use this command.</string>
     <string name="tpl_unknown_command">Unknown command. Reply #commands for a list of commands.</string>
     <string name="tpl_invalid_number">Invalid phone number format.</string>
+    <string name="tpl_to_wrong_mode">Only available in Reply Mode.</string>
+    <string name="tpl_to_usage">Usage: #to &lt;nickname&gt; &lt;message&gt;</string>
+    <string name="tpl_to_not_found">No active member named %1$s.</string>
     <string name="tpl_relay_prefix">%1$s: %2$s</string>
     <string name="tpl_admin_relay_prefix">@admin %1$s: %2$s</string>
+    <string name="tpl_reply_prefix">%1$s (reply): %2$s</string>
+    <string name="tpl_reply_no_target">Sent to the admins. To post to everyone, start your message with #all.</string>
+    <string name="tpl_reply_copy_admin">@admin reply from %1$s to %2$s: %3$s</string>
     <string name="tpl_dm_prefix">[Admin]: %1$s</string>
     <string name="tpl_commands_list_common">Available commands:\n#commands - show this list\n#mute - pause messages\n#unmute - resume messages\n#stop - leave the group\n#list - list members\n#name &lt;new nickname&gt; - change your nickname\n#admin &lt;message&gt; - message admins only\n#mode - show the current group mode\n#join &lt;nickname&gt; - request to join (non-members)</string>
-    <string name="tpl_commands_list_admin_extra">\n(Admins) #add &lt;number&gt; &lt;nickname&gt; - add a member\n(Admins) #remove &lt;nickname or number&gt; - remove a member\n(Admins) #topic &lt;new name&gt; - change the group name\n(Admins) #limits - show today\'s group limit status\n(Admins) #override [nickname or number] - add 1 message to the group limit, or a member\'s individual limit\n(Admins) #mode announcement|group - switch between Announcement and Group mode</string>
+    <string name="tpl_commands_list_admin_extra">\n(Admins) #add &lt;number&gt; &lt;nickname&gt; - add a member\n(Admins) #remove &lt;nickname or number&gt; - remove a member\n(Admins) #topic &lt;new name&gt; - change the group name\n(Admins) #limits - show today\'s group limit status\n(Admins) #override [nickname or number] - add 1 message to the group limit, or a member\'s individual limit\n(Admins) #mode group|announcement|reply - switch group mode</string>
+    <string name="tpl_commands_list_reply_extra">\n#all &lt;message&gt; - post to everyone\n#to &lt;nickname&gt; &lt;message&gt; - reply privately to one member</string>
     <string name="tpl_list_you">(You)</string>
     <string name="tpl_list_admin">(admin)</string>
     <string name="default_added_by_admin">An Admin</string>
@@ -321,12 +341,14 @@
     <!-- Failure alert -->
     <string name="tpl_failure_alert">@system: %1$s has had %2$d failed messages.</string>
 
-    <!-- Announcement / Group mode -->
+    <!-- Announcement / Group / Reply mode -->
     <string name="tpl_mode_status_announcement">Announcement mode is on: only admin messages are relayed to everyone. Everyone else\'s messages go to admins only.</string>
     <string name="tpl_mode_status_group">Group mode is on: everyone\'s messages are relayed to the group.</string>
-    <string name="tpl_mode_invalid">Usage: #mode announcement or #mode group</string>
+    <string name="tpl_mode_status_reply">Reply mode is on: start a message with #all to post to everyone. A plain reply goes only to the person who posted.</string>
+    <string name="tpl_mode_invalid">Usage: #mode group, #mode announcement, or #mode reply</string>
     <string name="tpl_mode_changed_announcement">%1$s switched the group to Announcement mode. Only admin messages will be relayed to everyone from now on.</string>
     <string name="tpl_mode_changed_group">%1$s switched the group back to Group mode. Everyone\'s messages will be relayed again.</string>
+    <string name="tpl_mode_changed_reply">%1$s switched the group to Reply mode. Start a message with #all to post to everyone; a plain reply goes only to the person who posted.</string>
 
     <!-- Joining by text (#join) -->
     <string name="tpl_added_you_self">You joined %1$s Group. Reply #stop at anytime to opt out.</string>

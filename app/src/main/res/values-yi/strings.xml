@@ -27,9 +27,11 @@
     <string name="stats_next_burst">די קומענדיקע פארזאמלונג אין %1$s (%2$d ידיעות)</string>
     <string name="badge_sending">שיקט…</string>
     <string name="badge_announcement_mode">אָנזאָג-מאָדוס</string>
+    <string name="badge_reply_mode">ענטפער-מאָדוס</string>
     <string name="badge_service_paused">סערוויס אָפּגעשטעלט</string>
     <string name="menu_switch_to_announcement">אריבערגיין צו אָנזאָג-מאָדוס</string>
     <string name="menu_switch_to_group">אריבערגיין צו גרופע-מאָדוס</string>
+    <string name="menu_switch_to_reply">אריבערגיין צו ענטפער-מאָדוס</string>
     <string name="send_group_message_shortcut">שיקן צו דער גרופע</string>
     <string name="recent_activity">לעצטע אקטיוויטעט</string>
     <string name="no_activity_yet">נאך קיין אקטיוויטעט נישטא.</string>
@@ -136,9 +138,15 @@
     <string name="pause_status_timed">אָפּגעשטעלט. שטעלט זיך ווידער אָן אין %1$s.</string>
 
     <string name="section_group_mode">גרופע-מאָדוס</string>
-    <string name="group_mode_desc">גרופע-מאָדוס שיקט אריבער אלעמענס ידיעות ווי געוויינטליך. אָנזאָג-מאָדוס שיקט אריבער צו אלעמען נאר אדמין-ידיעות - אלע אנדערע\'ס ידיעות גייען נאר צו אדמינען. קען אויך ווערן געביטן דורך א מעסעדזש מיט #mode announcement / #mode group.</string>
+    <string name="group_mode_desc">גרופע-מאָדוס שיקט אריבער אלעמענס ידיעות ווי געוויינטליך. אָנזאָג-מאָדוס שיקט אריבער צו אלעמען נאר אדמין-ידיעות - אלע אנדערע\'ס ידיעות גייען נאר צו אדמינען. ענטפער-מאָדוס שיקט אריבער א ידיעה צו אלעמען נאר ווען זי הייבט זיך אן מיט #all; א פשוטע ענטפער גייט נאר צום מיטגליד וואס האט געשיקט. קען אויך ווערן געביטן דורך א מעסעדזש מיט #mode group / #mode announcement / #mode reply.</string>
     <string name="group_mode_group">גרופע-מאָדוס</string>
     <string name="group_mode_announcement">אָנזאָג-מאָדוס</string>
+    <string name="group_mode_reply">ענטפער-מאָדוס</string>
+
+    <string name="section_reply_mode">ענטפער-מאָדוס</string>
+    <string name="reply_mode_desc">אין ענטפער-מאָדוס קען יעדער איינער שיקן צו אלעמען דורך הייבן אן א ידיעה מיט #all. א פשוטע ענטפער גייט נאר צום מיטגליד וואס האט געשיקט די לעצטע ידיעה וואס איר האט באקומען. קען אויך ווערן געביטן דורך א מעסעדזש מיט #mode reply.</string>
+    <string name="reply_window_hours_label">ענטפער-פענצטער (שעות; 0 = אָן א גרענעץ)</string>
+    <string name="copy_replies_to_admins_label">קאפירן ענטפערס צו אדמינען</string>
 
     <string name="section_staggering">צעטיילן דאס שיקן</string>
     <string name="staggering_desc">וואַרט צווישן פארזאמלונגען פון ארויסגייענדיקע ידיעות, אזוי אז ידיעות ווערן נישט אלע געשיקט אויף איין מאל.</string>
@@ -256,6 +264,10 @@
     <string name="theme_light">ליכטיק</string>
     <string name="theme_dark">טונקל</string>
 
+    <string name="section_commands">באפעלן</string>
+    <string name="commands_desc">אָננעמען געוויינטליכע אָפּזאָג- און הילף-ווערטער וואס ווערן געשיקט אליין, אָן דעם פאראויסגייענדיקן #.</string>
+    <string name="accept_bare_keywords_label">אָננעמען נאקעטע שליסל-ווערטער (STOP, HELP, MUTE)</string>
+
     <string name="section_miscellaneous">פארשידענע</string>
 
     <string name="section_about">וועגן</string>
@@ -287,6 +299,7 @@
 
     <!-- Command reply / broadcast templates -->
     <string name="tpl_added_you">%1$s האט אייך צוגעלייגט צו דער %2$s גרופע. ענטפערט #stop כדי אַרויסצוטרעטן.</string>
+    <string name="tpl_welcome_reply_hint"> הייבט אן א ידיעה מיט #all כדי צו שיקן צו אלעמען. א פשוטע ענטפער גייט נאר צו דעם וואס האט געשיקט די ידיעה.</string>
     <string name="tpl_added_other">%1$s האט צוגעלייגט %2$s צו דער גרופע.</string>
     <string name="tpl_removed_you">איר זענט אַרויסגענומען געוואָרן פון דער %1$s גרופע. איר וועט מער נישט באקומען ידיעות פון דער גרופע.</string>
     <string name="tpl_removed_other">%1$s האט אַרויסגענומען %2$s פון דער גרופע.</string>
@@ -300,11 +313,18 @@
     <string name="tpl_unauthorized">נאר אדמינען קענען ניצן דעם באפעל.</string>
     <string name="tpl_unknown_command">אומבאקאנטער באפעל. ענטפערט #commands פאר א רשימה פון באפעלן.</string>
     <string name="tpl_invalid_number">דער טעלעפאן נומער איז נישט גילטיק.</string>
+    <string name="tpl_to_wrong_mode">פאראן נאר אין ענטפער-מאָדוס.</string>
+    <string name="tpl_to_usage">ניצן: #to &lt;צונאמען&gt; &lt;ידיעה&gt;</string>
+    <string name="tpl_to_not_found">נישטא קיין אקטיוון מיטגליד מיטן נאמען %1$s.</string>
     <string name="tpl_relay_prefix">%1$s: %2$s</string>
     <string name="tpl_admin_relay_prefix">@admin %1$s: %2$s</string>
+    <string name="tpl_reply_prefix">%1$s (ענטפער): %2$s</string>
+    <string name="tpl_reply_no_target">געשיקט צו די אדמינען. כדי צו שיקן צו אלעמען, הייבט אן אייער ידיעה מיט #all.</string>
+    <string name="tpl_reply_copy_admin">@admin ענטפער פון %1$s צו %2$s: %3$s</string>
     <string name="tpl_dm_prefix">[אדמין]: %1$s</string>
     <string name="tpl_commands_list_common">פאראנע באפעלן:\n#commands - ווייזן די רשימה\n#mute - פארשטומען ידיעות\n#unmute - אָפּנעמען דעם שטום\n#stop - פארלאזן די גרופע\n#list - רשימה פון מיטגלידער\n#name &lt;נייער צונאמען&gt; - טוישן אייער צונאמען\n#admin &lt;ידיעה&gt; - א ידיעה נאר פאר אדמינען\n#mode - ווייזן דעם איצטיקן גרופע-מאָדוס\n#join &lt;צונאמען&gt; - בעטן זיך אנצושליסן (פאר נישט-מיטגלידער)</string>
-    <string name="tpl_commands_list_admin_extra">\n(אדמינען) #add &lt;נומער&gt; &lt;צונאמען&gt; - צולייגן א מיטגליד\n(אדמינען) #remove &lt;צונאמען אָדער נומער&gt; - אַרויסנעמען א מיטגליד\n(אדמינען) #topic &lt;נייער נאמען&gt; - טוישן דעם נאמען פון דער גרופע\n(אדמינען) #limits - ווייזן דעם היינטיקן סטאטוס פון דער גרופעס גרענעץ\n(אדמינען) #override [צונאמען אָדער נומער] - צולייגן איין ידיעה צו דער גרופעס גרענעץ, אָדער צו א מיטגליד\'ס באזונדער גרענעץ\n(אדמינען) #mode announcement|group - טוישן צווישן אָנזאָג-מאָדוס און גרופע-מאָדוס</string>
+    <string name="tpl_commands_list_admin_extra">\n(אדמינען) #add &lt;נומער&gt; &lt;צונאמען&gt; - צולייגן א מיטגליד\n(אדמינען) #remove &lt;צונאמען אָדער נומער&gt; - אַרויסנעמען א מיטגליד\n(אדמינען) #topic &lt;נייער נאמען&gt; - טוישן דעם נאמען פון דער גרופע\n(אדמינען) #limits - ווייזן דעם היינטיקן סטאטוס פון דער גרופעס גרענעץ\n(אדמינען) #override [צונאמען אָדער נומער] - צולייגן איין ידיעה צו דער גרופעס גרענעץ, אָדער צו א מיטגליד\'ס באזונדער גרענעץ\n(אדמינען) #mode group|announcement|reply - טוישן דעם גרופע-מאָדוס</string>
+    <string name="tpl_commands_list_reply_extra">\n#all &lt;ידיעה&gt; - שיקן צו אלעמען\n#to &lt;צונאמען&gt; &lt;ידיעה&gt; - ענטפערן פּריוואט צו איין מיטגליד</string>
     <string name="tpl_list_you">(איר)</string>
     <string name="tpl_list_admin">(אדמין)</string>
     <string name="default_added_by_admin">אן אדמין</string>
@@ -321,12 +341,14 @@
     <!-- Failure alert -->
     <string name="tpl_failure_alert">@system: %1$s האט געהאט %2$d נישט-געלונגענע ידיעות.</string>
 
-    <!-- Announcement / Group mode -->
+    <!-- Announcement / Group / Reply mode -->
     <string name="tpl_mode_status_announcement">אָנזאָג-מאָדוס איז אָנגעשאלטן: נאר אדמין-ידיעות ווערן איבערגעשיקט צו אלעמען. אלע אנדערע\'ס ידיעות גייען נאר צו אדמינען.</string>
     <string name="tpl_mode_status_group">גרופע-מאָדוס איז אָנגעשאלטן: אלעמענס ידיעות ווערן איבערגעשיקט צו דער גרופע.</string>
-    <string name="tpl_mode_invalid">ניצן: #mode announcement אָדער #mode group</string>
+    <string name="tpl_mode_status_reply">ענטפער-מאָדוס איז אָנגעשאלטן: הייבט אן א ידיעה מיט #all כדי צו שיקן צו אלעמען. א פשוטע ענטפער גייט נאר צו דעם וואס האט געשיקט די ידיעה.</string>
+    <string name="tpl_mode_invalid">ניצן: #mode group, #mode announcement אָדער #mode reply</string>
     <string name="tpl_mode_changed_announcement">%1$s האט אריבערגעשטעלט די גרופע אויף אָנזאָג-מאָדוס. פון איצט אן וועלן נאר אדמין-ידיעות ווערן איבערגעשיקט צו אלעמען.</string>
     <string name="tpl_mode_changed_group">%1$s האט צוריקגעשטעלט די גרופע אויף גרופע-מאָדוס. אלעמענס ידיעות וועלן ווידער ווערן איבערגעשיקט.</string>
+    <string name="tpl_mode_changed_reply">%1$s האט אריבערגעשטעלט די גרופע אויף ענטפער-מאָדוס. הייבט אן א ידיעה מיט #all כדי צו שיקן צו אלעמען; א פשוטע ענטפער גייט נאר צו דעם וואס האט געשיקט די ידיעה.</string>
 
     <!-- Joining by text (#join) -->
     <string name="tpl_added_you_self">איר האט זיך אנגעשלאסן צו דער %1$s גרופע. ענטפערט #stop כדי אַרויסצוטרעטן.</string>

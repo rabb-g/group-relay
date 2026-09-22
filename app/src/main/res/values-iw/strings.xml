@@ -27,9 +27,11 @@
     <string name="stats_next_burst">המנה הבאה בעוד %1$s (%2$d הודעות)</string>
     <string name="badge_sending">בשליחה…</string>
     <string name="badge_announcement_mode">מצב הכרזה</string>
+    <string name="badge_reply_mode">מצב תגובה</string>
     <string name="badge_service_paused">השירות מושהה</string>
     <string name="menu_switch_to_announcement">מעבר למצב הכרזה</string>
     <string name="menu_switch_to_group">מעבר למצב קבוצה</string>
+    <string name="menu_switch_to_reply">מעבר למצב תגובה</string>
     <string name="send_group_message_shortcut">שליחה לקבוצה</string>
     <string name="recent_activity">פעילות אחרונה</string>
     <string name="no_activity_yet">אין פעילות עדיין.</string>
@@ -136,9 +138,15 @@
     <string name="pause_status_timed">מושהה. מתחדש בעוד %1$s.</string>
 
     <string name="section_group_mode">מצב קבוצה</string>
-    <string name="group_mode_desc">מצב קבוצה מעביר את הודעות כולם כרגיל. מצב הכרזה מעביר לכולם רק הודעות מנהלים - הודעות כל האחרים מגיעות רק למנהלים. ניתן לשנות גם באמצעות מסרון עם #mode announcement / #mode group.</string>
+    <string name="group_mode_desc">מצב קבוצה מעביר את הודעות כולם כרגיל. מצב הכרזה מעביר לכולם רק הודעות מנהלים - הודעות כל האחרים מגיעות רק למנהלים. מצב תגובה מעביר הודעה לכולם רק כשהיא מתחילה ב-#all; תגובה רגילה מגיעה רק למי שפרסם. ניתן לשנות גם באמצעות מסרון עם #mode group / #mode announcement / #mode reply.</string>
     <string name="group_mode_group">מצב קבוצה</string>
     <string name="group_mode_announcement">מצב הכרזה</string>
+    <string name="group_mode_reply">מצב תגובה</string>
+
+    <string name="section_reply_mode">מצב תגובה</string>
+    <string name="reply_mode_desc">במצב תגובה כל אחד יכול לפרסם לכולם על ידי התחלת הודעה ב-#all. תגובה רגילה מגיעה רק למי ששלח את ההודעה האחרונה שקיבלתם. ניתן לשנות גם באמצעות מסרון עם #mode reply.</string>
+    <string name="reply_window_hours_label">חלון תגובה (שעות; 0 = ללא הגבלה)</string>
+    <string name="copy_replies_to_admins_label">העתקת תגובות למנהלים</string>
 
     <string name="section_staggering">פיזור שליחה</string>
     <string name="staggering_desc">המתנה בין מנות של הודעות יוצאות כך שההודעות לא נשלחות כולן בבת אחת.</string>
@@ -256,6 +264,10 @@
     <string name="theme_light">בהיר</string>
     <string name="theme_dark">כהה</string>
 
+    <string name="section_commands">פקודות</string>
+    <string name="commands_desc">קבלת מילות פרישה ועזרה נפוצות שנשלחות בפני עצמן, ללא ה-# בהתחלה.</string>
+    <string name="accept_bare_keywords_label">קבלת מילות מפתח חשופות (STOP, HELP, MUTE)</string>
+
     <string name="section_miscellaneous">שונות</string>
 
     <string name="section_about">אודות</string>
@@ -287,6 +299,7 @@
 
     <!-- Command reply / broadcast templates -->
     <string name="tpl_added_you">%1$s הוסיף/ה אותך לקבוצת %2$s. השיבו #stop בכל עת כדי לצאת.</string>
+    <string name="tpl_welcome_reply_hint"> התחילו הודעה ב-#all כדי לפרסם לכולם. תגובה רגילה מגיעה רק למי שפרסם את ההודעה.</string>
     <string name="tpl_added_other">%1$s הוסיף/ה את %2$s לקבוצה.</string>
     <string name="tpl_removed_you">הוסרת מקבוצת %1$s. לא תקבל/י יותר הודעות מקבוצה זו.</string>
     <string name="tpl_removed_other">%1$s הסיר/ה את %2$s מהקבוצה.</string>
@@ -300,11 +313,18 @@
     <string name="tpl_unauthorized">רק מנהלים יכולים להשתמש בפקודה זו.</string>
     <string name="tpl_unknown_command">פקודה לא מוכרת. השיבו #commands לרשימת הפקודות.</string>
     <string name="tpl_invalid_number">פורמט מספר טלפון לא תקין.</string>
+    <string name="tpl_to_wrong_mode">זמין רק במצב תגובה.</string>
+    <string name="tpl_to_usage">שימוש: #to &lt;כינוי&gt; &lt;הודעה&gt;</string>
+    <string name="tpl_to_not_found">אין חבר פעיל בשם %1$s.</string>
     <string name="tpl_relay_prefix">%1$s: %2$s</string>
     <string name="tpl_admin_relay_prefix">@admin %1$s: %2$s</string>
+    <string name="tpl_reply_prefix">%1$s (תגובה): %2$s</string>
+    <string name="tpl_reply_no_target">נשלח למנהלים. כדי לפרסם לכולם, התחילו את ההודעה שלכם ב-#all.</string>
+    <string name="tpl_reply_copy_admin">@admin תגובה מ-%1$s אל %2$s: %3$s</string>
     <string name="tpl_dm_prefix">[מנהל]: %1$s</string>
     <string name="tpl_commands_list_common">פקודות זמינות:\n#commands - הצגת רשימה זו\n#mute - השתקת הודעות\n#unmute - ביטול השתקה\n#stop - עזיבת הקבוצה\n#list - רשימת חברים\n#name &lt;כינוי חדש&gt; - שינוי הכינוי שלך\n#admin &lt;הודעה&gt; - הודעה למנהלים בלבד\n#mode - הצגת מצב הקבוצה הנוכחי\n#join &lt;כינוי&gt; - בקשה להצטרף (למי שאינם חברים)</string>
-    <string name="tpl_commands_list_admin_extra">\n(מנהלים) #add &lt;מספר&gt; &lt;כינוי&gt; - הוספת חבר\n(מנהלים) #remove &lt;כינוי או מספר&gt; - הסרת חבר\n(מנהלים) #topic &lt;שם חדש&gt; - שינוי שם הקבוצה\n(מנהלים) #limits - הצגת מצב המגבלה היומית של הקבוצה\n(מנהלים) #override [כינוי או מספר] - הוספת הודעה אחת למגבלת הקבוצה, או למגבלה האישית של חבר\n(מנהלים) #mode announcement|group - מעבר בין מצב הכרזה למצב קבוצה</string>
+    <string name="tpl_commands_list_admin_extra">\n(מנהלים) #add &lt;מספר&gt; &lt;כינוי&gt; - הוספת חבר\n(מנהלים) #remove &lt;כינוי או מספר&gt; - הסרת חבר\n(מנהלים) #topic &lt;שם חדש&gt; - שינוי שם הקבוצה\n(מנהלים) #limits - הצגת מצב המגבלה היומית של הקבוצה\n(מנהלים) #override [כינוי או מספר] - הוספת הודעה אחת למגבלת הקבוצה, או למגבלה האישית של חבר\n(מנהלים) #mode group|announcement|reply - החלפת מצב הקבוצה</string>
+    <string name="tpl_commands_list_reply_extra">\n#all &lt;הודעה&gt; - פרסום לכולם\n#to &lt;כינוי&gt; &lt;הודעה&gt; - תגובה פרטית לחבר אחד</string>
     <string name="tpl_list_you">(את/ה)</string>
     <string name="tpl_list_admin">(מנהל)</string>
     <string name="default_added_by_admin">מנהל</string>
@@ -321,12 +341,14 @@
     <!-- Failure alert -->
     <string name="tpl_failure_alert">@system: ל-%1$s היו %2$d הודעות שנכשלו.</string>
 
-    <!-- Announcement / Group mode -->
+    <!-- Announcement / Group / Reply mode -->
     <string name="tpl_mode_status_announcement">מצב הכרזה פעיל: רק הודעות מנהלים מועברות לכולם. הודעות של כל האחרים מגיעות רק למנהלים.</string>
     <string name="tpl_mode_status_group">מצב קבוצה פעיל: הודעות כולם מועברות לקבוצה.</string>
-    <string name="tpl_mode_invalid">שימוש: #mode announcement או #mode group</string>
+    <string name="tpl_mode_status_reply">מצב תגובה פעיל: התחילו הודעה ב-#all כדי לפרסם לכולם. תגובה רגילה מגיעה רק למי שפרסם את ההודעה.</string>
+    <string name="tpl_mode_invalid">שימוש: #mode group, #mode announcement או #mode reply</string>
     <string name="tpl_mode_changed_announcement">%1$s העביר/ה את הקבוצה למצב הכרזה. מעתה רק הודעות מנהלים יועברו לכולם.</string>
     <string name="tpl_mode_changed_group">%1$s החזיר/ה את הקבוצה למצב קבוצה. הודעות כולם יועברו שוב.</string>
+    <string name="tpl_mode_changed_reply">%1$s העביר/ה את הקבוצה למצב תגובה. התחילו הודעה ב-#all כדי לפרסם לכולם; תגובה רגילה מגיעה רק למי שפרסם את ההודעה.</string>
 
     <!-- Joining by text (#join) -->
     <string name="tpl_added_you_self">הצטרפת לקבוצת %1$s. השיבו #stop בכל עת כדי לצאת.</string>

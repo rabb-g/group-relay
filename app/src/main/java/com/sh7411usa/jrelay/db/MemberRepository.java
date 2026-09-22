@@ -128,6 +128,7 @@ public class MemberRepository {
         cv.put("is_muted", 0);
         cv.put("active", 1);
         cv.putNull("removed_at");
+        cv.putNull("last_post_received_id");
         db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
     }
 
@@ -185,6 +186,40 @@ public class MemberRepository {
         updateColumn(id, "failed_count", 0);
     }
 
+    /**
+     * Records the same post id on every member in `memberIds` in one statement, or clears the column
+     * for them when `postLogId` is null. Clearing is what app-originated admin messages use, so a
+     * member's next plain reply falls through to the admin route instead of targeting a stale post.
+     * The per-member alternative issues one implicit transaction per row; this commits once per chunk.
+     * No-op on a null/empty list.
+     */
+    public void setLastPostReceivedIdForAll(List<Long> memberIds, Long postLogId) {
+        if (memberIds == null || memberIds.isEmpty()) {
+            return;
+        }
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        if (postLogId != null) {
+            cv.put("last_post_received_id", postLogId);
+        } else {
+            cv.putNull("last_post_received_id");
+        }
+        int chunkSize = 500;
+        for (int start = 0; start < memberIds.size(); start += chunkSize) {
+            List<Long> chunk = memberIds.subList(start, Math.min(start + chunkSize, memberIds.size()));
+            StringBuilder placeholders = new StringBuilder();
+            String[] args = new String[chunk.size()];
+            for (int i = 0; i < chunk.size(); i++) {
+                if (i > 0) {
+                    placeholders.append(',');
+                }
+                placeholders.append('?');
+                args[i] = String.valueOf(chunk.get(i));
+            }
+            db.update(DbHelper.TABLE_MEMBERS, cv, "id IN (" + placeholders + ")", args);
+        }
+    }
+
     private void updateColumn(long id, String column, int value) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues cv = new ContentValues();
@@ -209,6 +244,8 @@ public class MemberRepository {
         m.dailyLimitBonus = c.getInt(c.getColumnIndexOrThrow("daily_limit_bonus"));
         m.dailyLimitBonusWindowStart = c.getLong(c.getColumnIndexOrThrow("daily_limit_bonus_window_start"));
         m.failedCount = c.getInt(c.getColumnIndexOrThrow("failed_count"));
+        int lastPostIdx = c.getColumnIndexOrThrow("last_post_received_id");
+        m.lastPostReceivedId = c.isNull(lastPostIdx) ? null : c.getLong(lastPostIdx);
         return m;
     }
 

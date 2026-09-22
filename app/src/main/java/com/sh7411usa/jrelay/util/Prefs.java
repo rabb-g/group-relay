@@ -15,7 +15,7 @@ public class Prefs {
 
     public enum ThemeChoice { SYSTEM, LIGHT, DARK }
 
-    public enum GroupMode { GROUP, ANNOUNCEMENT }
+    public enum GroupMode { GROUP, ANNOUNCEMENT, REPLY }
 
     public enum JoinPolicy { OFF, ALLOW, REQUIRE_APPROVAL }
 
@@ -73,6 +73,10 @@ public class Prefs {
     private static final String KEY_JOIN_POLICY = "join_policy";
     private static final String KEY_PAUSE_UNTIL_MILLIS = "pause_until_millis";
 
+    private static final String KEY_REPLY_WINDOW_HOURS = "reply_window_hours";
+    private static final String KEY_COPY_REPLIES_TO_ADMINS = "copy_replies_to_admins";
+    private static final String KEY_BARE_KEYWORDS_ENABLED = "bare_keywords_enabled";
+
     private static final String DEFAULT_GROUP_NAME = "jRelay";
     private static final int DEFAULT_BURST_MIN = 3;
     private static final int DEFAULT_BURST_MAX = 5;
@@ -89,6 +93,8 @@ public class Prefs {
 
     private static final int DEFAULT_GROUP_DAILY_LIMIT_VALUE = 100;
     private static final int DEFAULT_INDIVIDUAL_LIMIT_SEED = 10;
+
+    private static final int DEFAULT_REPLY_WINDOW_HOURS = 24;
 
     private final SharedPreferences prefs;
 
@@ -381,6 +387,31 @@ public class Prefs {
 
     public void setGroupMode(GroupMode mode) {
         prefs.edit().putString(KEY_GROUP_MODE, mode.name()).apply();
+    }
+
+    /** Hours a member's incoming reply is accepted after the group's last outgoing message. 0 = no limit. */
+    public int getReplyWindowHours() {
+        return prefs.getInt(KEY_REPLY_WINDOW_HOURS, DEFAULT_REPLY_WINDOW_HOURS);
+    }
+
+    public void setReplyWindowHours(int hours) {
+        prefs.edit().putInt(KEY_REPLY_WINDOW_HOURS, hours).apply();
+    }
+
+    public boolean isCopyRepliesToAdmins() {
+        return prefs.getBoolean(KEY_COPY_REPLIES_TO_ADMINS, false);
+    }
+
+    public void setCopyRepliesToAdmins(boolean on) {
+        prefs.edit().putBoolean(KEY_COPY_REPLIES_TO_ADMINS, on).apply();
+    }
+
+    public boolean isBareKeywordsEnabled() {
+        return prefs.getBoolean(KEY_BARE_KEYWORDS_ENABLED, true);
+    }
+
+    public void setBareKeywordsEnabled(boolean on) {
+        prefs.edit().putBoolean(KEY_BARE_KEYWORDS_ENABLED, on).apply();
     }
 
     public JoinPolicy getJoinPolicy() {

@@ -44,6 +44,15 @@
                     android:visibility="gone" />
 
                 <TextView
+                    android:id="@+id/badge_reply_mode"
+                    style="@style/Widget.JRelay.Badge.Muted"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/badge_reply_mode"
+                    android:visibility="gone" />
+
+                <TextView
                     android:id="@+id/badge_service_paused"
                     style="@style/Widget.JRelay.Badge.Danger"
                     android:layout_width="wrap_content"

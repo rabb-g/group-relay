@@ -9,7 +9,7 @@ Built as a vanilla Android Java app (no Kotlin, no Jetpack/androidx) with a loca
 There is no group MMS thread and no third-party service involved. jRelay only uses standard SMS:
 
 1. A member texts the host device's number.
-2. jRelay reads the message, checks the sender against its member list, and either runs a command or relays the message (after checking Announcement mode and daily limits — see [Announcement Mode](#announcement-mode) and [Daily Limits](#daily-limits)).
+2. jRelay reads the message, checks the sender against its member list, and either runs a command or relays the message (after checking the current group mode and daily limits — see [Group Modes](#group-modes) and [Daily Limits](#daily-limits)).
 3. A relayed message is optionally transformed (see [Message Content & Salting](#message-content--salting)), then queued and sent out individually to every other active, unmuted member, prefixed with the sender's nickname (e.g. `Alex: on my way`).
 4. Sending itself is paced globally (see [Send Pacing](#send-pacing)) — the whole outbox drains on one shared burst/wait/microspacing schedule, in a shuffled order, with automatic retries and failure tracking.
 
@@ -29,7 +29,7 @@ Below that is a checkbox, "You have read and accept the terms of the license," w
 
 ### Dashboard (Main screen)
 
-- Group name, with an **Options** button opening a dropdown: **Set Group Name**, **Add Member**, **Settings**, **Send to Group**, and a one-tap **Switch to Announcement Mode**/**Switch to Group Mode** toggle (label reflects the current mode; see [Announcement Mode](#announcement-mode)). A small **Announcement Mode** badge appears next to the group name whenever the group is in that mode, and a **Service Paused** badge appears whenever [Pause Service](#pause-service) is active.
+- Group name, with an **Options** button opening a dropdown: **Set Group Name**, **Add Member**, **Settings**, **Send to Group**, and one-tap entries for the two group modes that aren't currently active — **Switch to Group Mode**, **Switch to Announcement Mode**, **Switch to Reply Mode** (see [Group Modes](#group-modes)). A small **Announcement Mode** or **Reply Mode** badge appears next to the group name whenever one of those is active, and a **Service Paused** badge appears whenever [Pause Service](#pause-service) is active.
 - A 2-column grid of stat tiles: Members, Admins, Muted, Messages Today, Messages Total, **Failed Today**, and In Queue. The Queue tile shows a small green **Sending…** badge whenever a burst is actively scheduled or in flight.
 - **Next burst in Xs (N messages)** — a live countdown (updates every second) to the next scheduled burst, and how many messages it will contain. Hidden when nothing is scheduled.
 - A scrollable feed of the most recent activity across the whole group, with a thin separator between each entry. Tapping an entry opens that member's detail screen. Shows one row per relayed message (who sent it and what) rather than a copy per recipient it was delivered to.
@@ -97,7 +97,18 @@ While paused, incoming texts are ignored entirely (not even logged) and the outb
 
 #### Group Mode
 
-A dropdown + Save button to switch between **Group Mode** and **Announcement Mode** from the app — the same setting `#mode announcement`/`#mode group` controls by text (see [Announcement Mode](#announcement-mode)), and also reachable as a one-tap toggle from the dashboard's **Options** menu.
+A dropdown + Save button to switch between **Group Mode**, **Announcement Mode** and **Reply Mode** from the app — the same setting `#mode group`/`#mode announcement`/`#mode reply` controls by text (see [Group Modes](#group-modes)), and also reachable from the dashboard's **Options** menu, which offers the two modes that aren't currently active.
+
+#### Reply Mode
+
+Only affects behavior while the group is in [Reply Mode](#reply-mode).
+
+- **Reply window (hours; 0 = no limit)** — default 24. How long after a post a plain reply still reaches its author. Past the window there's no valid target, so the message goes to the admins instead.
+- **Copy replies to admins** — off by default. Also sends every delivered reply to active admins as `@admin reply from <sender> to <target>: <text>`. Muted admins are skipped, and so are the sender and the target, so nobody gets it twice.
+
+#### Commands
+
+- **Accept bare keywords** — on by default. Lets members text `STOP`, `UNSUBSCRIBE`, `CANCEL`, `QUIT`, `END`, `HELP`, `MUTE` or `UNMUTE` without a leading `#`. See [Bare keywords](#bare-keywords).
 
 #### Send Pacing
 
@@ -201,9 +212,13 @@ A dedicated screen (opened from **Options → Send to Group**) for sending a one
 | `#limits` | admins only | Replies with today's group daily limit status: used/total/remaining and reset time |
 | `#override` | admins only | Adds 1 message of headroom to the group's daily limit for today |
 | `#override <nickname or number>` | admins only | Adds 1 message of headroom to that member's individual daily limit for today (errors if they don't have one set) |
-| `#mode` | anyone | Replies with the current group mode (Group or Announcement) |
-| `#mode announcement` / `#mode group` | admins only | Switches the group mode (see [Announcement Mode](#announcement-mode)) |
+| `#mode` | anyone | Replies with the current group mode (Group, Announcement or Reply) |
+| `#mode group` / `#mode announcement` / `#mode reply` | admins only | Switches the group mode (see [Group Modes](#group-modes)) |
+| `#all <message>` | anyone | Posts `<message>` to everyone. Required in [Reply Mode](#reply-mode), where a plain message is treated as a reply instead; accepted (and simply stripped) in the other modes so the habit is never punished. `all: <message>` works the same way |
+| `#to <nickname> <message>` | anyone | **Reply Mode only.** Sends `<message>` privately to one named member. Accepts a nickname or a phone number, and handles nicknames containing spaces. In other modes it replies "Only available in Reply Mode." |
 | `#join <nickname>` | non-members | Requests to join the group, if Join Requests is enabled (see [Join Requests](#join-requests)) |
+
+Members can also text the bare words `STOP`, `UNSUBSCRIBE`, `CANCEL`, `QUIT` or `END` (same as `#stop`), `HELP` (same as `#commands`), or `MUTE`/`UNMUTE`, with no leading `#` — see [Bare keywords](#bare-keywords).
 
 Non-admins attempting an admin-only command get back: `"Only admins can use this command."` An unrecognized `#` command gets: `"Unknown command. Reply #commands for a list of commands."` `#commands` itself only lists the admin-only commands to admins — a regular member's reply omits them entirely.
 
@@ -283,14 +298,38 @@ Sending is global: `SmsSendService` drains the whole outbox on one shared burst/
 
 A send that fails is retried (up to the configured retry limit) by requeuing it for a later burst rather than hammering immediately; once retries are exhausted it's logged as failed and counted toward that member's failure-alert threshold (see [Settings → Failures & Retries](#failures--retries)).
 
-## Announcement Mode
+## Group Modes
 
-A group-wide switch between two modes. It can be changed three ways: by text (`#mode announcement` / `#mode group`, admins only), from **Settings → Group Mode** (dropdown + Save), or with the one-tap toggle in the dashboard's **Options** menu — anyone can check the current mode by texting `#mode`.
+A group-wide switch between three modes. It can be changed three ways: by text (`#mode group` / `#mode announcement` / `#mode reply`, admins only), from **Settings → Group Mode** (dropdown + Save), or from the dashboard's **Options** menu, which offers the two modes that aren't currently active — anyone can check the current mode by texting `#mode`.
 
 - **Group mode** (default) — everyone's plain-text messages are relayed to the whole group, as usual.
 - **Announcement mode** — only admins' plain-text messages are relayed to everyone. A non-admin's message is instead sent only to admins (formatted `@admin <nickname>: <message>`, the same as `#admin <message>`), and doesn't count against anyone's daily limit.
+- **Reply mode** — anyone can still post to everyone, but they have to say so: a plain message is treated as a *reply* and goes to one person. See below.
 
-However it's changed, switching modes broadcasts a notice to the group (attributed to whichever admin made the change, or "An Admin" when changed from the app) and, if triggered by text, replies to that admin with the new mode's status. The dashboard shows a small **Announcement Mode** badge next to the group name whenever it's active, so it's obvious at a glance.
+However it's changed, switching modes broadcasts a notice to the group (attributed to whichever admin made the change, or "An Admin" when changed from the app) and, if triggered by text, replies to that admin with the new mode's status. The dashboard shows a small **Announcement Mode** or **Reply Mode** badge next to the group name whenever one is active, so it's obvious at a glance.
+
+### Reply Mode
+
+Reply mode exists to cut how many texts actually leave the phone. In a 100-member group, a post relayed to everyone costs 100 SMS — and so does every reply to it. Reply mode keeps posts costing 100 and makes replies cost 1.
+
+- **To post to everyone**, start the message with `#all ` (or `all:`). The prefix is stripped and the message is relayed exactly as it would be in Group mode — same daily-limit checks, same `nickname: body` format, same salting. It counts as one relayed message, as usual.
+- **To reply**, just text normally. The message goes *only* to the person who sent the last post you received, formatted `<nickname> (reply): <text>`. Replies **don't** count against anyone's daily limit, the same way `#admin` messages don't.
+- **If there's nobody to reply to** — you haven't received a post yet, the [reply window](#reply-mode-1) has passed, the poster has left the group, or you wrote the last post yourself — the message goes to the admins instead, and you get back: `"Sent to the admins. To post to everyone, start your message with #all."`
+- **To reply to a specific person** when two posts arrived close together, use `#to <nickname> <message>`. It accepts a nickname or a phone number, and copes with nicknames that contain spaces.
+- Receiving an admin **Send to Group** broadcast or an admin direct message clears your reply target, so replying to one of those reaches the admins rather than whichever member happened to post before it.
+- `#all` also works in Group and Announcement mode (the prefix is simply stripped), so nobody is punished for keeping the habit after a mode change.
+
+### Bare keywords
+
+Carriers expect opt-out words to work without punctuation, and people type `STOP` without the `#`. With **Settings → Commands → Accept bare keywords** on (the default), a message whose *entire* text is one of these — trimmed, any capitalization — runs the matching command, in every mode:
+
+| Typed | Acts as |
+|---|---|
+| `STOP`, `UNSUBSCRIBE`, `CANCEL`, `QUIT`, `END` | `#stop` |
+| `HELP` | `#commands` |
+| `MUTE` / `UNMUTE` | `#mute` / `#unmute` |
+
+Whole-message matching only, so ordinary sentences are safe: "stop by later" relays as normal text. Turning the setting off makes these words relay as text too.
 
 ## Message Content & Salting
 

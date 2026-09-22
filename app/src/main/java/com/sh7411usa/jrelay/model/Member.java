@@ -19,4 +19,7 @@ public class Member {
 
     /** Cumulative sends that exhausted retries since this member's last successful send. */
     public int failedCount;
+
+    /** message_log id of the most recent post relayed to this member, for Reply Mode targeting. Null if none yet. */
+    public Long lastPostReceivedId;
 }

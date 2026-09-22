@@ -84,6 +84,81 @@
                 android:text="@string/action_save"
                 android:layout_marginBottom="28dp" />
 
+            <!-- Reply Mode -->
+            <TextView
+                style="@style/TextAppearance.JRelay.Subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/section_reply_mode"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/reply_mode_desc"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/reply_window_hours_label" />
+
+            <EditText
+                android:id="@+id/edit_reply_window_hours"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:layout_marginBottom="8dp" />
+
+            <CheckBox
+                android:id="@+id/checkbox_copy_replies_to_admins"
+                style="@style/Widget.JRelay.CheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/copy_replies_to_admins_label"
+                android:layout_marginBottom="12dp" />
+
+            <Button
+                android:id="@+id/button_save_reply_mode"
+                style="@style/Widget.JRelay.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_save"
+                android:layout_marginBottom="28dp" />
+
+            <!-- Commands -->
+            <TextView
+                style="@style/TextAppearance.JRelay.Subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/section_commands"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/commands_desc"
+                android:layout_marginBottom="8dp" />
+
+            <CheckBox
+                android:id="@+id/checkbox_accept_bare_keywords"
+                style="@style/Widget.JRelay.CheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/accept_bare_keywords_label"
+                android:layout_marginBottom="12dp" />
+
+            <Button
+                android:id="@+id/button_save_commands"
+                style="@style/Widget.JRelay.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_save"
+                android:layout_marginBottom="28dp" />
+
             <!-- Staggering -->
             <TextView
                 style="@style/TextAppearance.JRelay.Subtitle"

@@ -53,6 +53,7 @@
     <string-array name="group_mode_options">
         <item>@string/group_mode_group</item>
         <item>@string/group_mode_announcement</item>
+        <item>@string/group_mode_reply</item>
     </string-array>
 
     <!-- Positions 1-4 map to a fixed duration from now; position 5 is indefinite. Position 0 resumes. -->

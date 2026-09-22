@@ -18,7 +18,7 @@ public class MessageRepository {
         dbHelper = DbHelper.getInstance(context);
     }
 
-    public void log(Long memberId, String direction, String category, String body) {
+    public long log(Long memberId, String direction, String category, String body) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues cv = new ContentValues();
         if (memberId != null) {
@@ -28,7 +28,19 @@ public class MessageRepository {
         cv.put("category", category);
         cv.put("body", body);
         cv.put("timestamp", System.currentTimeMillis());
-        db.insert(DbHelper.TABLE_MESSAGE_LOG, null, cv);
+        return db.insert(DbHelper.TABLE_MESSAGE_LOG, null, cv);
+    }
+
+    /** One logged message by row id, or null when it no longer exists. Used to resolve a reply's target post. */
+    public MessageRecord getById(long id) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor c = db.query(DbHelper.TABLE_MESSAGE_LOG, null, "id = ?", new String[]{String.valueOf(id)}, null, null, null);
+        MessageRecord r = null;
+        if (c.moveToFirst()) {
+            r = fromCursor(c);
+        }
+        c.close();
+        return r;
     }
 
     /**

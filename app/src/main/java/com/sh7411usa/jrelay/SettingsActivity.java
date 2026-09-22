@@ -78,6 +78,13 @@ public class SettingsActivity extends BaseActivity {
     // Group Mode
     private Spinner groupModeSpinner;
 
+    // Reply Mode
+    private EditText replyWindowHoursInput;
+    private CheckBox copyRepliesToAdminsCheckbox;
+
+    // Commands
+    private CheckBox acceptBareKeywordsCheckbox;
+
     // Staggering / Burst / Microspacing
     private CheckBox staggeringEnabledCheckbox;
     private EditText minWaitInput;
@@ -171,6 +178,11 @@ public class SettingsActivity extends BaseActivity {
         groupModeSpinner = findViewById(R.id.spinner_group_mode);
         appVersionView = findViewById(R.id.text_app_version);
 
+        replyWindowHoursInput = findViewById(R.id.edit_reply_window_hours);
+        copyRepliesToAdminsCheckbox = findViewById(R.id.checkbox_copy_replies_to_admins);
+
+        acceptBareKeywordsCheckbox = findViewById(R.id.checkbox_accept_bare_keywords);
+
         staggeringEnabledCheckbox = findViewById(R.id.checkbox_staggering_enabled);
         minWaitInput = findViewById(R.id.edit_min_wait);
         maxWaitInput = findViewById(R.id.edit_max_wait);
@@ -228,6 +240,11 @@ public class SettingsActivity extends BaseActivity {
         groupModeSpinner.setSelection(prefs.getGroupMode().ordinal());
         appVersionView.setText(getVersionLabel());
 
+        replyWindowHoursInput.setText(String.valueOf(prefs.getReplyWindowHours()));
+        copyRepliesToAdminsCheckbox.setChecked(prefs.isCopyRepliesToAdmins());
+
+        acceptBareKeywordsCheckbox.setChecked(prefs.isBareKeywordsEnabled());
+
         staggeringEnabledCheckbox.setChecked(prefs.isStaggeringEnabled());
         minWaitInput.setText(String.valueOf(prefs.getMinWaitSeconds()));
         maxWaitInput.setText(String.valueOf(prefs.getMaxWaitSeconds()));
@@ -275,6 +292,8 @@ public class SettingsActivity extends BaseActivity {
     private void wireListeners() {
         pauseSpinner.setOnItemSelectedListener(pauseSpinnerListener);
         findViewById(R.id.button_save_group_mode).setOnClickListener(v -> saveGroupMode());
+        findViewById(R.id.button_save_reply_mode).setOnClickListener(v -> saveReplyModeSettings());
+        findViewById(R.id.button_save_commands).setOnClickListener(v -> saveCommandsSettings());
         findViewById(R.id.button_save).setOnClickListener(v -> savePacingSettings());
         findViewById(R.id.button_save_reporting).setOnClickListener(v -> saveReportingSettings());
         findViewById(R.id.button_save_content).setOnClickListener(v -> saveContentSettings());
@@ -399,6 +418,17 @@ public class SettingsActivity extends BaseActivity {
         if (newMode != prefs.getGroupMode()) {
             new CommandProcessor(this).setGroupMode(newMode, getString(R.string.default_added_by_admin), -1);
         }
+        Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
+    }
+
+    private void saveReplyModeSettings() {
+        prefs.setReplyWindowHours(Math.max(0, parseOrDefault(replyWindowHoursInput, prefs.getReplyWindowHours())));
+        prefs.setCopyRepliesToAdmins(copyRepliesToAdminsCheckbox.isChecked());
+        Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
+    }
+
+    private void saveCommandsSettings() {
+        prefs.setBareKeywordsEnabled(acceptBareKeywordsCheckbox.isChecked());
         Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
     }
 
