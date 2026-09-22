@@ -209,12 +209,21 @@ public class MainActivity extends BaseActivity {
         queueCountView.setText(String.valueOf(outboxRepository.countUnsent()));
 
         long nextBurstAt = SendQueueStatus.getNextBurstAtMillis();
+        int holding = outboxRepository.countHolding();
         if (nextBurstAt > 0) {
             long remainingMs = Math.max(0, nextBurstAt - System.currentTimeMillis());
-            nextBurstView.setText(getString(R.string.stats_next_burst,
-                    formatDuration(remainingMs), SendQueueStatus.getNextBurstSize()));
+            String burstStatus = getString(R.string.stats_next_burst,
+                    formatDuration(remainingMs), SendQueueStatus.getNextBurstSize());
+            if (holding > 0) {
+                burstStatus += getString(R.string.queue_holding_suffix, holding);
+            }
+            nextBurstView.setText(burstStatus);
             nextBurstView.setVisibility(View.VISIBLE);
             sendingBadgeView.setVisibility(View.VISIBLE);
+        } else if (holding > 0) {
+            nextBurstView.setText(getString(R.string.queue_holding_only, holding));
+            nextBurstView.setVisibility(View.VISIBLE);
+            sendingBadgeView.setVisibility(View.GONE);
         } else {
             nextBurstView.setVisibility(View.GONE);
             sendingBadgeView.setVisibility(View.GONE);

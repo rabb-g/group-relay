@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "jrelay.db";
-    private static final int DB_VERSION = 4;
+    private static final int DB_VERSION = 5;
 
     public static final String TABLE_MEMBERS = "members";
     public static final String TABLE_MESSAGE_LOG = "message_log";
@@ -68,7 +68,10 @@ public class DbHelper extends SQLiteOpenHelper {
                 "body TEXT NOT NULL," +
                 "enqueued_at INTEGER NOT NULL," +
                 "status TEXT NOT NULL DEFAULT 'PENDING'," +
-                "attempts INTEGER NOT NULL DEFAULT 0" +
+                "attempts INTEGER NOT NULL DEFAULT 0," +
+                "category TEXT," +
+                "hold_until INTEGER NOT NULL DEFAULT 0," +
+                "apply_salt INTEGER NOT NULL DEFAULT 0" +
                 ")");
     }
 
@@ -93,6 +96,11 @@ public class DbHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 4) {
             db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN last_post_received_id INTEGER");
+        }
+        if (oldVersion < 5) {
+            db.execSQL("ALTER TABLE " + TABLE_OUTBOX + " ADD COLUMN category TEXT");
+            db.execSQL("ALTER TABLE " + TABLE_OUTBOX + " ADD COLUMN hold_until INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("ALTER TABLE " + TABLE_OUTBOX + " ADD COLUMN apply_salt INTEGER NOT NULL DEFAULT 0");
         }
     }
 

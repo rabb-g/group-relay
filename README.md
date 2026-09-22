@@ -120,6 +120,9 @@ Only affects behavior while the group is in [Reply Mode](#reply-mode).
 - **Microspacing** — paces the individual messages *inside* one burst apart from each other, in milliseconds (default 350ms, on by default). Can be a fixed gap or randomized between bounds. This is intentionally not built on `Thread.sleep`: gaps are computed as a fractional-millisecond deadline and enforced with a self-correcting loop of short `LockSupport.parkNanos` calls, so short waits stay precise instead of drifting.
 - Send pacing is global — one shared burst/wait/microspacing schedule drains the whole outbox. It is not configurable per member.
 
+- **Coalesce window (seconds; 0 = off)** — default 45. Holds a relayed post briefly so posts made close together reach each member as **one** text instead of one each. See [Coalescing](#coalescing).
+- **Max segments per merged message** — default 3. A merged text never grows past this many SMS segments; when the next post would push it over, the merged message is closed and a new one started.
+
 #### Delivery Queue Shuffling
 
 On by default. Each burst, the pending messages it's drawn from are shuffled before being picked, so the same member isn't always first (or last) in a repeating pattern.
@@ -298,6 +301,19 @@ Sending is global: `SmsSendService` drains the whole outbox on one shared burst/
 
 A send that fails is retried (up to the configured retry limit) by requeuing it for a later burst rather than hammering immediately; once retries are exhausted it's logged as failed and counted toward that member's failure-alert threshold (see [Settings → Failures & Retries](#failures--retries)).
 
+Only one drain runs at a time. If something triggers a send while one is already in progress, it's dropped rather than starting a second — the running drain re-checks the outbox on every pass, so it picks up whatever the dropped trigger was for. Without this, every incoming message would add another burst loop running its own independent pacing, and the effective send rate would multiply.
+
+## Coalescing
+
+Posts made close together are combined, so each member receives one text instead of one per post. With the default 45-second window, three posts inside that window reach 100 members as **100 sends instead of 300**. A person composing one longer message is also closer to what carriers expect than three rapid identical blasts.
+
+- Only **relayed posts** are ever held. Command replies, system notices, admin messages, DMs and Reply-Mode replies go out immediately, as before.
+- Merged posts are joined in the order they were sent, one per line, and the merged text never exceeds [Max segments per merged message](#send-pacing). A single post too long to fit on its own is still sent whole — never split or dropped.
+- **A post made while an earlier one is still being delivered is merged into the copies that haven't gone out yet.** Members reached early get the two texts separately; everyone still in the queue gets them together. This is why merging is per *member* rather than per *post* — in a group where a post draws replies, the tail of the list gets the whole exchange in one message.
+- Set the window to **0** to turn coalescing off entirely and send each post on its own, as before.
+
+While posts are being held the dashboard says so, either as `holding N` appended to the next-burst countdown or as **Holding N to merge** on its own, so a post never appears to simply vanish for 45 seconds. The **Sending…** badge stays hidden while merely holding, since nothing is going out yet.
+
 ## Group Modes
 
 A group-wide switch between three modes. It can be changed three ways: by text (`#mode group` / `#mode announcement` / `#mode reply`, admins only), from **Settings → Group Mode** (dropdown + Save), or from the dashboard's **Options** menu, which offers the two modes that aren't currently active — anyone can check the current mode by texting `#mode`.
@@ -334,6 +350,10 @@ Whole-message matching only, so ordinary sentences are safe: "stop by later" rel
 ## Message Content & Salting
 
 Content transforms apply only to **relayed member messages** (the `nickname: body` broadcasts) — not system notices, admin broadcasts, DMs, or command replies. See [Settings → Message Content & Salting](#message-content--salting) above for the full list of options (all off by default except send-pacing related ones).
+
+**Each recipient's copy is salted separately.** A salt is applied once per outgoing text, at the moment it's sent, so every member's copy of the same post differs. Earlier versions salted a post once and sent that identical body to everyone, which meant the salt only ever distinguished one post from another — never one copy from another — and a hundred byte-identical messages is exactly the pattern salting exists to avoid. Retries are salted afresh too, rather than resending an identical body.
+
+One consequence: the **timestamp** salt reflects when that member's copy went out, not when the post was made. At the default pacing a 100-member fan-out takes roughly three minutes, so the spread is small; the `HEX_SECONDS`, `HEX_MILLIS` and `UNIX_SECONDS` formats make it unnoticeable, and `TIME_HHMMSS` is the only one where it's legible.
 
 ## Daily Limits
 

@@ -24,6 +24,8 @@
     <string name="stats_messages_total">סה\"כ הודעות: %1$d</string>
     <string name="stats_failed_today">נכשלו היום: %1$d</string>
     <string name="stats_queue_count">הודעות בתור: %1$d</string>
+    <string name="queue_holding_suffix">, מוחזקות %1$d</string>
+    <string name="queue_holding_only">מחזיקים %1$d לאיחוד</string>
     <string name="stats_next_burst">המנה הבאה בעוד %1$s (%2$d הודעות)</string>
     <string name="badge_sending">בשליחה…</string>
     <string name="badge_announcement_mode">מצב הכרזה</string>
@@ -162,6 +164,10 @@
     <string name="hint_min_wait">שניות</string>
     <string name="hint_max_wait">שניות</string>
     <string name="checkbox_initial_delay">המתנה לפני שליחת המנה הראשונה (לפי טווח ההמתנה שלמעלה)</string>
+
+    <string name="coalesce_window_label">חלון איחוד (שניות; 0 = כבוי)</string>
+    <string name="coalesce_window_hint">כאשר מספר הודעות מתפרסמות בטווח הזמן הזה (בשניות), כל חבר מקבל אותן כהודעה אחת במקום הודעה נפרדת לכל אחת. 0 מכבה אפשרות זו.</string>
+    <string name="max_merged_segments_label">מספר מקטעים מקסימלי בהודעה מאוחדת</string>
 
     <string name="section_burst_configuration">הגדרות מנת שליחה</string>
     <string name="label_burst_mode">מספר הודעות במנה</string>

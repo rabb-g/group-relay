@@ -7,10 +7,25 @@ import java.util.Random;
 import java.util.regex.Pattern;
 
 /**
- * Content transforms applied to a relayed member message right before it's enqueued: stripping
- * any phone numbers the sender typed, appending the sender's own number for traceability, and
- * "salting" the body (timestamp / random hex / zero-width spaces) so that otherwise-identical
- * messages don't look byte-for-byte identical to the carrier.
+ * Content transforms applied to a relayed member message: stripping any phone numbers the sender
+ * typed, appending the sender's own number for traceability, and "salting" the body (timestamp /
+ * random hex / zero-width spaces) so that otherwise-identical messages don't look byte-for-byte
+ * identical to the carrier.
+ *
+ * <p>Since Phase 2 (coalescing window), these transforms split into two phases so that a window
+ * of several original messages that get merged into one outgoing SMS is salted exactly once, at
+ * send time, rather than once per original message:
+ * <ul>
+ *   <li>{@link #applyEnqueueTime}: per-original-message transforms (strip phone numbers, append
+ *       sender number), run when each message is first enqueued. These are properties of the
+ *       individual sender's message and must be applied before merging.</li>
+ *   <li>{@link #applySendTime}: per-outgoing-message salts (timestamp, hex code, zero-width
+ *       spaces), run once on the final outgoing body, whether it holds one message or several
+ *       merged ones.</li>
+ * </ul>
+ * {@link #applyAll} is preserved for existing callers that don't split enqueue from send and is
+ * implemented as {@code applySendTime(applyEnqueueTime(...))} — the two phases run in exactly the
+ * order they always have, so this is a pure decomposition, not a behavior change.
  */
 public final class MessageSalt {
 
@@ -22,8 +37,20 @@ public final class MessageSalt {
     private MessageSalt() {
     }
 
-    /** Applies every enabled transform, in a fixed order, to a formatted relay message body. */
+    /**
+     * Applies every enabled transform, in a fixed order, to a formatted relay message body.
+     * Equivalent to {@code applySendTime(prefs, applyEnqueueTime(prefs, senderE164, body))} —
+     * kept for callers that apply the full pipeline to a single message in one shot.
+     */
     public static String applyAll(Prefs prefs, String senderE164, String body) {
+        return applySendTime(prefs, applyEnqueueTime(prefs, senderE164, body));
+    }
+
+    /**
+     * Per-original-message transforms: strip phone numbers, then append the sender number.
+     * Run once per original message at enqueue time, before any merging into an outgoing SMS.
+     */
+    public static String applyEnqueueTime(Prefs prefs, String senderE164, String body) {
         String result = body;
         if (prefs.isStripPhoneNumbersEnabled()) {
             result = stripPhoneNumbers(result);
@@ -31,6 +58,15 @@ public final class MessageSalt {
         if (prefs.isAppendSenderNumberEnabled()) {
             result = appendSenderNumber(senderE164, result);
         }
+        return result;
+    }
+
+    /**
+     * Per-outgoing-message salts: timestamp, then hex code, then zero-width spaces. Run once per
+     * outgoing SMS at send time, on the final body (single message or coalesced merge).
+     */
+    public static String applySendTime(Prefs prefs, String body) {
+        String result = body;
         if (prefs.isSaltTimestampEnabled()) {
             result = appendTimestampSalt(result, prefs.getSaltTimestampFormat());
         }

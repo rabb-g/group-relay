@@ -612,9 +612,9 @@ public class CommandProcessor {
         }
 
         String formatted = context.getString(R.string.tpl_relay_prefix, sender.nickname, body);
-        formatted = MessageSalt.applyAll(prefs, sender.phoneE164, formatted);
+        formatted = MessageSalt.applyEnqueueTime(prefs, sender.phoneE164, formatted);
         long postLogId = messageRepository.log(sender.id, "IN", "RELAYED", body);
-        broadcastExcept(sender.id, formatted, "RELAY", postLogId);
+        broadcastExcept(sender.id, formatted, OutboxRepository.CATEGORY_RELAY, postLogId);
     }
 
     /**
@@ -772,7 +772,7 @@ public class CommandProcessor {
 
     private void broadcastExcept(long excludeId, String message, String category, Long postLogId) {
         List<Member> recipients = memberRepository.getActiveRecipientsExcept(excludeId);
-        boolean trackPost = postLogId != null && "RELAY".equals(category);
+        boolean trackPost = postLogId != null && OutboxRepository.CATEGORY_RELAY.equals(category);
         List<Long> postRecipientIds = trackPost ? new ArrayList<>(recipients.size()) : null;
         for (Member m : recipients) {
             enqueue(m, message, category);
@@ -790,7 +790,15 @@ public class CommandProcessor {
     }
 
     private void enqueue(Member recipient, String message, String category) {
-        outboxRepository.enqueue(recipient.id, recipient.phoneE164, message);
+        long holdUntil = 0L;
+        boolean applySalt = false;
+        if (OutboxRepository.CATEGORY_RELAY.equals(category)) {
+            holdUntil = prefs.isCoalescingEnabled()
+                    ? System.currentTimeMillis() + prefs.getCoalesceWindowSeconds() * 1000L
+                    : 0L;
+            applySalt = true;
+        }
+        outboxRepository.enqueue(recipient.id, recipient.phoneE164, message, category, holdUntil, applySalt);
         messageRepository.log(recipient.id, "OUT", category, message);
     }
 

@@ -104,6 +104,10 @@ public class SettingsActivity extends BaseActivity {
     private EditText microspacingMinMsInput;
     private EditText microspacingMaxMsInput;
 
+    // Coalescing window
+    private EditText coalesceWindowSecondsInput;
+    private EditText maxMergedSegmentsInput;
+
     // Delivery shuffle
     private CheckBox deliveryShuffleCheckbox;
 
@@ -201,6 +205,9 @@ public class SettingsActivity extends BaseActivity {
         microspacingMinMsInput = findViewById(R.id.edit_microspacing_min_ms);
         microspacingMaxMsInput = findViewById(R.id.edit_microspacing_max_ms);
 
+        coalesceWindowSecondsInput = findViewById(R.id.edit_coalesce_window_seconds);
+        maxMergedSegmentsInput = findViewById(R.id.edit_max_merged_segments);
+
         deliveryShuffleCheckbox = findViewById(R.id.checkbox_delivery_shuffle);
 
         addedReportingEnabledCheckbox = findViewById(R.id.checkbox_added_reporting_enabled);
@@ -262,6 +269,9 @@ public class SettingsActivity extends BaseActivity {
         microspacingMinMsInput.setText(String.valueOf(prefs.getMicrospacingMinMs()));
         microspacingMaxMsInput.setText(String.valueOf(prefs.getMicrospacingMaxMs()));
         updateMicrospacingModeVisibility(prefs.getMicrospacingMode());
+
+        coalesceWindowSecondsInput.setText(String.valueOf(prefs.getCoalesceWindowSeconds()));
+        maxMergedSegmentsInput.setText(String.valueOf(prefs.getMaxMergedSegments()));
 
         deliveryShuffleCheckbox.setChecked(prefs.isDeliveryShuffleEnabled());
 
@@ -474,6 +484,10 @@ public class SettingsActivity extends BaseActivity {
         int microMax = parseOrDefault(microspacingMaxMsInput, prefs.getMicrospacingMaxMs());
         prefs.setMicrospacingMinMs(microMin);
         prefs.setMicrospacingMaxMs(Math.max(microMin, microMax));
+
+        prefs.setCoalesceWindowSeconds(
+                Math.min(600, Math.max(0, parseOrDefault(coalesceWindowSecondsInput, prefs.getCoalesceWindowSeconds()))));
+        prefs.setMaxMergedSegments(Math.max(1, parseOrDefault(maxMergedSegmentsInput, prefs.getMaxMergedSegments())));
 
         prefs.setDeliveryShuffleEnabled(deliveryShuffleCheckbox.isChecked());
 

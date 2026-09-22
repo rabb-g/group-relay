@@ -77,6 +77,9 @@ public class Prefs {
     private static final String KEY_COPY_REPLIES_TO_ADMINS = "copy_replies_to_admins";
     private static final String KEY_BARE_KEYWORDS_ENABLED = "bare_keywords_enabled";
 
+    private static final String KEY_COALESCE_WINDOW_SECONDS = "coalesce_window_seconds";
+    private static final String KEY_MAX_MERGED_SEGMENTS = "max_merged_segments";
+
     private static final String DEFAULT_GROUP_NAME = "jRelay";
     private static final int DEFAULT_BURST_MIN = 3;
     private static final int DEFAULT_BURST_MAX = 5;
@@ -95,6 +98,9 @@ public class Prefs {
     private static final int DEFAULT_INDIVIDUAL_LIMIT_SEED = 10;
 
     private static final int DEFAULT_REPLY_WINDOW_HOURS = 24;
+
+    private static final int DEFAULT_COALESCE_WINDOW_SECONDS = 45;
+    private static final int DEFAULT_MAX_MERGED_SEGMENTS = 3;
 
     private final SharedPreferences prefs;
 
@@ -412,6 +418,29 @@ public class Prefs {
 
     public void setBareKeywordsEnabled(boolean on) {
         prefs.edit().putBoolean(KEY_BARE_KEYWORDS_ENABLED, on).apply();
+    }
+
+    /** Seconds to hold a relayed post so near-simultaneous posts merge into one SMS. 0 = off. */
+    public int getCoalesceWindowSeconds() {
+        return prefs.getInt(KEY_COALESCE_WINDOW_SECONDS, DEFAULT_COALESCE_WINDOW_SECONDS);
+    }
+
+    public void setCoalesceWindowSeconds(int seconds) {
+        prefs.edit().putInt(KEY_COALESCE_WINDOW_SECONDS, seconds).apply();
+    }
+
+    /** True when the coalescing window is on. Single owner of the on/off question: the enqueuer and the send loop must agree. */
+    public boolean isCoalescingEnabled() {
+        return getCoalesceWindowSeconds() > 0;
+    }
+
+    /** Cap on how many SMS segments one merged message may occupy. */
+    public int getMaxMergedSegments() {
+        return prefs.getInt(KEY_MAX_MERGED_SEGMENTS, DEFAULT_MAX_MERGED_SEGMENTS);
+    }
+
+    public void setMaxMergedSegments(int segments) {
+        prefs.edit().putInt(KEY_MAX_MERGED_SEGMENTS, segments).apply();
     }
 
     public JoinPolicy getJoinPolicy() {

@@ -24,6 +24,8 @@
     <string name="stats_messages_total">אלע ידיעות: %1$d</string>
     <string name="stats_failed_today">נישט געלונגען היינט: %1$d</string>
     <string name="stats_queue_count">ידיעות אין ריי: %1$d</string>
+    <string name="queue_holding_suffix">, האלט %1$d</string>
+    <string name="queue_holding_only">האלט %1$d צו צונויפגיסן</string>
     <string name="stats_next_burst">די קומענדיקע פארזאמלונג אין %1$s (%2$d ידיעות)</string>
     <string name="badge_sending">שיקט…</string>
     <string name="badge_announcement_mode">אָנזאָג-מאָדוס</string>
@@ -162,6 +164,10 @@
     <string name="hint_min_wait">סעקונדעס</string>
     <string name="hint_max_wait">סעקונדעס</string>
     <string name="checkbox_initial_delay">וואַרטן איידער די ערשטע פארזאמלונג (ניצט דעם וואַרטן-שיעור פון אויבן)</string>
+
+    <string name="coalesce_window_label">צונויפגיסן-פענצטער (סעקונדעס; 0 = אָפּגעשאלטן)</string>
+    <string name="coalesce_window_hint">ווען עטליכע ידיעות ווערן געשיקט אינערהאלב דעם צאל סעקונדעס, באקומט יעדער מיטגליד זיי ווי איין מעסעדזש אנשטאט א באזונדערן מעסעדזש פאר יעדע איינע. 0 שאלט דאס אָפּ.</string>
+    <string name="max_merged_segments_label">מאקסימום סעגמענטן פאר א צונויפגעגאסענע ידיעה</string>
 
     <string name="section_burst_configuration">פארזאמלונג אײנשטעלונגען</string>
     <string name="label_burst_mode">ידיעות א פארזאמלונג</string>

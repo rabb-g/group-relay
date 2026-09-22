@@ -24,6 +24,8 @@
     <string name="stats_messages_total">Messages Total: %1$d</string>
     <string name="stats_failed_today">Failed Today: %1$d</string>
     <string name="stats_queue_count">Messages in Queue: %1$d</string>
+    <string name="queue_holding_suffix">, holding %1$d</string>
+    <string name="queue_holding_only">Holding %1$d to merge</string>
     <string name="stats_next_burst">Next burst in %1$s (%2$d messages)</string>
     <string name="badge_sending">Sending…</string>
     <string name="badge_announcement_mode">Announcement Mode</string>
@@ -162,6 +164,10 @@
     <string name="hint_min_wait">Seconds</string>
     <string name="hint_max_wait">Seconds</string>
     <string name="checkbox_initial_delay">Wait before sending the first burst (uses the wait range above)</string>
+
+    <string name="coalesce_window_label">Coalesce window (seconds; 0 = off)</string>
+    <string name="coalesce_window_hint">When several messages are posted within this many seconds, each member receives them as one text instead of one text each. 0 turns this off.</string>
+    <string name="max_merged_segments_label">Max segments per merged message</string>
 
     <string name="section_burst_configuration">Burst Configuration</string>
     <string name="label_burst_mode">Messages per burst</string>
