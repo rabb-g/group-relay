@@ -66,12 +66,17 @@ Open items:         **Nothing behavioral is verified** — no device was availab
 Nothing in CI substitutes for these. Items 1 and 2 are the feature's own happy path; 3–8 are the failure modes found in review.
 
 1. **Three posts inside one window, ~100 members** — each member receives ONE text containing all three, in order, salted once. This is the primary acceptance test for the phase.
-2. **A command during a hold** — text `HELP` while posts are held; the reply must arrive promptly rather than waiting out the window.
-3. **Two posts during one drain** — the service stays alive and the second post's messages go out.
-4. **Full fan-out with the screen off and the app backgrounded** — watch logcat for `IllegalStateException` and for the service being stopped mid-drain. Closest thing to real operating conditions.
-5. **Upgrade in place from the installed 5.0 build with messages already queued** — the backlog drains and those bodies go out unchanged. The 4→5 migration has never run against a real database.
-6. **Pause pressed mid-fan-out** — sending stops within one burst.
-7. **Coalesce window set to 0** — one post behaves as 5.0 did, allowing for the three documented deviations (per-recipient salting, pause honoured mid-drain, single-drainer guard).
-8. **A post crossing the segment cap** — recipients get two texts, nothing lost or duplicated.
+2. **A post made during an active fan-out** — post A to ~100 members, let it drain partway, then post B. Verify all three of these, in this order of importance:
+   - **Every** member receives B's content. Merging must never cost a recipient — it changes packaging only.
+   - Members already served A receive B as a **separate** text.
+   - Members still queued receive **one** text containing A then B, in that order.
+   This is the case that matters most in practice, because replies arrive while the previous post is still going out. Check the queue count reaches 0 afterwards with nothing stuck in `SENDING`.
+3. **A command during a hold** — text `HELP` while posts are held; the reply must arrive promptly rather than waiting out the window.
+4. **Two posts during one drain** — the service stays alive and the second post's messages go out.
+5. **Full fan-out with the screen off and the app backgrounded** — watch logcat for `IllegalStateException` and for the service being stopped mid-drain. Closest thing to real operating conditions.
+6. **Upgrade in place from the installed 5.0 build with messages already queued** — the backlog drains and those bodies go out unchanged. The 4→5 migration has never run against a real database.
+7. **Pause pressed mid-fan-out** — sending stops within one burst.
+8. **Coalesce window set to 0** — one post behaves as 5.0 did, allowing for the three documented deviations (per-recipient salting, pause honoured mid-drain, single-drainer guard).
+9. **A post crossing the segment cap** — recipients get two texts, nothing lost or duplicated.
 
-After 1 and 4, confirm the dashboard queue count returns to 0 and no rows are left in `SENDING` — the cheapest check for the stranded-row risk under real conditions.
+After 1, 2 and 5, confirm the dashboard queue count returns to 0 and no rows are left in `SENDING` — the cheapest check for the stranded-row risk under real conditions.
