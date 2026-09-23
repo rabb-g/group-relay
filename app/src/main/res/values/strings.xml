@@ -25,7 +25,7 @@
     <string name="stats_failed_today">Failed Today: %1$d</string>
     <string name="stats_queue_count">Messages in Queue: %1$d</string>
     <string name="queue_holding_suffix">, holding %1$d</string>
-    <string name="queue_holding_only">Holding %1$d to merge</string>
+    <string name="queue_holding_only">Holding %1$d</string>
     <string name="stats_next_burst">Next burst in %1$s (%2$d messages)</string>
     <string name="badge_sending">Sending…</string>
     <string name="badge_announcement_mode">Announcement Mode</string>
@@ -334,7 +334,7 @@
     <string name="tpl_reply_no_target">Sent to the admins. To post to everyone, start your message with #all.</string>
     <string name="tpl_reply_copy_admin">@admin reply from %1$s to %2$s: %3$s</string>
     <string name="tpl_dm_prefix">[Admin]: %1$s</string>
-    <string name="tpl_commands_list_common">Available commands:\n#commands - show this list\n#mute - pause messages\n#unmute - resume messages\n#stop - leave the group\n#list - list members\n#name &lt;new nickname&gt; - change your nickname\n#admin &lt;message&gt; - message admins only\n#mode - show the current group mode\n#join &lt;nickname&gt; - request to join (non-members)</string>
+    <string name="tpl_commands_list_common">Available commands:\n#commands - show this list\n#help - how to send a message in this group\n#mute - pause messages\n#unmute - resume messages\n#stop - leave the group\n#list - list members\n#name &lt;new nickname&gt; - change your nickname\n#admin &lt;message&gt; - message admins only\n#mode - show the current group mode\n#join &lt;nickname&gt; - request to join (non-members)</string>
     <string name="tpl_commands_list_admin_extra">\n(Admins) #add &lt;number&gt; &lt;nickname&gt; - add a member\n(Admins) #remove &lt;nickname or number&gt; - remove a member\n(Admins) #topic &lt;new name&gt; - change the group name\n(Admins) #limits - show today\'s group limit status\n(Admins) #override [nickname or number] - add 1 message to the group limit, or a member\'s individual limit\n(Admins) #mode group|announcement|reply - switch group mode</string>
     <string name="tpl_commands_list_reply_extra">\n#all &lt;message&gt; - post to everyone\n#to &lt;nickname&gt; &lt;message&gt; - reply privately to one member</string>
     <string name="tpl_list_you">(You)</string>
@@ -358,6 +358,10 @@
     <string name="tpl_mode_status_announcement">Announcement mode is on: only admin messages are relayed to everyone. Everyone else\'s messages go to admins only.</string>
     <string name="tpl_mode_status_group">Group mode is on: everyone\'s messages are relayed to the group.</string>
     <string name="tpl_mode_status_reply">Reply mode is on: start a message with #all to post to everyone. A plain reply goes only to the person who posted.</string>
+    <string name="tpl_help_group">Just text normally and everyone in the group gets it. Reply #commands for the full list, or #stop to leave.</string>
+    <string name="tpl_help_announcement">Only admins\' messages go to everyone right now. Anything you send goes to the admins. Reply #commands for the full list, or #stop to leave.</string>
+    <string name="tpl_help_reply">Start your message with #all to send it to everyone. Without it, your message goes only to whoever sent the last post you received. Reply #commands for the full list, or #stop to leave.</string>
+    <string name="tpl_help_muted">You are muted, so you will not receive group messages and yours will not be relayed. Reply #unmute to turn messages back on, or #commands for the full list.</string>
     <string name="tpl_mode_invalid">Usage: #mode group, #mode announcement, or #mode reply</string>
     <string name="tpl_mode_changed_announcement">%1$s switched the group to Announcement mode. Only admin messages will be relayed to everyone from now on.</string>
     <string name="tpl_mode_changed_group">%1$s switched the group back to Group mode. Everyone\'s messages will be relayed again.</string>
@@ -379,7 +383,7 @@
     <string name="send_result_radio_off">Phone had no signal (airplane mode or radio off)</string>
     <string name="send_result_no_service">No cell service at the time</string>
     <string name="send_result_null_pdu">Message could not be encoded</string>
-    <string name="send_result_limit_exceeded">Carrier send limit reached -- slow down the send pacing</string>
+    <string name="send_result_limit_exceeded">Sending too fast -- check the outgoing SMS limit in Settings</string>
     <string name="send_result_short_code_not_allowed">Carrier blocked this as a short-code message</string>
     <string name="send_result_not_sent">Never reached the network</string>
     <string name="send_result_unknown">Send failed (code %1$d)</string>

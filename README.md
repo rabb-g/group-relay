@@ -203,6 +203,7 @@ A dedicated screen (opened from **Options → Send to Group**) for sending a one
 | Command | Who can use it | What it does |
 |---|---|---|
 | `#commands` | anyone | Replies with the list of available commands |
+| `#help` | anyone | Replies with how to phrase a message **in the mode the group is in right now** — in [Reply Mode](#reply-mode) it explains the `#all` prefix, in [Announcement Mode](#announcement-mode) it explains who may post, in Group Mode it says to just text normally. A muted member gets a different answer instead, since the above would be false for them: it says they are muted and points them at `#unmute`. Distinct from `#commands`, which answers "what commands exist?" rather than "what do I do now?" |
 | `#mute` | anyone | Pauses messages for you (see below) |
 | `#unmute` | anyone | Resumes messages |
 | `#stop` | anyone | Leaves the group |
@@ -222,6 +223,8 @@ A dedicated screen (opened from **Options → Send to Group**) for sending a one
 | `#join <nickname>` | non-members | Requests to join the group, if Join Requests is enabled (see [Join Requests](#join-requests)) |
 
 Members can also text the bare words `STOP`, `UNSUBSCRIBE`, `CANCEL`, `QUIT` or `END` (same as `#stop`), `HELP` (same as `#commands`), or `MUTE`/`UNMUTE`, with no leading `#` — see [Bare keywords](#bare-keywords).
+
+Note that bare `HELP` and `#help` deliberately do **not** do the same thing. Bare `HELP` is a carrier opt-out convention that has to keep returning the command list, so it maps to `#commands`; `#help` answers the different question of how to phrase a message right now. Each reply mentions the other, so a member who types the "wrong" one is still pointed somewhere useful.
 
 Non-admins attempting an admin-only command get back: `"Only admins can use this command."` An unrecognized `#` command gets: `"Unknown command. Reply #commands for a list of commands."` `#commands` itself only lists the admin-only commands to admins — a regular member's reply omits them entirely.
 
@@ -288,7 +291,7 @@ The dashboard's group name always reflects the current value, live — no need t
 
 ### Mute behavior
 
-Muting pauses messages in **both directions**: while muted, you neither receive relayed or admin messages, nor does anything you send in plain text get relayed to the group. Commands (`#unmute`, `#stop`, `#commands`, `#list`) still work normally while muted, so you're never stuck.
+Muting pauses messages in **both directions**: while muted, you neither receive relayed or admin messages, nor does anything you send in plain text get relayed to the group. Commands (`#unmute`, `#stop`, `#commands`, `#help`, `#list`) still work normally while muted, so you're never stuck. `#help` in particular detects that you're muted and tells you so, rather than giving the normal mode advice that wouldn't apply to you.
 
 ### Leaving the group (`#stop`)
 
@@ -309,8 +312,8 @@ jRelay asks Android to report what actually happened to each message, rather tha
 
 | What you'll see | What it means |
 |---|---|
-| **Carrier rejected the message** | The network refused it. Repeated across many members, this is what carrier filtering looks like |
-| **Carrier send limit reached — slow down the send pacing** | You're sending faster than the line allows. Raise the wait between bursts |
+| **Carrier rejected the message** | The network refused it outright |
+| **Sending too fast -- check the outgoing SMS limit in Settings** | Something refused the message for rate reasons. Most often this is Android's own per-app throttle (30 messages per 30 minutes by default), not your carrier — check [Settings → Android Outgoing SMS Limit](#settings) first, then your send pacing |
 | **Phone had no signal (airplane mode or radio off)** | The host phone had no radio at that moment |
 | **No cell service at the time** | In range of nothing usable |
 | **Never reached the network** | The send failed before it left the phone |
@@ -318,7 +321,11 @@ jRelay asks Android to report what actually happened to each message, rather tha
 
 Failed messages are retried up to your configured retry limit before being recorded as failed, and repeated failures to the same member still trigger the usual admin alert. The difference is that these now fire on real failures — previously they could only react to the rare case where the send call itself threw, which is not how carriers refuse messages.
 
-**The rate-limit reason is the one to watch.** It's the first direct signal that your pacing is too aggressive, instead of inferring it from members mentioning they never got something.
+A failed message is retried after a delay rather than immediately, and how long depends on why it failed: five minutes for a rate refusal, since something has just told you to slow down and resending at once is the opposite of the right response; a minute for no-signal or no-service, which usually resolve on their own; thirty seconds otherwise.
+
+**If you hit a rate refusal, the backoff is not the fix — raising the limit is.** The usual source of that refusal is Android's own per-app cap, and its window is 30 messages per *30 minutes* (see [Android Outgoing SMS Limit](#android-outgoing-sms-limit)). Waiting five minutes often isn't long enough for that window to reopen, so with the default retry limit of 1 the message spends its only retry and is then marked failed. Worse, the cap applies to the whole phone line rather than to one message, so during a group send the messages behind it are being refused too. If you see a run of rate refusals, raise the Android limit rather than waiting it out. Holding the entire queue when the limit is hit — the response that would actually fit the problem — is planned but not yet built.
+
+**What this does not do: detect carrier filtering.** Filtering is silent by design — the network accepts the message, reports success, and drops it later. No error code is produced, so nothing here can see it. Everything above is a failure that *announced itself*. Staying under the carrier's thresholds is still the only defence against the silent kind, which is what the pacing, daily limits and [coalescing](#coalescing) are for.
 
 Delivery results arrive a moment after a message goes out, so the app stays running briefly at the end of a send to collect them — otherwise a failure on the very last message of a group send would sit unretried until the next time anything else triggered a send.
 

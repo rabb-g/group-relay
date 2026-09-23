@@ -84,6 +84,11 @@ public class CommandProcessor {
         String lower = text.toLowerCase();
         if (lower.equals("#commands")) {
             handleCommandsList(sender);
+        } else if (lower.equals("#help")) {
+            // Bare "HELP" is a carrier opt-out convention (see MessageIntent.canonicalBareKeyword) and
+            // deliberately still maps to #commands; #help answers a different question ("how do I
+            // phrase a message right now?" vs. "what commands exist?") — don't unify the two later.
+            handleHelp(sender);
         } else if (lower.equals("#mute")) {
             memberRepository.setMuted(sender.id, true);
             reply(sender, context.getString(R.string.tpl_muted_confirm));
@@ -130,6 +135,29 @@ public class CommandProcessor {
             sb.append(context.getString(R.string.tpl_commands_list_reply_extra));
         }
         reply(requester, sb.toString());
+    }
+
+    /** #help: mode-aware guidance on how to phrase a message right now, for every member (not admin-gated). */
+    private void handleHelp(Member requester) {
+        // Mute takes precedence over mode: while muted, the mode is irrelevant to this member — nothing
+        // reaches them and nothing they send goes out, whichever mode the group is in.
+        if (requester.isMuted) {
+            reply(requester, context.getString(R.string.tpl_help_muted));
+            return;
+        }
+        reply(requester, context.getString(helpStringRes(prefs.getGroupMode())));
+    }
+
+    private int helpStringRes(Prefs.GroupMode mode) {
+        switch (mode) {
+            case ANNOUNCEMENT:
+                return R.string.tpl_help_announcement;
+            case REPLY:
+                return R.string.tpl_help_reply;
+            case GROUP:
+            default:
+                return R.string.tpl_help_group;
+        }
     }
 
     private void handleStop(Member sender) {

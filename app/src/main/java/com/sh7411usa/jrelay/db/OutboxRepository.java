@@ -37,7 +37,6 @@ public class OutboxRepository {
         public int attempts;
         public String category;
         public boolean applySalt;
-        public Integer lastResult;
     }
 
     private final DbHelper dbHelper;
@@ -300,6 +299,10 @@ public class OutboxRepository {
         try {
             ContentValues cv = new ContentValues();
             cv.put("parts_pending", 0);
+            // last_result has no Java reader (the failure reason reaches the UI via
+            // tpl_failed_with_reason instead) - it's kept write-only, deliberately, so the raw
+            // radio result code is still visible when inspecting the database directly to
+            // diagnose a delivery problem. Do not remove this write in a future cleanup pass.
             cv.put("last_result", resultCode);
             int rows = db.update(DbHelper.TABLE_OUTBOX, cv,
                     "id = ? AND status = ? AND parts_pending > 0 AND handed_off_at = ?",
@@ -309,19 +312,6 @@ public class OutboxRepository {
         } finally {
             db.endTransaction();
         }
-    }
-
-    /** The most recent delivery result code for a row, or null when it has none. */
-    public Integer lastResult(long id) {
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor c = db.rawQuery("SELECT last_result FROM " + DbHelper.TABLE_OUTBOX + " WHERE id = ?",
-                new String[]{String.valueOf(id)});
-        Integer result = null;
-        if (c.moveToFirst() && !c.isNull(0)) {
-            result = c.getInt(0);
-        }
-        c.close();
-        return result;
     }
 
     /**
@@ -388,12 +378,18 @@ public class OutboxRepository {
         return items;
     }
 
-    /** Sends this item back to PENDING (so it's picked up by a later burst) with its attempt count bumped. */
-    public void requeueForRetry(long id, int attempts) {
+    /**
+     * Sends this item back to PENDING with its attempt count bumped, held until `holdUntilMillis`
+     * so a retry can be backed off. Pass 0 to retry at the next opportunity, which is the old
+     * behavior. The hold reuses the same `hold_until` column and the same `takeBurst` filter the
+     * coalescing window uses, so a backed-off row is simply invisible to bursts until it is due.
+     */
+    public void requeueForRetry(long id, int attempts, long holdUntilMillis) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put("status", "PENDING");
         cv.put("attempts", attempts);
+        cv.put("hold_until", holdUntilMillis);
         db.update(DbHelper.TABLE_OUTBOX, cv, "id = ?", new String[]{String.valueOf(id)});
     }
 
@@ -420,8 +416,6 @@ public class OutboxRepository {
         item.attempts = c.getInt(c.getColumnIndexOrThrow("attempts"));
         item.category = c.getString(c.getColumnIndexOrThrow("category"));
         item.applySalt = c.getInt(c.getColumnIndexOrThrow("apply_salt")) != 0;
-        int lastResultIdx = c.getColumnIndexOrThrow("last_result");
-        item.lastResult = c.isNull(lastResultIdx) ? null : c.getInt(lastResultIdx);
         return item;
     }
 

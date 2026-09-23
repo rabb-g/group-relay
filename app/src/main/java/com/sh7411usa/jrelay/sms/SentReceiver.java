@@ -203,14 +203,48 @@ public class SentReceiver extends BroadcastReceiver {
     }
 
     /**
+     * KNOWN MISCALIBRATION, to fix in 5.5: the dominant source of {@code RESULT_ERROR_LIMIT_EXCEEDED}
+     * is Android's own per-app outgoing-SMS throttle, whose default window is 30 messages per
+     * 30 MINUTES - so five minutes is very often not long enough for the window to have reopened.
+     * With the default retry limit of 1, a row spends its only retry while the window is still
+     * closed and then goes FAILED. Raising the number is not the real fix either: this code is a
+     * property of the LINE, not of one message, so backing off a single row while the drain keeps
+     * feeding the same closed window at full pace just burns every row's retry in turn. The end
+     * state is a line-level gate - on the first LIMIT_EXCEEDED, hold the whole queue until T.
+     * Until then, the documented remedy is raising the Android limit in Settings.
+     */
+    static final long RETRY_DELAY_LIMIT_EXCEEDED_MILLIS = 5 * 60 * 1000L; // rate-limited: back off hardest
+    static final long RETRY_DELAY_TRANSIENT_MILLIS = 60 * 1000L; // radio off / no service: self-resolving
+    static final long RETRY_DELAY_DEFAULT_MILLIS = 30 * 1000L; // everything else: modest delay, not instant
+
+    /**
+     * Delay before a retry goes out, by failure reason. Everything used to retry on the very next
+     * burst regardless of why it failed - fine for an ordinary hiccup, wrong for
+     * {@code RESULT_ERROR_LIMIT_EXCEEDED}: that code means a send limit was hit (usually Android's
+     * own per-app throttle rather than the carrier's), so answering it with an immediate resend is
+     * the one response this app's whole pacing design would not choose. Package-private and pure,
+     * same trick as {@link #stringResFor}, so it's unit-testable without Android.
+     */
+    static long retryDelayMillis(int resultCode) {
+        if (resultCode == SmsManager.RESULT_ERROR_LIMIT_EXCEEDED) {
+            return RETRY_DELAY_LIMIT_EXCEEDED_MILLIS;
+        } else if (resultCode == SmsManager.RESULT_ERROR_RADIO_OFF
+                || resultCode == SmsManager.RESULT_ERROR_NO_SERVICE) {
+            return RETRY_DELAY_TRANSIENT_MILLIS;
+        }
+        return RETRY_DELAY_DEFAULT_MILLIS;
+    }
+
+    /**
      * Applies the retry policy to a failed send, from either failure path: a non-OK delivery
      * result (only after {@link OutboxRepository#recordSendFailure} has confirmed this is the
      * first part of the row to report failure), or a synchronous throw in
      * {@code SmsSendService#sendOne} - which fires no intent at all, so this is the only way that
-     * case is ever handled. Under the retry limit the row is requeued and a drain kicked off; at
-     * the limit it is marked FAILED, logged, and counted toward the member's failure alert. This
-     * is a straight port of sendOne's original retry-vs-fail block - now the single owner of that
-     * policy, called from both places instead of being duplicated.
+     * case is ever handled. Under the retry limit the row is requeued (delayed per
+     * {@link #retryDelayMillis}) and a drain kicked off; at the limit it is marked FAILED, logged,
+     * and counted toward the member's failure alert. This is a straight port of sendOne's original
+     * retry-vs-fail block - now the single owner of that policy, called from both places instead of
+     * being duplicated.
      */
     public static void handleFailure(Context context, OutboxRepository.OutboxItem item, int resultCode) {
         Context appContext = context.getApplicationContext();
@@ -230,7 +264,7 @@ public class SentReceiver extends BroadcastReceiver {
         int attempts = item.attempts + 1;
         int maxAttempts = Math.max(1, prefs.getRetryLimit() + 1);
         if (attempts < maxAttempts) {
-            outbox.requeueForRetry(item.id, attempts);
+            outbox.requeueForRetry(item.id, attempts, System.currentTimeMillis() + retryDelayMillis(resultCode));
             SmsSendService.start(appContext);
             return;
         }

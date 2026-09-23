@@ -25,7 +25,7 @@
     <string name="stats_failed_today">נישט געלונגען היינט: %1$d</string>
     <string name="stats_queue_count">ידיעות אין ריי: %1$d</string>
     <string name="queue_holding_suffix">, האלט %1$d</string>
-    <string name="queue_holding_only">האלט %1$d צו צונויפגיסן</string>
+    <string name="queue_holding_only">האלט %1$d</string>
     <string name="stats_next_burst">די קומענדיקע פארזאמלונג אין %1$s (%2$d ידיעות)</string>
     <string name="badge_sending">שיקט…</string>
     <string name="badge_announcement_mode">אָנזאָג-מאָדוס</string>
@@ -334,7 +334,7 @@
     <string name="tpl_reply_no_target">געשיקט צו די אדמינען. כדי צו שיקן צו אלעמען, הייבט אן אייער ידיעה מיט #all.</string>
     <string name="tpl_reply_copy_admin">@admin ענטפער פון %1$s צו %2$s: %3$s</string>
     <string name="tpl_dm_prefix">[אדמין]: %1$s</string>
-    <string name="tpl_commands_list_common">פאראנע באפעלן:\n#commands - ווייזן די רשימה\n#mute - פארשטומען ידיעות\n#unmute - אָפּנעמען דעם שטום\n#stop - פארלאזן די גרופע\n#list - רשימה פון מיטגלידער\n#name &lt;נייער צונאמען&gt; - טוישן אייער צונאמען\n#admin &lt;ידיעה&gt; - א ידיעה נאר פאר אדמינען\n#mode - ווייזן דעם איצטיקן גרופע-מאָדוס\n#join &lt;צונאמען&gt; - בעטן זיך אנצושליסן (פאר נישט-מיטגלידער)</string>
+    <string name="tpl_commands_list_common">פאראנע באפעלן:\n#commands - ווייזן די רשימה\n#help - ווי צו שיקן א ידיעה אין דער דאָזיקער גרופע\n#mute - פארשטומען ידיעות\n#unmute - אָפּנעמען דעם שטום\n#stop - פארלאזן די גרופע\n#list - רשימה פון מיטגלידער\n#name &lt;נייער צונאמען&gt; - טוישן אייער צונאמען\n#admin &lt;ידיעה&gt; - א ידיעה נאר פאר אדמינען\n#mode - ווייזן דעם איצטיקן גרופע-מאָדוס\n#join &lt;צונאמען&gt; - בעטן זיך אנצושליסן (פאר נישט-מיטגלידער)</string>
     <string name="tpl_commands_list_admin_extra">\n(אדמינען) #add &lt;נומער&gt; &lt;צונאמען&gt; - צולייגן א מיטגליד\n(אדמינען) #remove &lt;צונאמען אָדער נומער&gt; - אַרויסנעמען א מיטגליד\n(אדמינען) #topic &lt;נייער נאמען&gt; - טוישן דעם נאמען פון דער גרופע\n(אדמינען) #limits - ווייזן דעם היינטיקן סטאטוס פון דער גרופעס גרענעץ\n(אדמינען) #override [צונאמען אָדער נומער] - צולייגן איין ידיעה צו דער גרופעס גרענעץ, אָדער צו א מיטגליד\'ס באזונדער גרענעץ\n(אדמינען) #mode group|announcement|reply - טוישן דעם גרופע-מאָדוס</string>
     <string name="tpl_commands_list_reply_extra">\n#all &lt;ידיעה&gt; - שיקן צו אלעמען\n#to &lt;צונאמען&gt; &lt;ידיעה&gt; - ענטפערן פּריוואט צו איין מיטגליד</string>
     <string name="tpl_list_you">(איר)</string>
@@ -358,6 +358,10 @@
     <string name="tpl_mode_status_announcement">אָנזאָג-מאָדוס איז אָנגעשאלטן: נאר אדמין-ידיעות ווערן איבערגעשיקט צו אלעמען. אלע אנדערע\'ס ידיעות גייען נאר צו אדמינען.</string>
     <string name="tpl_mode_status_group">גרופע-מאָדוס איז אָנגעשאלטן: אלעמענס ידיעות ווערן איבערגעשיקט צו דער גרופע.</string>
     <string name="tpl_mode_status_reply">ענטפער-מאָדוס איז אָנגעשאלטן: הייבט אן א ידיעה מיט #all כדי צו שיקן צו אלעמען. א פשוטע ענטפער גייט נאר צו דעם וואס האט געשיקט די ידיעה.</string>
+    <string name="tpl_help_group">פשוט שיקט א געוויינטליכע ידיעה און יעדער אין דער גרופע באקומט זי. ענטפערט #commands פאר דער גאנצער רשימה, אָדער #stop כדי אַרויסצוטרעטן.</string>
+    <string name="tpl_help_announcement">יעצט ווערן נאר אדמין-ידיעות איבערגעשיקט צו אלעמען. וואס איר שיקט גייט צו די אדמינען. ענטפערט #commands פאר דער גאנצער רשימה, אָדער #stop כדי אַרויסצוטרעטן.</string>
+    <string name="tpl_help_reply">הייבט אן אייער ידיעה מיט #all כדי זי צו שיקן צו אלעמען. אָן דעם, גייט אייער ידיעה נאר צו דעם וואס האט געשיקט די לעצטע ידיעה וואס איר האט באקומען. ענטפערט #commands פאר דער גאנצער רשימה, אָדער #stop כדי אַרויסצוטרעטן.</string>
+    <string name="tpl_help_muted">איר זענט פארשטומט, אזוי איר וועט נישט באקומען גרופע-ידיעות און אייערע ידיעות וועלן נישט ווערן איבערגעשיקט. ענטפערט #unmute כדי ווידער צו באקומען ידיעות, אָדער #commands פאר דער גאנצער רשימה.</string>
     <string name="tpl_mode_invalid">ניצן: #mode group, #mode announcement אָדער #mode reply</string>
     <string name="tpl_mode_changed_announcement">%1$s האט אריבערגעשטעלט די גרופע אויף אָנזאָג-מאָדוס. פון איצט אן וועלן נאר אדמין-ידיעות ווערן איבערגעשיקט צו אלעמען.</string>
     <string name="tpl_mode_changed_group">%1$s האט צוריקגעשטעלט די גרופע אויף גרופע-מאָדוס. אלעמענס ידיעות וועלן ווידער ווערן איבערגעשיקט.</string>
@@ -379,7 +383,7 @@
     <string name="send_result_radio_off">דער טעלעפאן האט נישט געהאט קיין סיגנאל (עראפלאן-מאָדוס אָדער רדיא אָפּגעשטעלט)</string>
     <string name="send_result_no_service">עס איז נישט געווען קיין סעלולער סערוויס אין יענעם מאָמענט</string>
     <string name="send_result_null_pdu">די ידיעה האט נישט געקענט ווערן קאדירט</string>
-    <string name="send_result_limit_exceeded">דער קאמפאניעס שיקן-גרענעץ איז דערגרייכט געוואָרן - פארלאנגזאמט דעם שיקן-טעמפּא</string>
+    <string name="send_result_limit_exceeded">דאָס שיקן איז צו גיך - קוקט נאָך די גרענעץ פאר ארויסגייענדיקע ידיעות אין די אײנשטעלונגען</string>
     <string name="send_result_short_code_not_allowed">די קאמפאניע האט דאס בלאקירט ווי א קורצער-קאָד ידיעה</string>
     <string name="send_result_not_sent">קיינמאל נישט דערגרייכט דעם נעץ</string>
     <string name="send_result_unknown">דאָס שיקן איז נישט געלונגען (קאָד %1$d)</string>

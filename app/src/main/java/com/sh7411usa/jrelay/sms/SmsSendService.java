@@ -241,9 +241,11 @@ public class SmsSendService extends Service {
     /**
      * Folds RELAY rows whose coalescing hold has elapsed into as few outgoing bodies as possible,
      * per recipient, so the upcoming burst draw sees merged rows instead of individual ones.
-     * No-op when the coalescing window is off, so v5.0 behavior (one outgoing SMS per queued row,
-     * no rows ever held) is unchanged: {@link OutboxRepository#takeReleasedRelayRows()} is never
-     * even called.
+     * No-op when the coalescing window is off: {@link OutboxRepository#takeReleasedRelayRows()} is
+     * never even called, and coalescing itself never holds a row in that case. That does NOT mean
+     * no rows can be held, though — {@code hold_until} is no longer coalescing's alone as of 5.4:
+     * retry backoff sets it too, so a backed-off retry can hold a row for 30s-5min regardless of
+     * this setting.
      */
     private void mergeReleasedRelayRows(OutboxRepository outbox, Prefs prefs, SmsManager smsManager) {
         if (prefs.getCoalesceWindowSeconds() == 0) {

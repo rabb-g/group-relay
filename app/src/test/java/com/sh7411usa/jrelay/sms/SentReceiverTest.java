@@ -141,4 +141,45 @@ public class SentReceiverTest {
         assertNotEquals(SmsManager.RESULT_ERROR_LIMIT_EXCEEDED, SentReceiver.RESULT_NOT_SENT);
         assertNotEquals(SmsManager.RESULT_ERROR_SHORT_CODE_NOT_ALLOWED, SentReceiver.RESULT_NOT_SENT);
     }
+
+    // ---- retryDelayMillis: rate-limit refusals back off hardest ----
+
+    @Test
+    public void retryDelayMillis_limitExceededIsLongerThanEveryOtherKnownCode() {
+        // The one that matters: if the policy ever gets flattened so RESULT_ERROR_LIMIT_EXCEEDED
+        // stops backing off hardest, this must fail loudly rather than silently pass.
+        long limitExceededDelay = SentReceiver.retryDelayMillis(SmsManager.RESULT_ERROR_LIMIT_EXCEEDED);
+        for (int code : KNOWN_CODES) {
+            if (code == SmsManager.RESULT_ERROR_LIMIT_EXCEEDED) {
+                continue;
+            }
+            assertTrue("delay for " + code + " should be shorter than the rate-limit delay",
+                    limitExceededDelay > SentReceiver.retryDelayMillis(code));
+        }
+    }
+
+    @Test
+    public void retryDelayMillis_radioOffIsTheMediumDelay() {
+        assertEquals(SentReceiver.RETRY_DELAY_TRANSIENT_MILLIS,
+                SentReceiver.retryDelayMillis(SmsManager.RESULT_ERROR_RADIO_OFF));
+    }
+
+    @Test
+    public void retryDelayMillis_noServiceIsTheMediumDelay() {
+        assertEquals(SentReceiver.RETRY_DELAY_TRANSIENT_MILLIS,
+                SentReceiver.retryDelayMillis(SmsManager.RESULT_ERROR_NO_SERVICE));
+    }
+
+    @Test
+    public void retryDelayMillis_unrecognisedCodeIsTheDefaultDelay() {
+        assertEquals(SentReceiver.RETRY_DELAY_DEFAULT_MILLIS, SentReceiver.retryDelayMillis(999_999));
+    }
+
+    @Test
+    public void retryDelayMillis_everyKnownCodeIsStrictlyPositive() {
+        // A zero would silently restore the immediate-resend behavior this change exists to remove.
+        for (int code : KNOWN_CODES) {
+            assertTrue("delay for " + code + " must be > 0", SentReceiver.retryDelayMillis(code) > 0);
+        }
+    }
 }

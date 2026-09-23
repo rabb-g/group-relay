@@ -25,7 +25,7 @@
     <string name="stats_failed_today">נכשלו היום: %1$d</string>
     <string name="stats_queue_count">הודעות בתור: %1$d</string>
     <string name="queue_holding_suffix">, מוחזקות %1$d</string>
-    <string name="queue_holding_only">מחזיקים %1$d לאיחוד</string>
+    <string name="queue_holding_only">מוחזקות %1$d</string>
     <string name="stats_next_burst">המנה הבאה בעוד %1$s (%2$d הודעות)</string>
     <string name="badge_sending">בשליחה…</string>
     <string name="badge_announcement_mode">מצב הכרזה</string>
@@ -334,7 +334,7 @@
     <string name="tpl_reply_no_target">נשלח למנהלים. כדי לפרסם לכולם, התחילו את ההודעה שלכם ב-#all.</string>
     <string name="tpl_reply_copy_admin">@admin תגובה מ-%1$s אל %2$s: %3$s</string>
     <string name="tpl_dm_prefix">[מנהל]: %1$s</string>
-    <string name="tpl_commands_list_common">פקודות זמינות:\n#commands - הצגת רשימה זו\n#mute - השתקת הודעות\n#unmute - ביטול השתקה\n#stop - עזיבת הקבוצה\n#list - רשימת חברים\n#name &lt;כינוי חדש&gt; - שינוי הכינוי שלך\n#admin &lt;הודעה&gt; - הודעה למנהלים בלבד\n#mode - הצגת מצב הקבוצה הנוכחי\n#join &lt;כינוי&gt; - בקשה להצטרף (למי שאינם חברים)</string>
+    <string name="tpl_commands_list_common">פקודות זמינות:\n#commands - הצגת רשימה זו\n#help - איך לשלוח הודעה בקבוצה זו\n#mute - השתקת הודעות\n#unmute - ביטול השתקה\n#stop - עזיבת הקבוצה\n#list - רשימת חברים\n#name &lt;כינוי חדש&gt; - שינוי הכינוי שלך\n#admin &lt;הודעה&gt; - הודעה למנהלים בלבד\n#mode - הצגת מצב הקבוצה הנוכחי\n#join &lt;כינוי&gt; - בקשה להצטרף (למי שאינם חברים)</string>
     <string name="tpl_commands_list_admin_extra">\n(מנהלים) #add &lt;מספר&gt; &lt;כינוי&gt; - הוספת חבר\n(מנהלים) #remove &lt;כינוי או מספר&gt; - הסרת חבר\n(מנהלים) #topic &lt;שם חדש&gt; - שינוי שם הקבוצה\n(מנהלים) #limits - הצגת מצב המגבלה היומית של הקבוצה\n(מנהלים) #override [כינוי או מספר] - הוספת הודעה אחת למגבלת הקבוצה, או למגבלה האישית של חבר\n(מנהלים) #mode group|announcement|reply - החלפת מצב הקבוצה</string>
     <string name="tpl_commands_list_reply_extra">\n#all &lt;הודעה&gt; - פרסום לכולם\n#to &lt;כינוי&gt; &lt;הודעה&gt; - תגובה פרטית לחבר אחד</string>
     <string name="tpl_list_you">(את/ה)</string>
@@ -358,6 +358,10 @@
     <string name="tpl_mode_status_announcement">מצב הכרזה פעיל: רק הודעות מנהלים מועברות לכולם. הודעות של כל האחרים מגיעות רק למנהלים.</string>
     <string name="tpl_mode_status_group">מצב קבוצה פעיל: הודעות כולם מועברות לקבוצה.</string>
     <string name="tpl_mode_status_reply">מצב תגובה פעיל: התחילו הודעה ב-#all כדי לפרסם לכולם. תגובה רגילה מגיעה רק למי שפרסם את ההודעה.</string>
+    <string name="tpl_help_group">פשוט שלחו הודעה רגילה וכל חברי הקבוצה יקבלו אותה. השיבו #commands לרשימה המלאה, או #stop כדי לצאת.</string>
+    <string name="tpl_help_announcement">כרגע רק הודעות מנהלים מגיעות לכולם. כל מה שתשלחו מגיע למנהלים. השיבו #commands לרשימה המלאה, או #stop כדי לצאת.</string>
+    <string name="tpl_help_reply">התחילו את ההודעה שלכם ב-#all כדי לשלוח אותה לכולם. בלעדיו, ההודעה שלכם תגיע רק למי ששלח את ההודעה האחרונה שקיבלתם. השיבו #commands לרשימה המלאה, או #stop כדי לצאת.</string>
+    <string name="tpl_help_muted">את/ה מושתק/ת, ולכן לא תקבל/י הודעות מהקבוצה וההודעות שלך לא יועברו. השיבו #unmute כדי לחדש קבלת הודעות, או #commands לרשימה המלאה.</string>
     <string name="tpl_mode_invalid">שימוש: #mode group, #mode announcement או #mode reply</string>
     <string name="tpl_mode_changed_announcement">%1$s העביר/ה את הקבוצה למצב הכרזה. מעתה רק הודעות מנהלים יועברו לכולם.</string>
     <string name="tpl_mode_changed_group">%1$s החזיר/ה את הקבוצה למצב קבוצה. הודעות כולם יועברו שוב.</string>
@@ -379,7 +383,7 @@
     <string name="send_result_radio_off">לא הייתה קליטה בטלפון (מצב טיסה או רדיו כבוי)</string>
     <string name="send_result_no_service">לא היה כיסוי סלולרי באותה עת</string>
     <string name="send_result_null_pdu">לא היה ניתן לקודד את ההודעה</string>
-    <string name="send_result_limit_exceeded">מגבלת השליחה של הספק הושגה - האיטו את קצב השליחה</string>
+    <string name="send_result_limit_exceeded">השליחה מהירה מדי - בדקו את מגבלת המסרונים היוצאים בהגדרות</string>
     <string name="send_result_short_code_not_allowed">הספק חסם את ההודעה כהודעת קוד קצר</string>
     <string name="send_result_not_sent">ההודעה מעולם לא הגיעה לרשת</string>
     <string name="send_result_unknown">השליחה נכשלה (קוד %1$d)</string>
