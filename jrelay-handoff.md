@@ -231,6 +231,8 @@ Also settle during the spike: whether the `WAP_PUSH_RECEIVED` receiver fires for
 
 ## Phase 4 — Multiple lines on one device (→ 7.0)
 
+**DEFERRED — 2026-09-22, at the user's direction.** Not cancelled; the spec below stands and is still the plan if and when a second line is added. Do not propose this phase as next work until the user raises it again. Note that it is the only phase that would raise the ceiling the whole project exists under — one line is capped around 1,000 messages/day, and two lines double that — so it becomes relevant the moment the group outgrows a single SIM. Everything else on the roadmap reduces *sends per post*; this is the only item that increases *sends available*.
+
 ### Scope
 Multiple SIM subscriptions on the **same** device only (dual-SIM / eSIM). Multi-device relay is out of scope for this handoff. If only one active subscription exists, this phase is invisible and everything defaults to that line.
 
