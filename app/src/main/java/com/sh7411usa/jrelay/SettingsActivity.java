@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.InputFilter;
 import android.text.format.DateFormat;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -30,6 +31,7 @@ import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.SmsSendService;
 import com.sh7411usa.jrelay.util.DailyLimitManager;
 import com.sh7411usa.jrelay.util.Prefs;
+import com.sh7411usa.jrelay.util.RateLimitConfig;
 import com.sh7411usa.jrelay.util.RateLimitSettings;
 
 import java.util.List;
@@ -48,6 +50,17 @@ public class SettingsActivity extends BaseActivity {
     };
 
     private static final long PAUSE_STATUS_TICK_MS = 1000;
+
+    /**
+     * Pacing ceilings live on {@link RateLimitConfig}, which also applies them when the drain
+     * READS these values - clamping only here, on save, would leave any out-of-range value already
+     * stored by an older build in force until someone happened to re-open this screen and press
+     * Save. Defined in one place so the two can never drift; see that class for why each bound is
+     * what it is, and for why they are sanity bounds rather than a rate control.
+     */
+    private static final int MAX_WAIT_SECONDS_CEILING = RateLimitConfig.MAX_WAIT_SECONDS_CEILING;
+    private static final int BURST_SIZE_CEILING = RateLimitConfig.BURST_SIZE_CEILING;
+    private static final int MICROSPACING_MS_CEILING = RateLimitConfig.MICROSPACING_MS_CEILING;
 
     private Prefs prefs;
     private MessageRepository messageRepository;
@@ -205,6 +218,19 @@ public class SettingsActivity extends BaseActivity {
         microspacingMinMsInput = findViewById(R.id.edit_microspacing_min_ms);
         microspacingMaxMsInput = findViewById(R.id.edit_microspacing_max_ms);
 
+        // Equivalent to android:maxLength, applied in code since this class doesn't own the
+        // layout file. Sized to the digit count of each field's ceiling above so the UI can't
+        // even accept absurd values like "2147483647" in the first place; the Math.min clamps
+        // in savePacingSettings() remain the real guarantee regardless of what's typed.
+        applyMaxDigits(minWaitInput, MAX_WAIT_SECONDS_CEILING);
+        applyMaxDigits(maxWaitInput, MAX_WAIT_SECONDS_CEILING);
+        applyMaxDigits(burstMinInput, BURST_SIZE_CEILING);
+        applyMaxDigits(burstMaxInput, BURST_SIZE_CEILING);
+        applyMaxDigits(fixedBurstSizeInput, BURST_SIZE_CEILING);
+        applyMaxDigits(microspacingFixedMsInput, MICROSPACING_MS_CEILING);
+        applyMaxDigits(microspacingMinMsInput, MICROSPACING_MS_CEILING);
+        applyMaxDigits(microspacingMaxMsInput, MICROSPACING_MS_CEILING);
+
         coalesceWindowSecondsInput = findViewById(R.id.edit_coalesce_window_seconds);
         maxMergedSegmentsInput = findViewById(R.id.edit_max_merged_segments);
 
@@ -239,6 +265,11 @@ public class SettingsActivity extends BaseActivity {
         themeSpinner = findViewById(R.id.spinner_theme);
 
         clearHistoryButton = findViewById(R.id.button_clear_history);
+    }
+
+    /** Caps an EditText's input length to the digit count of {@code ceiling} (android:maxLength equivalent, in code). */
+    private void applyMaxDigits(EditText input, int ceiling) {
+        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(String.valueOf(ceiling).length())});
     }
 
     private void populateFromPrefs() {
@@ -300,7 +331,14 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private void wireListeners() {
-        pauseSpinner.setOnItemSelectedListener(pauseSpinnerListener);
+        // AdapterView fires onItemSelected once automatically after the first layout pass, using
+        // whatever listener is attached by then — regardless of whether that happens before or
+        // after populateFromPrefs()'s setSelection(0) call above. Left unguarded, that spurious
+        // callback invokes applyPauseSelection(0), which silently cancels an active pause just
+        // from opening this screen. Deferring attachment via post() (same technique
+        // resetPauseSpinnerToIdle uses below) means the listener isn't attached yet when that
+        // automatic callback fires, so it's a no-op instead of a cancellation.
+        pauseSpinner.post(() -> pauseSpinner.setOnItemSelectedListener(pauseSpinnerListener));
         findViewById(R.id.button_save_group_mode).setOnClickListener(v -> saveGroupMode());
         findViewById(R.id.button_save_reply_mode).setOnClickListener(v -> saveReplyModeSettings());
         findViewById(R.id.button_save_commands).setOnClickListener(v -> saveCommandsSettings());
@@ -466,24 +504,27 @@ public class SettingsActivity extends BaseActivity {
         prefs.setStaggeringEnabled(staggeringEnabledCheckbox.isChecked());
         int min = parseOrDefault(minWaitInput, prefs.getMinWaitSeconds());
         int max = parseOrDefault(maxWaitInput, prefs.getMaxWaitSeconds());
-        prefs.setMinWaitSeconds(Math.max(0, min));
-        prefs.setMaxWaitSeconds(Math.max(prefs.getMinWaitSeconds(), max));
+        prefs.setMinWaitSeconds(RateLimitConfig.clamp(min, 0, MAX_WAIT_SECONDS_CEILING));
+        prefs.setMaxWaitSeconds(RateLimitConfig.clamp(max, prefs.getMinWaitSeconds(), MAX_WAIT_SECONDS_CEILING));
         prefs.setInitialDelayEnabled(initialDelayCheckbox.isChecked());
 
         prefs.setBurstMode(Prefs.BurstMode.values()[burstModeSpinner.getSelectedItemPosition()]);
         int burstMin = parseOrDefault(burstMinInput, prefs.getBurstMin());
         int burstMax = parseOrDefault(burstMaxInput, prefs.getBurstMax());
-        prefs.setBurstMin(Math.max(1, burstMin));
-        prefs.setBurstMax(Math.max(prefs.getBurstMin(), burstMax));
-        prefs.setFixedBurstSize(Math.max(1, parseOrDefault(fixedBurstSizeInput, prefs.getFixedBurstSize())));
+        prefs.setBurstMin(RateLimitConfig.clamp(burstMin, 1, BURST_SIZE_CEILING));
+        prefs.setBurstMax(RateLimitConfig.clamp(burstMax, prefs.getBurstMin(), BURST_SIZE_CEILING));
+        prefs.setFixedBurstSize(RateLimitConfig.clamp(
+                parseOrDefault(fixedBurstSizeInput, prefs.getFixedBurstSize()), 1, BURST_SIZE_CEILING));
 
         prefs.setMicrospacingEnabled(microspacingEnabledCheckbox.isChecked());
         prefs.setMicrospacingMode(Prefs.MicrospacingMode.values()[microspacingModeSpinner.getSelectedItemPosition()]);
-        prefs.setMicrospacingFixedMs(Math.max(0, parseOrDefault(microspacingFixedMsInput, prefs.getMicrospacingFixedMs())));
-        int microMin = Math.max(0, parseOrDefault(microspacingMinMsInput, prefs.getMicrospacingMinMs()));
+        prefs.setMicrospacingFixedMs(RateLimitConfig.clamp(
+                parseOrDefault(microspacingFixedMsInput, prefs.getMicrospacingFixedMs()), 0, MICROSPACING_MS_CEILING));
+        int microMin = RateLimitConfig.clamp(
+                parseOrDefault(microspacingMinMsInput, prefs.getMicrospacingMinMs()), 0, MICROSPACING_MS_CEILING);
         int microMax = parseOrDefault(microspacingMaxMsInput, prefs.getMicrospacingMaxMs());
         prefs.setMicrospacingMinMs(microMin);
-        prefs.setMicrospacingMaxMs(Math.max(microMin, microMax));
+        prefs.setMicrospacingMaxMs(RateLimitConfig.clamp(microMax, microMin, MICROSPACING_MS_CEILING));
 
         prefs.setCoalesceWindowSeconds(
                 Math.min(600, Math.max(0, parseOrDefault(coalesceWindowSecondsInput, prefs.getCoalesceWindowSeconds()))));

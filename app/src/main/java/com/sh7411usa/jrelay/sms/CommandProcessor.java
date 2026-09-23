@@ -17,6 +17,7 @@ import com.sh7411usa.jrelay.util.Prefs;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 public class CommandProcessor {
 
@@ -42,8 +43,16 @@ public class CommandProcessor {
 
         String trimmed = body == null ? "" : body.trim();
 
+        // A whitespace-only or empty inbound body (a pocket-send, or an SmsReceiver PDU whose parts
+        // all decoded to a null body) matches no command and would otherwise fall through to
+        // relayPlainMessage() -> postToGroup(), broadcasting an empty "Nickname: " post to the whole
+        // group and burning a daily-quota slot. Bail out before anything is logged, queued or replied to.
+        if (trimmed.isEmpty()) {
+            return;
+        }
+
         // #join is the one command a non-member can use, so it's checked before the member lookup below.
-        if (trimmed.toLowerCase().startsWith("#join")) {
+        if (trimmed.toLowerCase(Locale.ROOT).startsWith("#join")) {
             handleJoinRequest(senderE164, trimmed);
             SmsSendService.start(context);
             return;
@@ -81,7 +90,7 @@ public class CommandProcessor {
     }
 
     private void handleCommand(Member sender, String text) {
-        String lower = text.toLowerCase();
+        String lower = text.toLowerCase(Locale.ROOT);
         if (lower.equals("#commands")) {
             handleCommandsList(sender);
         } else if (lower.equals("#help")) {
@@ -161,6 +170,13 @@ public class CommandProcessor {
     }
 
     private void handleStop(Member sender) {
+        if (sender.isAdmin && memberRepository.countActiveAdmins() == 1) {
+            // The last admin can't remove themselves over SMS: setAdmin() is only reachable from the
+            // app UI (MemberDetailActivity), and reactivate() always resets is_admin to 0, so an empty
+            // admin set is unrecoverable without physically holding the handset.
+            reply(sender, context.getString(R.string.tpl_last_admin_refused));
+            return;
+        }
         memberRepository.softRemove(sender.id);
         String groupName = prefs.getGroupName();
         reply(sender, context.getString(R.string.tpl_removed_you, groupName));
@@ -343,6 +359,12 @@ public class CommandProcessor {
         if (target == null) {
             return;
         }
+        if (target.isAdmin && memberRepository.countActiveAdmins() == 1) {
+            // Same unrecoverable-empty-admin-set hazard as handleStop: refuse rather than let an
+            // admin remove the last admin (including themselves) with no way back except the app UI.
+            reply(sender, context.getString(R.string.tpl_last_admin_refused));
+            return;
+        }
         removeMember(target, sender.nickname);
     }
 
@@ -431,7 +453,7 @@ public class CommandProcessor {
             reply(sender, context.getString(R.string.tpl_unauthorized));
             return;
         }
-        String arg = stripLeadingWord(text).trim().toLowerCase();
+        String arg = stripLeadingWord(text).trim().toLowerCase(Locale.ROOT);
         Prefs.GroupMode newMode;
         if (arg.equals("announcement")) {
             newMode = Prefs.GroupMode.ANNOUNCEMENT;
@@ -550,7 +572,12 @@ public class CommandProcessor {
         String formatted = context.getString(R.string.tpl_failure_alert, target.nickname, failedCount);
         List<Member> admins = memberRepository.getActiveAdmins();
         for (Member admin : admins) {
-            if (admin.isMuted) {
+            // An alert about an admin's own failing number must never be routed back through that
+            // same admin's failure counter: enqueue() below stamps the outbox row with the admin's
+            // member_id, so a failed delivery of this very alert would increment the counter that
+            // triggers it, turning one bad admin number into a self-sustaining alert storm. Mirrors
+            // sendToAdminsOnly's identical sender-exclusion guard above.
+            if (admin.id == target.id || admin.isMuted) {
                 continue;
             }
             enqueue(admin, formatted, "ADMIN");
@@ -831,10 +858,11 @@ public class CommandProcessor {
     }
 
     private String stripLeadingWord(String text) {
-        int spaceIdx = text.indexOf(' ');
-        if (spaceIdx < 0) {
-            return "";
-        }
-        return text.substring(spaceIdx + 1);
+        // Split on any whitespace run (not just a literal space) so a newline after the command
+        // word, e.g. "#admin\nmessage", still separates it from the argument instead of yielding ""
+        // and silently dropping the member's message with no reply at all. Mirrors
+        // handleToCommand's rest.split("\\s+") and MessageIntent.stripPostPrefix.
+        String[] parts = text.split("\\s+", 2);
+        return parts.length > 1 ? parts[1] : "";
     }
 }

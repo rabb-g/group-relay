@@ -1,5 +1,78 @@
 # Version History
 
+## 5.5 - Audit Fixes, Part One
+
+A full adversarial audit of the whole codebase found around sixty real problems (written up in
+`docs/audit-2026-09.md`). This is the first remediation wave: the ones that expose data, send
+duplicates, or take the relay out of your control. Nothing here is a new feature.
+
+- **The app no longer ships as a debuggable build, and no longer backs your members up to Google.**
+  Two separate exposures of the same data, both present since the first release.
+  - The APK you install is the debug build, and Android's default marks that build debuggable.
+    Anyone with a machine that is authorised for ADB could run one command and copy the entire
+    database off the phone — every member's number and every message ever relayed, no root
+    needed. That phone gets plugged into a PC as a matter of routine, because that is how the
+    outgoing-SMS-limit setting gets granted. The build now explicitly turns that off. Logcat
+    still works, so nothing on the device checklist is affected.
+  - Backups were on, and both backup rule files were the unmodified template Android Studio
+    generates, with every rule commented out — so the default applied and the database was
+    included. That sent the member roster and the full message history to whichever Google
+    account the phone is signed into, and carried it along in a phone-to-phone transfer. None of
+    the hundred people in the group agreed to their number leaving the relay. Backups are now off,
+    and both rule files have been filled in as well, so that switching backups back on later
+    cannot quietly re-expose anything.
+- **Two ways a message could be sent twice are now closed.** Both were in the part of the app that
+  had already been reviewed the most, and neither needed anything unusual to happen.
+  - When a message was given up on for having gone quiet too long, the app marked it dead but left
+    behind the two values a late reply is matched against. If that message was then picked up and
+    re-sent, a reply belonging to the abandoned attempt could still be accepted, and it would push
+    the message — already going out again — back into the queue for a third try.
+  - Three places that change a message's state did so without first checking the message was still
+    the one they thought it was, while every comparable place in the same file does check. That let
+    a late reply overwrite a send already in progress, discard that send's real outcome as stale,
+    and queue the message up again.
+  - **Still open, and being fixed next:** one further path remains where a message can be resent
+    while its outcome is being recorded. It is narrower than it was but not gone. It needs the
+    recording step made atomic, which touches the most carefully guarded code in the app and
+    deserves its own release.
+- **A failing admin number can no longer generate its own alerts forever.** When a member's
+  messages fail repeatedly, admins get a warning. That warning was being counted against the
+  failure record of the admin it was sent to — so if an admin's own number went bad, the warning
+  about it failed, which produced another warning, which failed. It fires on exactly the
+  conditions that mean the line is already struggling: no service, radio off, or the carrier
+  refusing messages. The app's answer to "this line is in trouble" was to put more traffic on it.
+  The fix is one line, and the correct version of it was already sitting in a neighbouring method.
+- **The last admin can no longer lock everyone out of the group.** Texting `STOP` as the only
+  admin — or a stray "Cancel" in conversation, which counts as the same thing — removed the final
+  admin, after which every admin command refused everyone, permanently. There was no way back by
+  text: re-adding that person returns them as an ordinary member, and the only place admin status
+  can be granted is the app itself. Whoever held the phone would have had to fix it by hand. All
+  four routes to that state — two by text, two in the app — now refuse and explain why.
+- **Opening the Settings screen no longer cancels a pause.** The screen's pause control fired its
+  own "resume" as soon as it was drawn, before you touched anything. Because of how it was
+  guarded, it did nothing at all when the relay was running and fired only when it was paused —
+  so pausing the group, then opening Settings for any unrelated reason, silently resumed sending
+  and released the whole backlog. The screen then showed "Not Paused", so it looked correct.
+- **Send pacing can no longer be set to a value that breaks the relay.** Every pacing field had a
+  minimum but no maximum. A large enough wait could put the sender to sleep for years, and because
+  the pacing settings are read once when sending starts, changing the value back had no effect —
+  only force-stopping the app recovered it. A particular pair of values crashed the sender
+  outright, and since it runs on its own thread, that killed the app mid-send. All the pacing
+  fields now have sensible upper bounds.
+- **A blank text no longer costs a hundred messages.** An empty or whitespace-only message — a
+  pocket-send — was relayed to the whole group as an empty post and charged against the daily
+  limit.
+- **Commands written with a line break no longer vanish.** The app looked for a space to separate
+  a command from what follows it, so `#admin` followed by a new line left nothing after the
+  command and the message was dropped with no reply at all. Seven commands were affected. The same
+  problem had already been found and fixed in two other places; these were missed.
+- Command matching is now independent of the phone's language setting, which could otherwise stop
+  every command from being recognised on certain locales.
+- Hebrew and Yiddish kept in sync with the two new strings (328 in each of the three files) — one
+  sent as a text to the departing admin, one shown in the app, deliberately worded differently
+  because one addresses the person leaving and the other describes someone else on screen.
+- Updated `README.md` and `VERSION.md`.
+
 ## 5.4 - Retry Backoff, `#help`, and Two Things the App Was Getting Wrong
 
 A small release on top of 5.3. One behaviour change, one new command, and two places where the app was telling somebody something untrue.

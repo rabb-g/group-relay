@@ -175,9 +175,18 @@ public class OutboxRepository {
         int neverHandedOff = db.update(DbHelper.TABLE_OUTBOX, neverHandedOffCv,
                 "status = ? AND parts_pending = 0", new String[]{"SENDING"});
 
+        // parts_pending is zeroed here, not just status: this row is being declared dead, so it
+        // must stop matching recordSendFailure's/recordPartSent's WHERE clause
+        // (id = ? AND status = 'SENDING' AND parts_pending > 0 AND handed_off_at = ?) for the
+        // abandoned attempt. Leaving parts_pending > 0 intact let takeBurst reclaim the row
+        // (writing only status back to SENDING) while the old handed_off_at token was still
+        // sitting there - so a late result from the original, abandoned attempt could still
+        // satisfy that WHERE clause during the reclaimed attempt's SENDING window, and
+        // recordSendFailure's true triggered a requeue of a row that was mid-send again: a
+        // duplicate send.
         SQLiteStatement strandedStmt = db.compileStatement(
                 "UPDATE " + DbHelper.TABLE_OUTBOX
-                        + " SET status = 'PENDING', attempts = attempts + 1"
+                        + " SET status = 'PENDING', attempts = attempts + 1, parts_pending = 0"
                         + " WHERE status = 'SENDING' AND parts_pending > 0"
                         + " AND (handed_off_at <= ? OR handed_off_at < ?)");
         int strandedAwaitingResult;
@@ -227,12 +236,39 @@ public class OutboxRepository {
                 new String[]{"PENDING", String.valueOf(System.currentTimeMillis())});
     }
 
-    public void markSent(long id) {
-        updateStatus(id, "SENT");
+    /**
+     * Marks a row SENT. Guarded on {@code status = 'SENDING' AND handed_off_at = ?} (the same
+     * `token` the caller's own {@link #recordPartSent(long, long)} call just matched) so a stale
+     * caller - one whose attempt has since been abandoned and the row reclaimed into a new
+     * SENDING attempt under a new token - matches zero rows and is silently dropped instead of
+     * stamping SENT over a live, unrelated attempt. Every other outbox mutator that acts on a
+     * SENDING row (recordPartSent, recordSendFailure, takeBurst) is guarded the same way; this
+     * one previously was not, which is the second half of the same duplicate-send bug fixed in
+     * resetOrphanedSending's stranded branch. {@link #requeueForRetry} and {@link #markFailed}
+     * carry the identical guard for the same reason.
+     */
+    public void markSent(long id, long token) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("status", "SENT");
+        db.update(DbHelper.TABLE_OUTBOX, cv, "id = ? AND status = ? AND handed_off_at = ?",
+                new String[]{String.valueOf(id), "SENDING", String.valueOf(token)});
     }
 
-    public void markFailed(long id) {
-        updateStatus(id, "FAILED");
+    /**
+     * Marks a row FAILED - the retry limit has been exhausted. Guarded on
+     * {@code status = 'SENDING' AND handed_off_at = ?}, same pattern and same reasoning as
+     * {@link #markSent} / {@link #requeueForRetry}: `token` is the attempt this call is
+     * terminating, and if the row has since been reclaimed into a newer SENDING attempt under a
+     * different token, zero rows match and the call is silently dropped instead of stamping
+     * FAILED over a live, unrelated attempt.
+     */
+    public void markFailed(long id, long token) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("status", "FAILED");
+        db.update(DbHelper.TABLE_OUTBOX, cv, "id = ? AND status = ? AND handed_off_at = ?",
+                new String[]{String.valueOf(id), "SENDING", String.valueOf(token)});
     }
 
     /**
@@ -383,14 +419,25 @@ public class OutboxRepository {
      * so a retry can be backed off. Pass 0 to retry at the next opportunity, which is the old
      * behavior. The hold reuses the same `hold_until` column and the same `takeBurst` filter the
      * coalescing window uses, so a backed-off row is simply invisible to bursts until it is due.
+     *
+     * <p>Guarded on {@code status = 'SENDING' AND handed_off_at = ?}, same pattern as
+     * {@link #markSent} / {@link #recordPartSent} / {@link #recordSendFailure}: `token` is the
+     * attempt this failure belongs to. Without this guard, a late failure result for an attempt
+     * that has since been superseded - the row reclaimed into a newer SENDING attempt under a new
+     * token - would stamp PENDING directly over that live attempt; the newer attempt's real result
+     * then finds the row no longer in the state it expects and is discarded as stale, and the row
+     * gets sent again - a duplicate delivery, repeating until `attempts` exhausts. Zero rows
+     * matched means the row has moved on and this call is silently dropped instead, the same
+     * contract every other guarded mutator here already implements.
      */
-    public void requeueForRetry(long id, int attempts, long holdUntilMillis) {
+    public void requeueForRetry(long id, long token, int attempts, long holdUntilMillis) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put("status", "PENDING");
         cv.put("attempts", attempts);
         cv.put("hold_until", holdUntilMillis);
-        db.update(DbHelper.TABLE_OUTBOX, cv, "id = ?", new String[]{String.valueOf(id)});
+        db.update(DbHelper.TABLE_OUTBOX, cv, "id = ? AND status = ? AND handed_off_at = ?",
+                new String[]{String.valueOf(id), "SENDING", String.valueOf(token)});
     }
 
     /** Runs a single-value aggregate query over the outbox, returning 0 when there is no row or the value is NULL. */
@@ -417,12 +464,5 @@ public class OutboxRepository {
         item.category = c.getString(c.getColumnIndexOrThrow("category"));
         item.applySalt = c.getInt(c.getColumnIndexOrThrow("apply_salt")) != 0;
         return item;
-    }
-
-    private void updateStatus(long id, String status) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues cv = new ContentValues();
-        cv.put("status", status);
-        db.update(DbHelper.TABLE_OUTBOX, cv, "id = ?", new String[]{String.valueOf(id)});
     }
 }

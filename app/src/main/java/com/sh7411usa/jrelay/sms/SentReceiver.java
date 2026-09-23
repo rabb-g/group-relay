@@ -174,7 +174,7 @@ public class SentReceiver extends BroadcastReceiver {
         }
 
         if (outbox.recordSendFailure(item.id, token, resultCode)) {
-            handleFailure(appContext, item, resultCode);
+            handleFailure(appContext, item, token, resultCode);
         }
         // false: either already resolved by another part's result (a multi-part message must not
         // be counted as more than one failure), or this result belongs to a prior attempt whose
@@ -193,7 +193,7 @@ public class SentReceiver extends BroadcastReceiver {
             //  >0: other parts of this message are still outstanding - nothing more to do yet.
             return;
         }
-        outbox.markSent(item.id);
+        outbox.markSent(item.id, token);
         if (item.memberId != null) {
             Member member = memberRepository.findById(item.memberId);
             if (member != null) {
@@ -245,8 +245,18 @@ public class SentReceiver extends BroadcastReceiver {
      * and counted toward the member's failure alert. This is a straight port of sendOne's original
      * retry-vs-fail block - now the single owner of that policy, called from both places instead of
      * being duplicated.
+     *
+     * <p>{@code token} is the attempt this failure belongs to - both callers already hold the
+     * correct one in scope: {@link #onReceive} reads it from the intent extras, and by the time it
+     * calls here {@code recordSendFailure} has already confirmed it matches the row's
+     * {@code handed_off_at} while status was still {@code SENDING}; {@code SmsSendService#sendOne}'s
+     * catch block mints it earlier in the method and writes it via {@code markHandedOff}
+     * immediately before calling here, with status still {@code SENDING} from {@code takeBurst}.
+     * Passed straight through to {@link OutboxRepository#requeueForRetry} /
+     * {@link OutboxRepository#markFailed} so either write is dropped, not applied, if the row has
+     * since been reclaimed into a newer attempt under a different token.
      */
-    public static void handleFailure(Context context, OutboxRepository.OutboxItem item, int resultCode) {
+    public static void handleFailure(Context context, OutboxRepository.OutboxItem item, long token, int resultCode) {
         Context appContext = context.getApplicationContext();
         String reason = describe(appContext, resultCode);
 
@@ -264,12 +274,12 @@ public class SentReceiver extends BroadcastReceiver {
         int attempts = item.attempts + 1;
         int maxAttempts = Math.max(1, prefs.getRetryLimit() + 1);
         if (attempts < maxAttempts) {
-            outbox.requeueForRetry(item.id, attempts, System.currentTimeMillis() + retryDelayMillis(resultCode));
+            outbox.requeueForRetry(item.id, token, attempts, System.currentTimeMillis() + retryDelayMillis(resultCode));
             SmsSendService.start(appContext);
             return;
         }
 
-        outbox.markFailed(item.id);
+        outbox.markFailed(item.id, token);
         // tpl_failed_with_reason ("%1$s -- %2$s") folds the reason into this FAILED marker row
         // only - the delivered message text itself lives in its own log rows, untouched. This is
         // the only place the activity feed learns *why* a send failed, so it has to carry it.

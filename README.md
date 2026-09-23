@@ -77,6 +77,8 @@ Actions available:
 | Text (Default App) | Opens your default SMS app with this member's number, for an off-the-record text outside the relay |
 | Remove from Group | Removes the member (with confirmation) — see [Removal](#removal) below |
 
+The last remaining admin cannot be removed, demoted, or otherwise stop being an admin — by text (`#stop`, `#remove`) or in the app. This is deliberate: it was previously possible to end up with zero admins, and there was no way back — re-adding that person returns them as an ordinary member, since admin status can only be granted from the app, and with no admin left, no admin command would work either.
+
 ### Add Member
 
 A simple form (phone number + nickname) for adding a member from within the app. Members added this way are recorded as added by **"An Admin"** in all broadcasts, rather than a specific admin's nickname.
@@ -87,13 +89,13 @@ Everything configurable lives on one scrollable Settings screen (opened from the
 
 #### Pause Service
 
-An emergency stop. Choosing an option takes effect immediately:
+An emergency stop. Choosing an option is not instant — see below for what "immediately" actually means:
 
 - **Not Paused** (default) — normal operation, or resumes if currently paused.
 - **Pause for 10 Seconds / 1 Minute / 1 Hour / 1 Day** — stops all SMS sending and incoming-message processing for that long, then resumes automatically.
 - **Pause Until Unpaused** — stops indefinitely; only picking **Not Paused** resumes it.
 
-While paused, incoming texts are ignored entirely (not even logged) and the outbox stops draining — anything already queued, or queued by an app action while paused, stays queued and goes out once resumed. A status line under the dropdown shows the live countdown, and the dashboard shows a **Service Paused** badge. Resuming manually flushes the queue immediately; if a timed pause instead expires while the app is in the background, the backlog goes out on the next thing that would normally trigger a send (an incoming message or an app action), since there's no background alarm driving it on a timer alone.
+While paused, incoming texts are ignored entirely (not even logged), but sending is not cut off mid-air: the pause flag is only checked at the top of the drain loop, so a burst already scheduled still goes out in full before the pause takes hold — at the defaults that's up to 5 messages. Anything queued after that, or queued by an app action while paused, stays queued and goes out once resumed. A status line under the dropdown shows the live countdown, and the dashboard shows a **Service Paused** badge. Resuming manually flushes the queue immediately; if a timed pause instead expires while the app is in the background, the backlog goes out on the next thing that would normally trigger a send (an incoming message or an app action), since there's no background alarm driving it on a timer alone. Opening the Settings screen no longer cancels an active pause — it used to resume sending as a side effect of the screen drawing itself, silently releasing the backlog while still showing "Not Paused".
 
 #### Group Mode
 
@@ -116,9 +118,10 @@ Only affects behavior while the group is in [Reply Mode](#reply-mode).
 - **Burst Configuration** — how many messages go out per burst:
   - **Random amount, between bounds** (default) — each burst's size is drawn at random from a min/max range.
   - **Fixed amount** — every burst is exactly the size you set.
-  - **All messages at once** — no bursting at all; everything currently queued for a recipient goes out together.
+  - **All messages at once** — no bursting at all; the *entire pending outbox* goes out together, not just what's queued for one recipient — so picking this sends a whole fan-out in one uninterrupted burst.
 - **Microspacing** — paces the individual messages *inside* one burst apart from each other, in milliseconds (default 350ms, on by default). Can be a fixed gap or randomized between bounds. This is intentionally not built on `Thread.sleep`: gaps are computed as a fractional-millisecond deadline and enforced with a self-correcting loop of short `LockSupport.parkNanos` calls, so short waits stay precise instead of drifting.
 - Send pacing is global — one shared burst/wait/microspacing schedule drains the whole outbox. It is not configurable per member.
+- Pacing fields (waits, burst size, microspacing) now have upper as well as lower bounds, so a bad value can't put the sender to sleep for years or crash it outright. These are sanity limits, not a rate control — they do not keep you under any carrier's threshold. In particular, the inter-burst wait is skipped entirely with staggering off, and **All messages at once** ignores the burst ceiling altogether, so neither of those is bounded by this at all.
 
 - **Coalesce window (seconds; 0 = off)** — default 45. Holds a relayed post briefly so posts made close together reach each member as **one** text instead of one each. See [Coalescing](#coalescing).
 - **Max segments per merged message** — default 3. A merged text never grows past this many SMS segments; when the next post would push it over, the merged message is closed and a new one started.
@@ -157,10 +160,10 @@ An existing member who sends `#join` is just told they're already a member.
 
 #### Group Daily Limit
 
-Two independent, layered daily caps on relayed messages (both reset at a configurable time of day, midnight by default):
+Two independent, layered daily caps (both reset at a configurable time of day, midnight by default). **Both caps count posts, not messages sent.** One relayed post is one unit against the cap, no matter how many members it fans out to — a group of 100 turns every post into ~99 outbound texts that are never separately counted. So a limit typed as if it meant "messages" is off by roughly the group's size: a cap of "100" is not 100 messages/day, it's up to ~9,900.
 
-- **Group Daily Limit** — a single shared pool for the whole group (e.g. "100 messages/day total"). When enabled and exhausted, **every** member's relayed messages are blocked until reset, with a reply telling them it's a **Group limit** and when it resets. This always takes precedence over a member's individual cap.
-- **Default Individual Limit** — a separate per-member cap. Each member can have their own custom daily limit (set on their Member Detail screen), and this Settings field is a convenience to bulk-seed it: type a number and tap **Apply to All Members** (overwrites everyone's individual cap) or **Apply to Members Without a Custom Limit** (only fills in members who don't already have one). This does not touch the shared group pool.
+- **Group Daily Limit** — **off by default.** As shipped, there is no volume cap on the group at all; `#limits` answers "The group daily limit is not enabled." until you turn this on. Enabled, it's a single shared pool for the whole group (e.g. "100 posts/day total" — not 100 messages). When enabled and exhausted, **every** member's relayed messages are blocked until reset, with a reply telling them it's a **Group limit** and when it resets. This always takes precedence over a member's individual cap.
+- **Default Individual Limit** — a separate per-member cap, also counted in posts. Each member can have their own custom daily limit (set on their Member Detail screen), and this Settings field is a convenience to bulk-seed it: type a number and tap **Apply to All Members** (overwrites everyone's individual cap) or **Apply to Members Without a Custom Limit** (only fills in members who don't already have one). This does not touch the shared group pool.
 
 When a member hits *their own* individual cap (with the group pool still having room), they're told it's an **Individual limit**. Either way, the reply tells them to contact an admin for an override.
 
@@ -227,6 +230,10 @@ Members can also text the bare words `STOP`, `UNSUBSCRIBE`, `CANCEL`, `QUIT` or 
 Note that bare `HELP` and `#help` deliberately do **not** do the same thing. Bare `HELP` is a carrier opt-out convention that has to keep returning the command list, so it maps to `#commands`; `#help` answers the different question of how to phrase a message right now. Each reply mentions the other, so a member who types the "wrong" one is still pointed somewhere useful.
 
 Non-admins attempting an admin-only command get back: `"Only admins can use this command."` An unrecognized `#` command gets: `"Unknown command. Reply #commands for a list of commands."` `#commands` itself only lists the admin-only commands to admins — a regular member's reply omits them entirely.
+
+A command followed by a line break (e.g. `#admin` on its own line, message on the next) is recognized correctly and works the same as a trailing space. Command matching also no longer depends on the phone's own language/locale setting, so it can't silently stop recognizing commands on certain devices.
+
+An empty or whitespace-only message is not relayed — a pocket-send no longer reaches the group as a blank post and no longer counts against the daily limit.
 
 ### Adding a member by text
 
@@ -383,7 +390,7 @@ One consequence: the **timestamp** salt reflects when that member's copy went ou
 
 ## Daily Limits
 
-jRelay tracks how many messages have actually been relayed (not commands, not system/admin traffic) against two independent, layered caps — see [Settings → Group Daily Limit](#group-daily-limit) above for how to configure them, and the [`#limits`/`#override`](#commands-sent-by-text-from-any-member) commands above for checking status and granting overrides by text. Both caps reset at the same configurable time of day (default midnight); an override adds one message of headroom to *today's* limit only.
+jRelay tracks how many **posts** have actually been relayed (not commands, not system/admin traffic) against two independent, layered caps — see [Settings → Group Daily Limit](#group-daily-limit) above for how to configure them, and the [`#limits`/`#override`](#commands-sent-by-text-from-any-member) commands above for checking status and granting overrides by text. The unit is the inbound post, not the outbound copies it becomes — a 100-member group turns each post into ~99 sends that aren't separately counted, so size the number accordingly. Both caps reset at the same configurable time of day (default midnight); an override adds one post of headroom to *today's* limit only.
 
 ## Localization
 
@@ -430,6 +437,8 @@ Samsung, Xiaomi, Huawei and Oppo add their own protected-app or auto-start lists
 ## Data storage
 
 Everything is stored locally in a SQLite database on the device — there is no server or cloud component. Three tables back the app: members (including each member's optional daily-limit override), a full message log (used for dashboard/member stats, recent activity, and daily-limit accounting), and an outbox queue (with per-item retry tracking) that `SmsSendService` drains globally according to your send-pacing settings.
+
+The app no longer ships as a debuggable build, and Android backups are now off. That database holds every member's number and the entire message log; debuggable + default backup rules meant `adb shell run-as` could read it straight off the phone, and a backup would have carried it into whichever Google account the phone is signed into, or into a phone-to-phone transfer — none of which any member agreed to. The trade-off: `adb shell run-as` can no longer read the database for troubleshooting. Logcat is unaffected.
 
 ## License
 

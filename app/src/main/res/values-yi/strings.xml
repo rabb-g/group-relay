@@ -80,6 +80,7 @@
     <string name="error_invalid_number">דער טעלעפאן נומער איז נישט גילטיק.</string>
     <string name="error_duplicate_number">דער נומער איז שוין א מיטגליד.</string>
     <string name="error_empty_nickname">דער צונאמען קען נישט זיין ליידיק.</string>
+    <string name="error_last_admin">דער מיטגליד איז דער איינציקער אדמין. מאכט עמעצער אנדערש אן אדמין איידער איר נעמט אים אַרויס אָדער נעמט אָפּ זיין אדמין רעכטן.</string>
 
     <!-- Member Detail -->
     <string name="label_member_since">מיטגליד זייט: %1$s</string>
@@ -316,6 +317,7 @@
     <string name="tpl_removed_you">איר זענט אַרויסגענומען געוואָרן פון דער %1$s גרופע. איר וועט מער נישט באקומען ידיעות פון דער גרופע.</string>
     <string name="tpl_removed_other">%1$s האט אַרויסגענומען %2$s פון דער גרופע.</string>
     <string name="tpl_left_other">%1$s האט פארלאזט די גרופע.</string>
+    <string name="tpl_last_admin_refused">איר זענט דער איינציקער אדמין. מאכט עמעצער אנדערש אן אדמין פון דער אפליקאציע איידער איר פארלאזט די גרופע.</string>
     <string name="tpl_muted_confirm">איר זענט יעצט פארשטומט. ענטפערט #unmute כדי ווידער צו באקומען ידיעות.</string>
     <string name="tpl_unmuted_confirm">דער שטום איז אָפּגענומען געוואָרן. איר וועט ווידער באקומען ידיעות.</string>
     <string name="tpl_name_changed_confirm">אייער נאמען איז געביטן געוואָרן צו %1$s.</string>

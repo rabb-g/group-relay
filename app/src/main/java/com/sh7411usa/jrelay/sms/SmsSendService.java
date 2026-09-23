@@ -452,7 +452,7 @@ public class SmsSendService extends Service {
             // result path uses rather than duplicating it here.
             Log.e(TAG, "Failed to send SMS to " + item.phoneE164, e);
             outbox.markHandedOff(item.id, 0, token);
-            SentReceiver.handleFailure(this, item, SentReceiver.RESULT_NOT_SENT);
+            SentReceiver.handleFailure(this, item, token, SentReceiver.RESULT_NOT_SENT);
         }
     }
 

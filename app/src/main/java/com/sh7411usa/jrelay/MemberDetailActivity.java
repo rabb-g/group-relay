@@ -90,6 +90,10 @@ public class MemberDetailActivity extends BaseActivity {
         overrideDailyLimitButton = findViewById(R.id.button_override_daily_limit);
 
         adminButton.setOnClickListener(v -> {
+            if (member.isAdmin && memberRepository.countActiveAdmins() <= 1) {
+                Toast.makeText(this, R.string.error_last_admin, Toast.LENGTH_SHORT).show();
+                return;
+            }
             memberRepository.setAdmin(member.id, !member.isAdmin);
             refresh();
         });
@@ -248,6 +252,10 @@ public class MemberDetailActivity extends BaseActivity {
     }
 
     private void confirmRemove() {
+        if (member.isAdmin && memberRepository.countActiveAdmins() <= 1) {
+            Toast.makeText(this, R.string.error_last_admin, Toast.LENGTH_SHORT).show();
+            return;
+        }
         new AlertDialog.Builder(this)
                 .setTitle(R.string.confirm_remove_title)
                 .setMessage(getString(R.string.confirm_remove_message, member.nickname))

@@ -73,6 +73,24 @@ public class MemberRepository {
         return query("active = 1 AND is_admin = 1", null, "created_at ASC");
     }
 
+    /**
+     * Count of active admins, matching the same predicate as {@link #getActiveAdmins()}. Used to
+     * refuse removing/demoting the last admin over SMS (CommandProcessor#handleStop,
+     * #handleRemove), since re-adding a removed admin does not restore admin status and setAdmin()
+     * is only reachable from the app UI.
+     */
+    public int countActiveAdmins() {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT COUNT(*) FROM " + DbHelper.TABLE_MEMBERS + " WHERE active = 1 AND is_admin = 1", null);
+        int count = 0;
+        if (c.moveToFirst()) {
+            count = c.getInt(0);
+        }
+        c.close();
+        return count;
+    }
+
     public List<Member> getActiveRecipientsExcept(long excludeId) {
         return query("active = 1 AND is_muted = 0 AND id != ?", new String[]{String.valueOf(excludeId)}, "created_at ASC");
     }
@@ -88,6 +106,12 @@ public class MemberRepository {
         return list;
     }
 
+    /**
+     * The ONLY place admin status can be granted anywhere in the app - there is no SMS command for
+     * it. That makes demoting the last active admin unrecoverable without physical access to the
+     * relay phone, so callers must check {@link #countActiveAdmins()} before passing false for an
+     * existing admin. See the note on {@link #softRemove} - the same invariant, not enforced here.
+     */
     public void setAdmin(long id, boolean isAdmin) {
         updateColumn(id, "is_admin", isAdmin ? 1 : 0);
     }
@@ -110,6 +134,17 @@ public class MemberRepository {
         db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
     }
 
+    /**
+     * INVARIANT THIS METHOD DOES NOT ENFORCE: the group must never reach zero active admins. Once
+     * it does, every admin-gated command refuses everyone permanently and there is no way back by
+     * text - {@link #reactivate} resets is_admin to 0, and {@link #setAdmin} is reachable only from
+     * the app UI on the relay handset. Every caller must therefore check
+     * {@link #countActiveAdmins()} first; as of 5.5 both do (CommandProcessor#handleStop and
+     * #removeMember, the latter reached only via the guarded #handleRemove and the guarded UI).
+     * A new caller that skips that check can brick the group, so add the guard there too - or move
+     * it in here, which requires this method to report refusal so callers stop sending the
+     * "you left the group" notices that follow a successful removal.
+     */
     public void softRemove(long id) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues cv = new ContentValues();

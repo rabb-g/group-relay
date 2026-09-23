@@ -80,6 +80,7 @@
     <string name="error_invalid_number">פורמט מספר טלפון לא תקין.</string>
     <string name="error_duplicate_number">המספר הזה כבר רשום כחבר.</string>
     <string name="error_empty_nickname">הכינוי לא יכול להיות ריק.</string>
+    <string name="error_last_admin">חבר זה הוא המנהל היחיד. הפכו מישהו אחר למנהל לפני שתסירו אותו או תבטלו את הרשאתו.</string>
 
     <!-- Member Detail -->
     <string name="label_member_since">חבר/ה מאז: %1$s</string>
@@ -316,6 +317,7 @@
     <string name="tpl_removed_you">הוסרת מקבוצת %1$s. לא תקבל/י יותר הודעות מקבוצה זו.</string>
     <string name="tpl_removed_other">%1$s הסיר/ה את %2$s מהקבוצה.</string>
     <string name="tpl_left_other">%1$s עזב/ה את הקבוצה.</string>
+    <string name="tpl_last_admin_refused">את/ה המנהל/ת היחיד/ה. הפכו מישהו אחר למנהל/ת מהאפליקציה לפני שתעזבו את הקבוצה.</string>
     <string name="tpl_muted_confirm">את/ה מושתק/ת כעת. השיבו #unmute כדי לחדש קבלת הודעות.</string>
     <string name="tpl_unmuted_confirm">ההשתקה בוטלה. תחזור/י לקבל הודעות.</string>
     <string name="tpl_name_changed_confirm">שמך שונה ל-%1$s.</string>
