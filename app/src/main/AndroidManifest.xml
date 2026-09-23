@@ -60,6 +60,10 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".sms.SentReceiver"
+            android:exported="false" />
+
         <service
             android:name=".sms.SmsSendService"
             android:exported="false"

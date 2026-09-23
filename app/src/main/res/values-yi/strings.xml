@@ -352,6 +352,7 @@
 
     <!-- Failure alert -->
     <string name="tpl_failure_alert">@system: %1$s האט געהאט %2$d נישט-געלונגענע ידיעות.</string>
+    <string name="tpl_failed_with_reason">%1$s - %2$s</string>
 
     <!-- Announcement / Group / Reply mode -->
     <string name="tpl_mode_status_announcement">אָנזאָג-מאָדוס איז אָנגעשאלטן: נאר אדמין-ידיעות ווערן איבערגעשיקט צו אלעמען. אלע אנדערע\'ס ידיעות גייען נאר צו אדמינען.</string>
@@ -371,4 +372,15 @@
 
     <!-- CSV import reporting -->
     <string name="tpl_csv_import_streamlined_notice">%1$s האט צוגעלייגט %2$d נייע מיטגלידער.</string>
+
+    <!-- SMS send result -->
+    <string name="send_result_ok">איבערגעגעבן צו דער קאמפאניע</string>
+    <string name="send_result_generic">די קאמפאניע האט אָפּגעווארפן די ידיעה</string>
+    <string name="send_result_radio_off">דער טעלעפאן האט נישט געהאט קיין סיגנאל (עראפלאן-מאָדוס אָדער רדיא אָפּגעשטעלט)</string>
+    <string name="send_result_no_service">עס איז נישט געווען קיין סעלולער סערוויס אין יענעם מאָמענט</string>
+    <string name="send_result_null_pdu">די ידיעה האט נישט געקענט ווערן קאדירט</string>
+    <string name="send_result_limit_exceeded">דער קאמפאניעס שיקן-גרענעץ איז דערגרייכט געוואָרן - פארלאנגזאמט דעם שיקן-טעמפּא</string>
+    <string name="send_result_short_code_not_allowed">די קאמפאניע האט דאס בלאקירט ווי א קורצער-קאָד ידיעה</string>
+    <string name="send_result_not_sent">קיינמאל נישט דערגרייכט דעם נעץ</string>
+    <string name="send_result_unknown">דאָס שיקן איז נישט געלונגען (קאָד %1$d)</string>
 </resources>

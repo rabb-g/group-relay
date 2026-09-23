@@ -1,5 +1,6 @@
 package com.sh7411usa.jrelay.sms;
 
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -12,7 +13,6 @@ import com.sh7411usa.jrelay.R;
 import com.sh7411usa.jrelay.db.MemberRepository;
 import com.sh7411usa.jrelay.db.MessageRepository;
 import com.sh7411usa.jrelay.db.OutboxRepository;
-import com.sh7411usa.jrelay.model.Member;
 import com.sh7411usa.jrelay.util.MessageSalt;
 import com.sh7411usa.jrelay.util.NotificationHelper;
 import com.sh7411usa.jrelay.util.Prefs;
@@ -28,11 +28,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class SmsSendService extends Service {
 
     private static final String TAG = "SmsSendService";
-    private static final int MAX_PART_LENGTH = 160;
     /** Cushion added past a held row's exact release time, so the wait doesn't wake a few millis early and find it still held. */
     private static final long HOLD_WAIT_MARGIN_MILLIS = 250L;
     /** Upper bound on one hold-wait sleep slice, so a newly enqueued COMMAND/REPLY row is never stuck behind the full window. */
     private static final long HOLD_WAIT_SLICE_MILLIS = 5_000L;
+    /**
+     * Upper bound on how long {@link #drainAll} will stay alive at an otherwise-empty exit point
+     * waiting for outstanding sent-intent results before returning anyway, so a genuinely lost
+     * result (radio never calls back) can never hang the drain forever. Deliberately NOT the same
+     * constant as the staleness window a handed-off row is abandoned by: that answers "when do we
+     * give up on this row," a multi-minute question; this answers "how long can a sent-intent
+     * plausibly take to fire," and the telephony stack's own internal retry is seconds, not
+     * minutes. Keep these two separate — unifying them re-introduces the failure this constant's
+     * short value exists to avoid (see {@link #waitForOutstandingResults}).
+     */
+    private static final long OUTSTANDING_RESULTS_WAIT_MILLIS = 60 * 1000L;
 
     /**
      * True while a drain loop is running. drainAll() now only returns once the outbox is fully
@@ -189,6 +199,11 @@ public class SmsSendService extends Service {
                         pending, holding));
                 if (pending <= holding) {
                     if (holding <= 0) {
+                        // Nothing pending, nothing held — but a result from an earlier send in
+                        // this drain may still be in flight. Stay up until it lands (or the wait
+                        // gives up) so this drain's own DRAINING/foreground standing is still
+                        // held when SentReceiver's start() call needs it, per waitForOutstandingResults.
+                        waitForOutstandingResults(outbox);
                         return;
                     }
                     waitForHold(outbox);
@@ -205,6 +220,8 @@ public class SmsSendService extends Service {
                 List<OutboxRepository.OutboxItem> burst = outbox.takeBurst(burstSize, shuffle);
                 if (burst.isEmpty()) {
                     if (outbox.countHolding() <= 0) {
+                        // Same reasoning as the other "nothing pending, nothing held" exit above.
+                        waitForOutstandingResults(outbox);
                         return;
                     }
                     waitForHold(outbox);
@@ -294,6 +311,41 @@ public class SmsSendService extends Service {
         }
     }
 
+    /**
+     * Sleeps on this worker thread, in slices of {@link #HOLD_WAIT_SLICE_MILLIS}, for as long as
+     * {@link OutboxRepository#countAwaitingResults()} is nonzero, bounded by
+     * {@link #OUTSTANDING_RESULTS_WAIT_MILLIS}. Called only at drainAll's "nothing pending, nothing
+     * held" exits, right before the return each already has.
+     * <p>
+     * The point is to keep this drain's DRAINING hold (and the foreground service it implies) up
+     * until any send this drain already started has actually resolved. A tail result — success,
+     * permanent failure, or a retry requeue — reports through SentReceiver, which calls
+     * {@link #start(Context)} to make sure the retried row gets picked up. If this drain has
+     * already returned and the service demoted by then, that start() is a background
+     * startForegroundService call, which throws on API 26+ and is swallowed, stranding the retry
+     * until some unrelated trigger arrives. Staying up here means that call instead lands while
+     * DRAINING is still true, so it is suppressed into {@link #RERUN} and consumed by the same
+     * onStartCommand loop exactly as any other suppressed start — no change needed there.
+     * <p>
+     * Mirrors {@link #waitForHold}'s early-out immediately above: {@code countAwaitingResults()}
+     * can include rows an earlier, already-dead process handed off and never resolved, not just
+     * this drain's own in-flight sends, so it must not be trusted to fall to zero promptly. Live
+     * traffic arriving mid-wait (real pending-and-not-held work) is what actually matters, and is
+     * checked every slice; as soon as it shows up this returns immediately instead of sitting out
+     * the rest of the wait, falling into drainAll's existing return — whichever start() enqueued
+     * that work has already set {@link #RERUN}, so it re-enters drainAll on the same thread right
+     * after, and any results still outstanding are covered on that next pass.
+     */
+    private void waitForOutstandingResults(OutboxRepository outbox) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + OUTSTANDING_RESULTS_WAIT_MILLIS;
+        while (outbox.countAwaitingResults() > 0 && System.currentTimeMillis() < deadline) {
+            if (outbox.countPending() > outbox.countHolding()) {
+                return;   // real work arrived; RERUN re-enters drainAll and covers the results next pass
+            }
+            Thread.sleep(HOLD_WAIT_SLICE_MILLIS);
+        }
+    }
+
     private int nextBurstSize(OutboxRepository outbox, RateLimitConfig config, Random random) {
         switch (config.burstMode) {
             case FIXED:
@@ -329,7 +381,7 @@ public class SmsSendService extends Service {
                             MemberRepository memberRepository, Prefs prefs, RateLimitConfig config,
                             Random random, List<OutboxRepository.OutboxItem> burst) {
         for (int i = 0; i < burst.size(); i++) {
-            sendOne(smsManager, outbox, messageRepository, memberRepository, prefs, burst.get(i));
+            sendOne(smsManager, outbox, prefs, burst.get(i));
             if (config.microspacingEnabled && i < burst.size() - 1) {
                 MicroSpacer.waitMillis(microspacingDelayMillis(config, random));
             }
@@ -346,9 +398,28 @@ public class SmsSendService extends Service {
         return Math.max(0, config.microspacingFixedMs);
     }
 
-    private void sendOne(SmsManager smsManager, OutboxRepository outbox, MessageRepository messageRepository,
-                          MemberRepository memberRepository, Prefs prefs, OutboxRepository.OutboxItem item) {
-        boolean success;
+    /**
+     * Hands the item off to the radio and records that it's awaiting a result — it no longer
+     * judges success itself. "The SmsManager call didn't throw" is not delivery: carrier
+     * rejection, radio-off, and no-service/rate-limit refusals all complete the send call
+     * without throwing, so the real outcome now comes from the per-part sent {@link PendingIntent}
+     * that {@link SentReceiver} observes, which owns markSent/requeueForRetry/markFailed and the
+     * admin failure alert from here on.
+     * <p>
+     * Splits on segment count via {@link SmsManager#divideMessage}, not on character count: the
+     * same API {@link #mergeReleasedRelayRows} already trusts for sizing. Hebrew and Yiddish text
+     * — and any body {@link MessageSalt} has zero-width-salted — is UCS-2 at 70 chars/segment, not
+     * GSM-7 at 160, so a length threshold let a 71-160 char Hebrew/Yiddish message take the
+     * single-part branch, where {@code getSubmitPdu} cannot build it and the platform fires
+     * {@code RESULT_ERROR_NULL_PDU}.
+     * <p>
+     * Mints one handoff token per call, shared by every part of this attempt, so a late result
+     * from a superseded attempt (this row failed and was re-sent before all of its earlier parts
+     * reported back) can never resolve the new attempt: {@link SentReceiver} checks the token
+     * against the row, not just the row id.
+     */
+    private void sendOne(SmsManager smsManager, OutboxRepository outbox, Prefs prefs, OutboxRepository.OutboxItem item) {
+        long token = System.currentTimeMillis();
         try {
             // Send-time salt: applied only to rows flagged for it (post-upgrade RELAY rows), once,
             // right here at the SmsManager boundary. Rows with applySalt == false — every
@@ -356,43 +427,30 @@ public class SmsSendService extends Service {
             // today. The salted body is never written back to item.body, so retries below re-salt
             // fresh and the failure log keeps the original stored text.
             String body = item.applySalt ? MessageSalt.applySendTime(prefs, item.body) : item.body;
-            if (body.length() > MAX_PART_LENGTH) {
-                ArrayList<String> parts = smsManager.divideMessage(body);
-                smsManager.sendMultipartTextMessage(item.phoneE164, null, parts, null, null);
+            ArrayList<String> parts = smsManager.divideMessage(body);
+            if (parts.size() > 1) {
+                ArrayList<PendingIntent> sentIntents = new ArrayList<>(parts.size());
+                for (int i = 0; i < parts.size(); i++) {
+                    sentIntents.add(SentReceiver.create(this, item.id, i, token));
+                }
+                // Recorded before the send call so the row is known to be awaiting results even
+                // if the process dies immediately after the radio accepts it.
+                outbox.markHandedOff(item.id, parts.size(), token);
+                smsManager.sendMultipartTextMessage(item.phoneE164, null, parts, sentIntents, null);
             } else {
-                smsManager.sendTextMessage(item.phoneE164, null, body, null, null);
+                PendingIntent sentIntent = SentReceiver.create(this, item.id, 0, token);
+                outbox.markHandedOff(item.id, 1, token);
+                smsManager.sendTextMessage(item.phoneE164, null, body, sentIntent, null);
             }
-            success = true;
         } catch (Exception e) {
+            // The one failure path SentReceiver cannot observe: nothing reached the radio, so no
+            // delivery intent will ever fire. markHandedOff(0) clears whatever parts_pending this
+            // attempt already recorded above, so the row isn't left looking like it's still
+            // awaiting results that will never arrive; then hand it to the same retry policy the
+            // result path uses rather than duplicating it here.
             Log.e(TAG, "Failed to send SMS to " + item.phoneE164, e);
-            success = false;
-        }
-
-        Member member = item.memberId != null ? memberRepository.findById(item.memberId) : null;
-
-        if (success) {
-            outbox.markSent(item.id);
-            if (member != null) {
-                memberRepository.resetFailedCount(member.id);
-            }
-            return;
-        }
-
-        int attempts = item.attempts + 1;
-        int maxAttempts = Math.max(1, prefs.getRetryLimit() + 1);
-        if (attempts < maxAttempts) {
-            outbox.requeueForRetry(item.id, attempts);
-            return;
-        }
-
-        outbox.markFailed(item.id);
-        messageRepository.log(item.memberId, "OUT", "FAILED", item.body);
-        if (member != null) {
-            int failedCount = memberRepository.incrementFailedCount(member.id);
-            int threshold = prefs.getFailureAlertThreshold();
-            if (threshold > 0 && failedCount % threshold == 0) {
-                new CommandProcessor(this).alertAdminsOfFailures(member, failedCount);
-            }
+            outbox.markHandedOff(item.id, 0, token);
+            SentReceiver.handleFailure(this, item, SentReceiver.RESULT_NOT_SENT);
         }
     }
 

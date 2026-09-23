@@ -303,6 +303,25 @@ A send that fails is retried (up to the configured retry limit) by requeuing it 
 
 Only one drain runs at a time. If something triggers a send while one is already in progress, it's dropped rather than starting a second — the running drain re-checks the outbox on every pass, so it picks up whatever the dropped trigger was for. Without this, every incoming message would add another burst loop running its own independent pacing, and the effective send rate would multiply.
 
+## Delivery status
+
+jRelay asks Android to report what actually happened to each message, rather than assuming a send worked because the call didn't fail. When a message can't be delivered, the reason appears next to it in that member's activity feed:
+
+| What you'll see | What it means |
+|---|---|
+| **Carrier rejected the message** | The network refused it. Repeated across many members, this is what carrier filtering looks like |
+| **Carrier send limit reached — slow down the send pacing** | You're sending faster than the line allows. Raise the wait between bursts |
+| **Phone had no signal (airplane mode or radio off)** | The host phone had no radio at that moment |
+| **No cell service at the time** | In range of nothing usable |
+| **Never reached the network** | The send failed before it left the phone |
+| **Send failed (code N)** | An unrecognised response. The number is shown rather than guessed at, so it stays diagnosable |
+
+Failed messages are retried up to your configured retry limit before being recorded as failed, and repeated failures to the same member still trigger the usual admin alert. The difference is that these now fire on real failures — previously they could only react to the rare case where the send call itself threw, which is not how carriers refuse messages.
+
+**The rate-limit reason is the one to watch.** It's the first direct signal that your pacing is too aggressive, instead of inferring it from members mentioning they never got something.
+
+Delivery results arrive a moment after a message goes out, so the app stays running briefly at the end of a send to collect them — otherwise a failure on the very last message of a group send would sit unretried until the next time anything else triggered a send.
+
 ## Coalescing
 
 Posts made close together are combined, so each member receives one text instead of one per post. With the default 45-second window, three posts inside that window reach 100 members as **100 sends instead of 300**. A person composing one longer message is also closer to what carriers expect than three rapid identical blasts.

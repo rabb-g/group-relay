@@ -352,6 +352,7 @@
 
     <!-- Failure alert -->
     <string name="tpl_failure_alert">@system: ל-%1$s היו %2$d הודעות שנכשלו.</string>
+    <string name="tpl_failed_with_reason">%1$s - %2$s</string>
 
     <!-- Announcement / Group / Reply mode -->
     <string name="tpl_mode_status_announcement">מצב הכרזה פעיל: רק הודעות מנהלים מועברות לכולם. הודעות של כל האחרים מגיעות רק למנהלים.</string>
@@ -371,4 +372,15 @@
 
     <!-- CSV import reporting -->
     <string name="tpl_csv_import_streamlined_notice">%1$s הוסיף/ה %2$d חברים חדשים.</string>
+
+    <!-- SMS send result -->
+    <string name="send_result_ok">נמסר לספק</string>
+    <string name="send_result_generic">הספק דחה את ההודעה</string>
+    <string name="send_result_radio_off">לא הייתה קליטה בטלפון (מצב טיסה או רדיו כבוי)</string>
+    <string name="send_result_no_service">לא היה כיסוי סלולרי באותה עת</string>
+    <string name="send_result_null_pdu">לא היה ניתן לקודד את ההודעה</string>
+    <string name="send_result_limit_exceeded">מגבלת השליחה של הספק הושגה - האיטו את קצב השליחה</string>
+    <string name="send_result_short_code_not_allowed">הספק חסם את ההודעה כהודעת קוד קצר</string>
+    <string name="send_result_not_sent">ההודעה מעולם לא הגיעה לרשת</string>
+    <string name="send_result_unknown">השליחה נכשלה (קוד %1$d)</string>
 </resources>
