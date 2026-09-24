@@ -36,6 +36,30 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <!-- Pending #join requests under "Require Approval". Hidden when there are none. -->
+            <LinearLayout
+                android:id="@+id/section_join_requests"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/text_join_requests_header"
+                    style="@style/TextAppearance.JRelay.Subtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp" />
+
+                <LinearLayout
+                    android:id="@+id/container_join_requests"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+            </LinearLayout>
+
             <EditText
                 android:id="@+id/edit_search"
                 android:layout_width="match_parent"

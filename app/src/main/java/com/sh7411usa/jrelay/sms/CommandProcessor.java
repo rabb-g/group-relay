@@ -4,6 +4,7 @@ import android.content.Context;
 import android.text.format.DateFormat;
 
 import com.sh7411usa.jrelay.R;
+import com.sh7411usa.jrelay.db.JoinRequestRepository;
 import com.sh7411usa.jrelay.db.MemberRepository;
 import com.sh7411usa.jrelay.db.MessageRepository;
 import com.sh7411usa.jrelay.db.OutboxRepository;
@@ -27,6 +28,7 @@ public class CommandProcessor {
     private final MemberRepository memberRepository;
     private final MessageRepository messageRepository;
     private final OutboxRepository outboxRepository;
+    private final JoinRequestRepository joinRequestRepository;
     private final Prefs prefs;
 
     public CommandProcessor(Context context) {
@@ -34,6 +36,7 @@ public class CommandProcessor {
         memberRepository = new MemberRepository(this.context);
         messageRepository = new MessageRepository(this.context);
         outboxRepository = new OutboxRepository(this.context);
+        joinRequestRepository = new JoinRequestRepository(this.context);
         prefs = new Prefs(this.context);
     }
 
@@ -324,6 +327,9 @@ public class CommandProcessor {
      * following this toggle.
      */
     public void addMember(String normalizedPhone, String nickname, String addedByLabel) {
+        // Every approval path lands here (an admin's texted #add and the app's Approve button), so
+        // clearing the pending request here keeps the in-app list from showing someone already added.
+        joinRequestRepository.delete(normalizedPhone);
         Member newMember = insertOrReactivateMember(normalizedPhone, nickname, addedByLabel);
         if (prefs.isAddedReportingEnabled()) {
             String groupName = prefs.getGroupName();
@@ -598,8 +604,38 @@ public class CommandProcessor {
         SmsSendService.start(context);
     }
 
-    /** JoinPolicy.REQUIRE_APPROVAL: no membership is created; admins get a ready-to-forward #add command. */
+    public enum ApproveResult { ADDED, ALREADY_MEMBER, GROUP_FULL }
+
+    /** Approve a pending request from the app. Same effect as an admin texting "#add <phone> <name>". */
+    public ApproveResult approveJoinRequest(String phoneE164, String nickname) {
+        Member existing = memberRepository.findByPhone(phoneE164);
+        if (existing != null && existing.active) {
+            // Added some other way since they asked (CSV import, Members screen); the request is stale.
+            joinRequestRepository.delete(phoneE164);
+            return ApproveResult.ALREADY_MEMBER;
+        }
+        int maxMembers = prefs.getMaxMembers();
+        if (maxMembers > 0 && memberRepository.countActiveMembers() >= maxMembers) {
+            // Keep the request: once someone leaves or the cap is raised it can still be approved,
+            // and the requester was already told their request was sent.
+            return ApproveResult.GROUP_FULL;
+        }
+        addMember(phoneE164, nickname, context.getString(R.string.join_approved_by_app));
+        return ApproveResult.ADDED;
+    }
+
+    /** Decline: remove the request. Deliberately sends NO text (saves a message; silence is how SMS approval already declines). */
+    public void declineJoinRequest(String phoneE164) {
+        joinRequestRepository.delete(phoneE164);
+    }
+
+    /**
+     * JoinPolicy.REQUIRE_APPROVAL: no membership is created; the request is stored for the in-app
+     * list and admins get a ready-to-forward #add command.
+     */
     private void requestJoinApproval(String senderE164, String nickname) {
+        // Stored first so the in-app list has it even if an admin text or the notification fails.
+        joinRequestRepository.upsert(senderE164, nickname);
         String suggestedCommand = "#add " + senderE164 + " " + nickname;
         String adminMessage = context.getString(R.string.tpl_join_request_admin, nickname, senderE164, suggestedCommand);
         List<Member> admins = memberRepository.getActiveAdmins();

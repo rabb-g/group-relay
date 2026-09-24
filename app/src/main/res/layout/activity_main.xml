@@ -80,6 +80,15 @@
             android:text="@string/warning_permission_missing"
             android:visibility="gone" />
 
+        <TextView
+            android:id="@+id/banner_join_requests"
+            style="@style/Widget.JRelay.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/primary"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

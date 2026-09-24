@@ -21,13 +21,14 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "jrelay.db";
-    private static final int DB_VERSION = 10;
+    private static final int DB_VERSION = 11;
 
     public static final String TABLE_MEMBERS = "members";
     public static final String TABLE_MESSAGE_LOG = "message_log";
     public static final String TABLE_OUTBOX = "outbox";
     public static final String TABLE_KNOWN_THREADS = "known_threads";
     public static final String TABLE_INGESTED_MMS = "ingested_mms";
+    public static final String TABLE_JOIN_REQUESTS = "join_requests";
 
     private static DbHelper instance;
 
@@ -105,6 +106,12 @@ public class DbHelper extends SQLiteOpenHelper {
                 "mms_id INTEGER PRIMARY KEY," +
                 "ingested_at INTEGER NOT NULL," +
                 "outcome TEXT" +
+                ")");
+
+        db.execSQL("CREATE TABLE " + TABLE_JOIN_REQUESTS + " (" +
+                "phone_e164 TEXT PRIMARY KEY," +
+                "nickname TEXT NOT NULL," +
+                "requested_at INTEGER NOT NULL" +
                 ")");
 
         createIndexes(db);
@@ -212,6 +219,17 @@ public class DbHelper extends SQLiteOpenHelper {
                     "outcome TEXT" +
                     ")");
         }
+        if (oldVersion < 11) {
+            // join_requests: pending "#join Name" requests under JoinPolicy.REQUIRE_APPROVAL, so the
+            // owner can approve or decline them in the app. Before this the request lived only in
+            // the admins' texts and a notification, so there was nothing to list. Keyed by phone so
+            // a repeat #join from the same number replaces the old row instead of duplicating it.
+            db.execSQL("CREATE TABLE " + TABLE_JOIN_REQUESTS + " (" +
+                    "phone_e164 TEXT PRIMARY KEY," +
+                    "nickname TEXT NOT NULL," +
+                    "requested_at INTEGER NOT NULL" +
+                    ")");
+        }
     }
 
     /** Permanently erases every member, message, and queued outbound message. Used only by "Disband Group". */
@@ -220,5 +238,8 @@ public class DbHelper extends SQLiteOpenHelper {
         db.delete(TABLE_OUTBOX, null, null);
         db.delete(TABLE_MESSAGE_LOG, null, null);
         db.delete(TABLE_MEMBERS, null, null);
+        // Pending requests are the numbers of people who asked to join the old group; they must
+        // not survive a disband and reappear as approvable requests in the next one.
+        db.delete(TABLE_JOIN_REQUESTS, null, null);
     }
 }

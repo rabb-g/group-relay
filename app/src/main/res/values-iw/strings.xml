@@ -465,4 +465,16 @@
     <string name="send_result_short_code_not_allowed">הספק חסם את ההודעה כהודעת קוד קצר</string>
     <string name="send_result_not_sent">ההודעה מעולם לא הגיעה לרשת</string>
     <string name="send_result_unknown">השליחה נכשלה (קוד %1$d)</string>
+    <!-- In-app approval of #join requests (Membership screen, main-screen banner) -->
+    <string name="join_requests_header">בקשות הצטרפות (%1$d)</string>
+    <string name="banner_join_requests">בקשות הצטרפות ממתינות: %1$d. הקישו לבדיקה.</string>
+    <string name="action_approve">אישור</string>
+    <string name="action_decline">דחייה</string>
+    <string name="join_approve_confirm">להוסיף את %1$s לקבוצה?</string>
+    <string name="join_decline_confirm">לדחות את %1$s? לא תישלח על כך הודעה.</string>
+    <string name="join_approved_toast">%1$s נוסף לקבוצה.</string>
+    <string name="join_already_member_toast">%1$s כבר חבר בקבוצה.</string>
+    <string name="join_group_full_toast">הקבוצה מלאה. הסירו מישהו או הגדילו את המגבלה תחילה.</string>
+    <string name="join_declined_toast">הבקשה נדחתה.</string>
+    <string name="join_approved_by_app">מנהל</string>
 </resources>

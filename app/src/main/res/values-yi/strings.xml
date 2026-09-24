@@ -465,4 +465,16 @@
     <string name="send_result_short_code_not_allowed">די קאמפאניע האט דאס בלאקירט ווי א קורצער-קאָד ידיעה</string>
     <string name="send_result_not_sent">קיינמאל נישט דערגרייכט דעם נעץ</string>
     <string name="send_result_unknown">דאָס שיקן איז נישט געלונגען (קאָד %1$d)</string>
+    <!-- In-app approval of #join requests (Membership screen, main-screen banner) -->
+    <string name="join_requests_header">בקשות זיך אנצושליסן (%1$d)</string>
+    <string name="banner_join_requests">בקשות זיך אנצושליסן וואַרטן: %1$d. דריקט צו איבערקוקן.</string>
+    <string name="action_approve">באשטעטיקן</string>
+    <string name="action_decline">אָפּווארפן</string>
+    <string name="join_approve_confirm">צולייגן %1$s צו דער גרופע?</string>
+    <string name="join_decline_confirm">אָפּווארפן %1$s? מען וועט זיי נישט לאזן וויסן.</string>
+    <string name="join_approved_toast">%1$s איז צוגעלייגט געוואָרן.</string>
+    <string name="join_already_member_toast">%1$s איז שוין א מיטגליד.</string>
+    <string name="join_group_full_toast">די גרופע איז פול. נעמט ארויס עמעצן אדער הייבט אויף די גרענעץ פריער.</string>
+    <string name="join_declined_toast">די בקשה איז אָפּגעווארפן געוואָרן.</string>
+    <string name="join_approved_by_app">דער אדמין</string>
 </resources>

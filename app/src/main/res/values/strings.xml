@@ -465,4 +465,16 @@
     <string name="send_result_short_code_not_allowed">Carrier blocked this as a short-code message</string>
     <string name="send_result_not_sent">Never reached the network</string>
     <string name="send_result_unknown">Send failed (code %1$d)</string>
+    <!-- In-app approval of #join requests (Membership screen, main-screen banner) -->
+    <string name="join_requests_header">Join requests (%1$d)</string>
+    <string name="banner_join_requests">Join requests waiting: %1$d. Tap to review.</string>
+    <string name="action_approve">Approve</string>
+    <string name="action_decline">Decline</string>
+    <string name="join_approve_confirm">Add %1$s to the group?</string>
+    <string name="join_decline_confirm">Decline %1$s? They will not be told.</string>
+    <string name="join_approved_toast">%1$s added.</string>
+    <string name="join_already_member_toast">%1$s is already a member.</string>
+    <string name="join_group_full_toast">The group is full. Remove someone or raise the limit first.</string>
+    <string name="join_declined_toast">Request declined.</string>
+    <string name="join_approved_by_app">Admin</string>
 </resources>

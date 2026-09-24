@@ -17,6 +17,7 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 
+import com.sh7411usa.jrelay.db.JoinRequestRepository;
 import com.sh7411usa.jrelay.db.MemberRepository;
 import com.sh7411usa.jrelay.db.MessageRepository;
 import com.sh7411usa.jrelay.db.OutboxRepository;
@@ -71,6 +72,7 @@ public class MainActivity extends BaseActivity {
     private TextView sendingBadgeView;
     private TextView nextBurstView;
     private TextView permissionWarningView;
+    private TextView joinRequestsBannerView;
     private LinearLayout recentActivityContainer;
 
     private final Handler queueStatusHandler = new Handler(Looper.getMainLooper());
@@ -112,6 +114,7 @@ public class MainActivity extends BaseActivity {
         sendingBadgeView = findViewById(R.id.badge_sending);
         nextBurstView = findViewById(R.id.text_next_burst);
         permissionWarningView = findViewById(R.id.warning_permission_missing);
+        joinRequestsBannerView = findViewById(R.id.banner_join_requests);
         recentActivityContainer = findViewById(R.id.container_recent_activity);
 
         findViewById(R.id.button_options).setOnClickListener(this::showOptionsMenu);
@@ -122,6 +125,8 @@ public class MainActivity extends BaseActivity {
             intent.setData(Uri.fromParts("package", getPackageName(), null));
             startActivity(intent);
         });
+        joinRequestsBannerView.setOnClickListener(v ->
+                startActivity(new Intent(this, MembershipActivity.class)));
     }
 
     @Override
@@ -131,6 +136,7 @@ public class MainActivity extends BaseActivity {
             return;
         }
         updatePermissionWarning();
+        updateJoinRequestsBanner();
         if (outboxRepository.countUnsent() > 0) {
             SmsSendService.start(this);
         }
@@ -154,6 +160,14 @@ public class MainActivity extends BaseActivity {
                 || (prefs.getDeliveryMode() == Prefs.DeliveryMode.GROUP_MMS
                         && anyDenied(GROUP_MMS_PERMISSIONS));
         permissionWarningView.setVisibility(missing ? View.VISIBLE : View.GONE);
+    }
+
+    private void updateJoinRequestsBanner() {
+        int pending = new JoinRequestRepository(this).count();
+        if (pending > 0) {
+            joinRequestsBannerView.setText(getString(R.string.banner_join_requests, pending));
+        }
+        joinRequestsBannerView.setVisibility(pending > 0 ? View.VISIBLE : View.GONE);
     }
 
     @Override

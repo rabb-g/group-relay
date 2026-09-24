@@ -12,12 +12,14 @@ import android.text.style.BackgroundColorSpan;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.sh7411usa.jrelay.db.JoinRequestRepository;
 import com.sh7411usa.jrelay.db.MemberRepository;
 import com.sh7411usa.jrelay.db.OutboxRepository;
 import com.sh7411usa.jrelay.model.Member;
@@ -51,8 +53,12 @@ public class MembershipActivity extends BaseActivity {
     private static final int REQUEST_IMPORT_CSV = 1002;
 
     private MemberRepository memberRepository;
+    private JoinRequestRepository joinRequestRepository;
     private CommandProcessor commandProcessor;
     private LinearLayout container;
+    private View joinRequestsSection;
+    private TextView joinRequestsHeader;
+    private LinearLayout joinRequestsContainer;
     private EditText searchInput;
     private TextView subgroupSizesView;
     private String currentQuery = "";
@@ -62,8 +68,12 @@ public class MembershipActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_membership);
         memberRepository = new MemberRepository(this);
+        joinRequestRepository = new JoinRequestRepository(this);
         commandProcessor = new CommandProcessor(this);
         container = findViewById(R.id.container_members);
+        joinRequestsSection = findViewById(R.id.section_join_requests);
+        joinRequestsHeader = findViewById(R.id.text_join_requests_header);
+        joinRequestsContainer = findViewById(R.id.container_join_requests);
         searchInput = findViewById(R.id.edit_search);
         subgroupSizesView = findViewById(R.id.text_subgroup_sizes);
 
@@ -94,7 +104,98 @@ public class MembershipActivity extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        // A request can arrive by text while this screen sits in the background.
+        renderJoinRequests();
         renderMembers();
+    }
+
+    /** Lists pending #join requests (Require Approval policy) above everything else, or hides the
+     *  section entirely when there are none. Name, number, then Approve and Decline stacked full
+     *  width so each gets its own DPAD stop on a small screen. */
+    private void renderJoinRequests() {
+        joinRequestsContainer.removeAllViews();
+        List<JoinRequestRepository.JoinRequest> requests = joinRequestRepository.getAll();
+        if (requests.isEmpty()) {
+            joinRequestsSection.setVisibility(View.GONE);
+            return;
+        }
+        joinRequestsSection.setVisibility(View.VISIBLE);
+        joinRequestsHeader.setText(getString(R.string.join_requests_header, requests.size()));
+
+        for (int i = 0; i < requests.size(); i++) {
+            JoinRequestRepository.JoinRequest request = requests.get(i);
+            LinearLayout entry = new LinearLayout(this);
+            entry.setOrientation(LinearLayout.VERTICAL);
+            entry.setPadding(0, dp(8), 0, dp(8));
+
+            TextView nameView = new TextView(this, null, 0, R.style.TextAppearance_JRelay_Body);
+            nameView.setText(request.nickname);
+            entry.addView(nameView);
+
+            TextView phoneView = new TextView(this, null, 0, R.style.TextAppearance_JRelay_Caption);
+            phoneView.setText(request.phoneE164);
+            entry.addView(phoneView);
+
+            Button approve = new Button(this, null, 0, R.style.Widget_JRelay_Button_Small);
+            approve.setText(R.string.action_approve);
+            approve.setOnClickListener(v -> confirmApprove(request));
+            entry.addView(approve, fullWidthButtonParams(dp(8)));
+
+            Button decline = new Button(this, null, 0, R.style.Widget_JRelay_Button_Small_Outline);
+            decline.setText(R.string.action_decline);
+            decline.setOnClickListener(v -> confirmDecline(request));
+            entry.addView(decline, fullWidthButtonParams(dp(8)));
+
+            joinRequestsContainer.addView(entry);
+            if (i < requests.size() - 1) {
+                joinRequestsContainer.addView(UiUtil.createDivider(this, R.color.divider));
+            }
+        }
+    }
+
+    private LinearLayout.LayoutParams fullWidthButtonParams(int topMargin) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.topMargin = topMargin;
+        return params;
+    }
+
+    private void confirmApprove(JoinRequestRepository.JoinRequest request) {
+        new AlertDialog.Builder(this)
+                .setMessage(getString(R.string.join_approve_confirm, request.nickname))
+                .setPositiveButton(R.string.action_approve, (dialog, which) -> {
+                    CommandProcessor.ApproveResult result =
+                            commandProcessor.approveJoinRequest(request.phoneE164, request.nickname);
+                    String toast;
+                    switch (result) {
+                        case ADDED:
+                            toast = getString(R.string.join_approved_toast, request.nickname);
+                            break;
+                        case ALREADY_MEMBER:
+                            toast = getString(R.string.join_already_member_toast, request.nickname);
+                            break;
+                        default:
+                            toast = getString(R.string.join_group_full_toast);
+                            break;
+                    }
+                    Toast.makeText(this, toast, Toast.LENGTH_LONG).show();
+                    renderJoinRequests();
+                    renderMembers();
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
+    private void confirmDecline(JoinRequestRepository.JoinRequest request) {
+        new AlertDialog.Builder(this)
+                .setMessage(getString(R.string.join_decline_confirm, request.nickname))
+                .setPositiveButton(R.string.action_decline, (dialog, which) -> {
+                    commandProcessor.declineJoinRequest(request.phoneE164);
+                    Toast.makeText(this, R.string.join_declined_toast, Toast.LENGTH_SHORT).show();
+                    renderJoinRequests();
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
     }
 
     private void renderSubgroupSizes() {
