@@ -73,6 +73,47 @@ message from Alice, and must not also receive the bridged `Alice: ...` copy. The
 participant list is what prevents that, and it must be got right or every message is seen twice by
 the people closest to it.
 
+### Inside a sub-group, nothing is prefixed with a name — and that is not fixable
+
+The section above says members "see your eight neighbours' names and numbers". That is only true
+**if each member has saved those eight contacts.** They have not. Today every member has exactly
+one number saved — the relay's — and every message arrives as `Alice: text`. Inside a sub-group
+thread jRelay is not in the path at all, so there is no opportunity to prefix anything: the
+message goes peer-to-peer and arrives attributed to whatever the recipient's phone knows about
+that number. On a flip phone with no contact saved, that is a raw string of digits.
+
+So a member's experience splits into `Alice: bins out tonight` from the relay, and
+`+18482074564` from the person standing next door. The second is worse than what they have today,
+on exactly the device class this deployment exists for.
+
+**This is confirmed, not predicted.** The spike's inbound reply carried two `type=151` rows —
+the reply went to the relay AND to the other participant directly. jRelay never saw it in time to
+touch it, and could not have.
+
+There is no technical fix. jRelay cannot inject a prefix into a message it does not carry, and it
+cannot prevent in-thread replies — the thread exists on the handsets and reply-all is simply what
+the phone does. Re-sending a prefixed copy would deliver the message twice to the people closest
+to it. The realistic responses, in order of how well they actually work:
+
+- **(a) Compose sub-groups from people who already know each other** — the same street, the same
+  building, the same shul. Then the numbers are mostly already saved, a nine-person thread is an
+  ordinary thing to be in, and the problem largely dissolves instead of being managed. This makes
+  sub-group composition a social decision, not a load-balancing one, which argues strongly for
+  **stable, admin-assigned** sub-groups (§5.2) over anything automatic or rotating.
+- **(b) Send a roster when a sub-group is formed**, so members can save the eight contacts. One
+  send per sub-group. But it deliberately publishes nine numbers to nine people — §4's privacy
+  question in a sharper form — and the flip-phone users least served by (a) are also the least
+  likely to go and save nine contacts.
+- **(c) Accept it and say so at join time.** Members learn their eight neighbours over a few
+  weeks, as they would in any group text.
+
+(a) and (c) together are the honest answer. (b) is worth offering as an admin action rather than
+doing automatically.
+
+Worth stating plainly: this is a real loss against today's behaviour, and it is the strongest
+argument against Phase 3 that does not involve carrier metering. It should be weighed against the
+saving, not waved past.
+
 ### Replying back to the original author
 
 Three routes, and the design must pick a default:
