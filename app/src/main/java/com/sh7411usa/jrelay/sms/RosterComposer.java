@@ -25,9 +25,13 @@ import java.util.Locale;
  * call site can pass only that sub-group's members.
  *
  * <p><b>Must be re-sent on membership change.</b> A join, a removal, or an admin rebalance leaves
- * every other member holding a stale roster. A stale roster is worse than no roster: it attributes
- * a saved contact to whoever *used to* hold that slot, so a message from the wrong person reads as
- * coming from a neighbour the recipient trusts. Any future call site MUST re-send the roster to a
+ * every other member holding a roster that omits the newcomer, so that person posts into the thread
+ * as a bare string of digits -- precisely the problem the roster exists to prevent, reappearing for
+ * whoever joined most recently. Note that a stale roster does not normally MISATTRIBUTE anyone:
+ * each member keeps their own number, so a departed member's saved contact simply stops appearing
+ * rather than pointing at somebody else. Misattribution needs the same number to change hands -- a
+ * carrier recycling a disconnected number, or an admin editing a member's number in place -- which
+ * is rare and is not what an ordinary join or removal does. Any future call site MUST re-send the roster to a
  * sub-group whenever that sub-group's member set changes, not only when it is first formed.
  *
  * <p>This class is intentionally Android-free (no {@code Context}, no resources, no SQLite) so it

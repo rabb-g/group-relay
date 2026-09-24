@@ -814,8 +814,8 @@ public class CommandProcessor {
      * admin-triggered and expected to go out now.
      *
      * <p><b>Caller's obligation:</b> a roster goes stale the moment that sub-group's membership
-     * changes, and a stale roster is worse than none (it attributes a saved contact to whoever
-     * used to hold that slot). Re-send after any join, removal, or rebalance.
+     * changes - everyone still holds a list without the newcomer on it, so that person posts as
+     * bare digits. Re-send after any join or rebalance.
      *
      * @return the number of sub-groups a roster was queued for. Empty sub-groups are skipped
      *         rather than sent a header-only message.
