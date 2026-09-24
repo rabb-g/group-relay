@@ -226,17 +226,18 @@ public class MembershipActivity extends BaseActivity {
                 .setTitle(R.string.merge_dialog_title)
                 .setMessage(getString(R.string.warning_subgroup_visibility) + "\n\n" + summary)
                 .setPositiveButton(R.string.merge_apply_action, (dialog, which) -> {
-                    // Both ends of every move, captured BEFORE any write: once assignSubgroup has
-                    // run there is no record of which group a member came from. The source is
-                    // re-rostered too, since its remaining members keep a list naming people who
-                    // are no longer in their thread.
+                    // Both ends of every move, captured BEFORE any write (once assignSubgroup has
+                    // run there is no record of which group a member came from). Both ends are
+                    // needed for the queue check below; only the destinations get a roster.
                     java.util.LinkedHashSet<Long> affected = new java.util.LinkedHashSet<>();
+                    java.util.LinkedHashSet<Long> destinations = new java.util.LinkedHashSet<>();
                     for (SubgroupPlanner.Assignment a : plan.assignments) {
                         Member before = memberRepository.findById(a.memberId);
                         if (before != null && before.subgroupId != null) {
                             affected.add(before.subgroupId);
                         }
                         affected.add((long) a.subgroupId);
+                        destinations.add((long) a.subgroupId);
                     }
 
                     // Checked here, at the moment of confirmation, not when the dialog opened:
@@ -253,7 +254,9 @@ public class MembershipActivity extends BaseActivity {
                     for (SubgroupPlanner.Assignment a : plan.assignments) {
                         memberRepository.assignSubgroup(a.memberId, (long) a.subgroupId);
                     }
-                    rosterAndDrain(affected);
+                    // Destinations only. A merged-away source has no members left to roster, and
+                    // a group that merely lost people does not need one.
+                    rosterAndDrain(destinations);
                     renderMembers();
                 })
                 .setNegativeButton(R.string.action_cancel, null)
@@ -307,15 +310,10 @@ public class MembershipActivity extends BaseActivity {
                 .setTitle(getString(R.string.subgroup_assign_dialog_title, member.nickname))
                 .setItems(items, (dialog, which) -> {
                     if (canClear && which == items.length - 1) {
-                        Long vacated = member.subgroupId;
+                        // No roster: the group they left has lost someone, not gained anyone.
+                        // Their saved contact on everyone else's phone still points at their own
+                        // number, so it misleads nobody -- it just stops appearing.
                         memberRepository.assignSubgroup(member.id, null);
-                        // The group they just left still holds a roster naming them, so its
-                        // members would keep a saved contact for somebody no longer in their
-                        // thread. Re-roster the group that was vacated; there is no destination
-                        // to re-roster here because the member is now unassigned.
-                        if (vacated != null) {
-                            rosterAndDrain(java.util.Collections.singletonList(vacated));
-                        }
                         Toast.makeText(this, getString(R.string.subgroup_cleared_toast, member.nickname),
                                 Toast.LENGTH_SHORT).show();
                         renderMembers();
@@ -348,23 +346,13 @@ public class MembershipActivity extends BaseActivity {
                 .setTitle(R.string.subgroup_confirm_assign_title)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    // Captured BEFORE the write: on a move (A -> B) both ends change, and once
-                    // assignSubgroup has run there is no record of where the member came from.
-                    Long vacated = member.subgroupId;
                     memberRepository.assignSubgroup(member.id, subgroupId);
-                    // Re-roster the destination immediately. Everyone already in that thread holds
-                    // a list without this person on it, so until it is re-sent the newcomer posts
-                    // as a bare string of digits -- the exact problem the roster exists to solve,
-                    // reappearing for whoever joined last. The group they LEFT is re-rostered too,
-                    // for the mirror-image reason: its list still names somebody who is no longer
-                    // in that thread. Only these two sub-groups are touched; the rest cannot see
-                    // this change and must not pay for it.
-                    java.util.LinkedHashSet<Long> affected = new java.util.LinkedHashSet<>();
-                    affected.add(subgroupId);
-                    if (vacated != null && vacated != subgroupId) {
-                        affected.add(vacated);
-                    }
-                    rosterAndDrain(affected);
+                    // Re-roster the destination only. Everyone already in that thread holds a list
+                    // without this person on it, so until it is re-sent the newcomer posts as a
+                    // bare string of digits. The group they LEFT is deliberately not re-rostered:
+                    // it lost someone rather than gaining anyone, and the departed member's saved
+                    // contact still points at their own number, so it misleads nobody.
+                    rosterAndDrain(java.util.Collections.singletonList(subgroupId));
                     Toast.makeText(this, getString(R.string.subgroup_assigned_toast, member.nickname, subgroupId),
                             Toast.LENGTH_SHORT).show();
                     renderMembers();
