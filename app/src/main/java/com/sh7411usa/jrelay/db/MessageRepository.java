@@ -62,10 +62,20 @@ public class MessageRepository {
         return list;
     }
 
-    /** One member's recent activity; excludes the internal "RELAYED" quota marker (see {@link #getRecent}). */
+    /**
+     * One member's own activity: what they sent, plus messages addressed to them specifically
+     * (direct messages, replies, admin and system notices, command answers).
+     *
+     * <p>Excludes the internal "RELAYED" quota marker (see {@link #getRecent}), and also every
+     * {@code OUT}/{@code RELAY} row. Each group post is logged once per recipient, under the
+     * recipient's id, so that per-member delivery counts work. Without this filter a member's
+     * activity screen listed every post anyone made to the group, since each one had been
+     * delivered to them. {@link #getRecent} already filters the same rows for the dashboard feed.
+     */
     public List<MessageRecord> getRecentForMember(long memberId, int limit) {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor c = db.query(DbHelper.TABLE_MESSAGE_LOG, null, "member_id = ? AND category != 'RELAYED'",
+        Cursor c = db.query(DbHelper.TABLE_MESSAGE_LOG, null,
+                "member_id = ? AND category != 'RELAYED' AND NOT (direction = 'OUT' AND category = 'RELAY')",
                 new String[]{String.valueOf(memberId)}, null, null, "timestamp DESC", String.valueOf(limit));
         List<MessageRecord> list = new ArrayList<>();
         while (c.moveToNext()) {
