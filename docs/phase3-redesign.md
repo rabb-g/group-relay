@@ -107,12 +107,29 @@ to it. The realistic responses, in order of how well they actually work:
 - **(c) Accept it and say so at join time.** Members learn their eight neighbours over a few
   weeks, as they would in any group text.
 
-(a) and (c) together are the honest answer. (b) is worth offering as an admin action rather than
-doing automatically.
+**DECIDED by the owner, 2026-09-24: (b) — each sub-group is sent a roster of its members so
+people can save the contacts.** Build it as part of the phase, not as an optional admin action.
 
-Worth stating plainly: this is a real loss against today's behaviour, and it is the strongest
-argument against Phase 3 that does not involve carrier metering. It should be weighed against the
-saving, not waved past.
+What that decision implies, and what the implementation must therefore handle:
+
+- **It also settles §4.** Publishing nine names and numbers to nine people is the number-visibility
+  question, answered deliberately in the affirmative. There is no longer any point treating the
+  numbers as concealed elsewhere in the design — they are on every handset in the thread by
+  intent. §4's remaining obligation is narrower but still real: members should be told this is
+  happening *before* the first sub-group MMS, not discover it from the roster.
+- **The roster must be re-sent when the sub-group changes.** A join, a removal, or an admin
+  rebalance leaves eight people holding a stale list. Cheap (one message), but easy to forget, and
+  a stale roster is worse than none — it attributes a number to the wrong neighbour.
+- **Format for a flip phone.** Nine entries of roughly `Name 848-207-4564` is ~225 characters, so
+  about 4 segments in Hebrew or Yiddish at 70 chars each. Acceptable as a one-off per sub-group
+  (~48 segments across twelve), but it must be plain text, one member per line, with no decoration
+  — and it is a rare case where the app deliberately sends a multi-segment message.
+- **It does not remove the argument for (a).** Composing sub-groups from people who already know
+  each other still makes the thread legible faster and makes a missed roster less costly. It also
+  still argues for stable, admin-assigned sub-groups (§5.2) rather than anything automatic.
+- **A roster does not help someone who never saves the contacts**, which on a flip phone is a real
+  fraction. The residual loss against today's universal `Alice:` prefix is reduced, not
+  eliminated. Worth remembering when judging whether the phase earned its cost.
 
 ### Replying back to the original author
 
@@ -343,6 +360,52 @@ pacing and on the 2m43s fan-out).
 **This is the single most important unknown in the phase, and it is not answerable from the
 codebase.** It needs either a carrier answer or an empirical one — send a known number of
 multi-recipient MMS on a line with a known allowance and watch what the account reports.
+
+#### Is there public data? No — and that is a property of the problem
+
+Carriers do not publish how their anti-abuse systems count messages. CTIA's guidelines give volume
+ranges, not counting rules, and the real filtering thresholds are deliberately unpublished,
+because publishing them tells a spammer exactly what to stay beneath. Any confident claim that "a
+group MMS counts as one" is a guess. Treat it as one.
+
+Splitting the question into what is and is not knowable:
+
+**Certain, and measurable today:**
+- **Radio transactions: 12 instead of 99.** Not an estimate — it is what the code does.
+- **Android's own throttle stops mattering.** `sms_outgoing_check_max_count` counts API calls, and
+  one `sendMultimediaMessage()` to nine people is one call. The platform ceiling (default 30 per
+  30 minutes, roughly 36x below this app's designed rate) ceases to be a constraint rather than
+  needing to be raised around.
+- **Fan-out time collapses**, from ~2m43s to well under a minute. That is not only a performance
+  figure: a post that takes three minutes to reach the last member is not really a group
+  conversation.
+
+**Unknown, and probably unknowable in advance:** what the carrier's filtering counts. One upload
+to their MMSC, which fans out to nine — do their abuse systems see one transaction or nine
+deliveries? Unpublished. MMS and SMS may also be metered on entirely separate tracks, which would
+make a like-for-like comparison meaningless in both directions.
+
+#### The reframing that matters more than the arithmetic
+
+The plan almost certainly includes unlimited texting, so **the constraint was never cost.** It is
+filtering — the carrier quietly deciding the line looks like a spam source and dropping messages
+with no error code, which is the one failure this app cannot detect (audit: "what this does not
+buy: it cannot detect carrier filtering").
+
+Filtering keys on *shape*: volume, rate, near-identical content, one-to-many fan-out. On that
+measure group MMS helps in a way that does not depend on counting at all:
+
+> Twelve messages to nine known participants each looks like a person using group chats.
+> Ninety-nine near-identical one-to-one texts in three minutes looks like precisely what
+> filtering exists to catch.
+
+That change in shape may be worth more than any per-message arithmetic — and it is an argument for
+the phase that survives even if the carrier meters by recipient and the headline 8x is zero.
+
+**So "settle the metering question" should be read as: run the pilot on group MMS for a fortnight
+and watch for silent non-delivery.** An account statement will likely not itemise it, and no
+carrier will answer the question directly. Observed deliverability is the only real measurement,
+and it is also the only way filtering would ever become visible.
 
 The honest framing: the *certain* wins are radio-call count, fan-out latency, and the free peer
 channel. The *uncertain* win — the 8x headroom the whole phase was justified on — depends on how
