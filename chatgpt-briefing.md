@@ -101,6 +101,32 @@ Open items:         Next wave, in order: atomic terminal-state resolution to clo
 
 Nothing in CI substitutes for these. Items 1 and 2 are the feature's own happy path; 3–8 are the failure modes found in review.
 
+> **RESULTS SO FAR — 2026-09-23, Samsung SM-F711U (Galaxy Z Flip 3), Android 15 / API 35.**
+> First hardware verification in this project's history. jRelay 5.6 installed clean over ADB.
+>
+> - **Item 1 PASSED — a Hebrew message arrived, on a flip phone.** This is the headline: the
+>   UCS-2 segment bug silently dropped Hebrew and Yiddish messages of roughly 71-160 characters
+>   from v1.0 through v5.3, while recording them as delivered. It is fixed, on real hardware,
+>   on the device class the deployment exists for.
+> - **Delivery results work end-to-end.** logcat shows 7 outbound sends, every one returning
+>   `statusCode 202` from the IMS stack, and 7 matching `com.sh7411usa.jrelay.SMS_SENT`
+>   broadcasts back to `SentReceiver`, each with its own `jrelay://sent/...` data URI. One
+>   result per send, none lost. Everything in 5.3/5.4/5.5 rests on this mechanism and it had
+>   never been exercised on a phone.
+> - **The foreground service starts and is permitted on Android 15** —
+>   `Background started FGS: Allowed ... targetSdkVersion:36`. The `specialUse` declaration is
+>   accepted.
+> - **No crashes, no exceptions** across the session.
+> - **The 5.5 security fix holds on device:** `run-as: package not debuggable`. Note the
+>   consequence — the database can no longer be inspected over ADB, so device checks now rely on
+>   logcat plus what recipients actually see.
+> - Host setup applied over ADB: permissions pre-granted (sidestepping the broken deny path),
+>   Doze exemption whitelisted, and Android's own outgoing-SMS throttle raised from its unset
+>   default to 200/30min. That default is ~30 per 30 minutes — roughly 36x BELOW the app's
+>   designed sending rate, so it would have tripped on the first real fan-out.
+>
+> Still unverified: everything below except item 1.
+
 1. **A ~100-character Hebrew message, with the zero-width-space salt ON.** Must arrive as a single message, row marked SENT. **Run this one first.** It is the first direct evidence the app will ever have had about whether these were being delivered at all — before 5.3 a 71-160 character Hebrew or Yiddish message was sent as one part, could not be encoded, never arrived, and was recorded as SENT. If it now arrives, that confirms silent loss that predates every phase in this log.
 2. **Airplane mode on the host, then send to a member.** The row must go FAILED with "Phone had no signal (airplane mode or radio off)" — not SENT. This is the basic proof that delivery results are being read at all.
 3. **Kill the app process mid-fan-out, reopen, and confirm no member receives a duplicate.** Exercises the PendingIntent identity fix: before it, a restart could tangle two messages onto one callback.
