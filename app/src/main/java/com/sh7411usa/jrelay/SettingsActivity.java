@@ -594,7 +594,7 @@ public class SettingsActivity extends BaseActivity {
 
     private void refreshCapacityStatus() {
         int activeCount = memberRepository.countActiveMembers();
-        capacityStatusView.setText(getString(R.string.tpl_capacity_status, activeCount));
+        capacityStatusView.setText(getString(R.string.capacity_status, activeCount));
     }
 
     private void saveContentSettings() {

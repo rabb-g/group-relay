@@ -194,8 +194,6 @@
     <string name="delivery_shuffle_desc">Dispatches messages to members in a random order each cycle instead of a repeating order.</string>
     <string name="checkbox_delivery_shuffle">Shuffle delivery order</string>
 
-    <string name="section_member_reporting">Member Reporting</string>
-    <string name="member_reporting_desc">Applies to #add and the Add Member screen. CSV imports always ask separately.</string>
     <string name="checkbox_added_reporting_enabled">Notify group when a member is added</string>
 
     <string name="section_join_requests">Join Requests</string>
@@ -338,7 +336,7 @@
     <string name="tpl_muted_confirm">You are now muted. Reply #unmute to resume receiving messages.</string>
     <string name="tpl_group_full_default">Sorry, this group has reached its maximum capacity. Please try again later.</string>
     <string name="tpl_group_full_admin">The group is full (%1$d of %2$d members). Raise the member limit in Settings to add more.</string>
-    <string name="tpl_capacity_status">You have %d active members.</string>
+    <string name="capacity_status">You have %d active members.</string>
     <string name="tpl_unmuted_confirm">You are now unmuted. You will resume receiving messages.</string>
     <string name="tpl_name_changed_confirm">Your name has been changed to %1$s.</string>
     <string name="tpl_name_changed_self_other">%1$s changed their name to %2$s.</string>

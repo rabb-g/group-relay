@@ -194,8 +194,6 @@
     <string name="delivery_shuffle_desc">שולח הודעות לחברים בסדר אקראי בכל מחזור, במקום בסדר חוזר.</string>
     <string name="checkbox_delivery_shuffle">ערבוב סדר המשלוח</string>
 
-    <string name="section_member_reporting">דיווח על חברים חדשים</string>
-    <string name="member_reporting_desc">חל על #add ועל מסך הוספת חבר. ייבוא CSV תמיד שואל בנפרד.</string>
     <string name="checkbox_added_reporting_enabled">הודעה לקבוצה כשמתווסף חבר</string>
 
     <string name="section_join_requests">בקשות הצטרפות</string>
@@ -338,7 +336,7 @@
     <string name="tpl_muted_confirm">את/ה מושתק/ת כעת. השיבו #unmute כדי לחדש קבלת הודעות.</string>
     <string name="tpl_group_full_default">הקבוצה הגיעה למספר החברים המרבי. נסו שוב מאוחר יותר.</string>
     <string name="tpl_group_full_admin">הקבוצה מלאה (%1$d מתוך %2$d חברים). הגדילו את מגבלת החברים בהגדרות כדי להוסיף עוד.</string>
-    <string name="tpl_capacity_status">יש לכם %d חברים פעילים.</string>
+    <string name="capacity_status">יש לכם %d חברים פעילים.</string>
     <string name="tpl_unmuted_confirm">ההשתקה בוטלה. תחזור/י לקבל הודעות.</string>
     <string name="tpl_name_changed_confirm">שמך שונה ל-%1$s.</string>
     <string name="tpl_name_changed_self_other">%1$s שינה/תה את שמו/ה ל-%2$s.</string>
