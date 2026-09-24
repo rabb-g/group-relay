@@ -199,6 +199,42 @@ and the members', not the implementation's.** At minimum:
 
 ---
 
+## 4a. Two further owner decisions, 2026-09-24
+
+**Leftover members stay on individual SMS.** When the people left over cannot form a viable
+sub-group, they are NOT folded into an existing thread to round it up — they remain unassigned and
+receive ordinary one-to-one texts, exactly as everyone does today. Rationale: an unassigned member
+is not stranded, `SubgroupRouter` already returns them separately for exactly this purpose, and the
+cost is one predictable extra send per post. Folding them in instead grows a thread past its
+target — and since jRelay is itself an extra participant, a "group of 10" is really 11, while
+carriers cap group-MMS recipients at a number nobody has published. One extra SMS is a known tiny
+cost; an oversized thread is an unknown one.
+
+**A sub-group that loses a member needs rebalancing, and rebalancing needs a fresh roster.**
+This is the operational loop nothing implements yet, and it has a cost that must be designed for
+rather than discovered:
+
+- A member leaving shrinks their sub-group. Several departures leave threads too small to be worth
+  their own message, so groups must eventually be recomposed.
+- **Any change to a sub-group's membership invalidates the roster held by everyone else in it.** A
+  stale roster is worse than none: it attributes a saved contact to whoever *used to* hold that
+  slot, so a message from the wrong person reads as coming from a trusted neighbour. So a rebalance
+  is never just a database update — it is a database update plus a roster to every affected
+  sub-group, at roughly four segments each in Hebrew or Yiddish.
+- That cost argues for **batching rebalances** rather than reacting to every single departure. One
+  member leaving a group of nine leaves eight, which still works fine; recomposing immediately
+  would spend messages to fix something that is not yet broken. A sensible rule is to rebalance
+  only when a sub-group drops below a floor, and to let the admin trigger it deliberately.
+- **And the old thread does not go away.** Recomposing creates a new thread; the previous one still
+  exists on every handset and still works. Anyone replying where their phone last showed the
+  conversation reaches the old set of people. This is the same unfixable problem as §5.1, and it
+  means rebalancing should be rare and deliberate, not automatic.
+
+Neither of these is implemented. The planner honours the first; the second needs the roster wired
+to sub-group membership changes, which is part of the layer that sends group messages at all.
+
+---
+
 ## 5. Consequences that need decisions, not implementations
 
 ### 5.1 `#stop` stops jRelay. It does not stop the neighbours.

@@ -53,6 +53,13 @@ public class SubgroupPlannerTest {
 
     @Test
     public void planFor_fillsExistingUnderFullSubgroupsBeforeCreatingNewOnes() {
+        // Previously this asserted all 3 unassigned members landed in group 1 (2 filling its open
+        // slots, 1 overfilling it to 10) -- protecting the old fold-into-last-group fallback. The
+        // owner removed that fallback: a group MMS thread is capped by the carrier and jRelay is
+        // already an 11th body in a "group of 10", so growing a sized thread by folding people in
+        // is no longer acceptable. Now this test protects the replacement rule: fill exactly the
+        // open slots in the existing group, and leave anything left over unassigned (with an
+        // advisory explaining they'll get an individual text) rather than overfill.
         List<Long> unassigned = List.of(1L, 2L, 3L);
         Map<Integer, Integer> currentSizes = new LinkedHashMap<>();
         currentSizes.put(1, 7); // 2 open slots at target 9
@@ -60,8 +67,10 @@ public class SubgroupPlannerTest {
         SubgroupPlanner.Plan plan = SubgroupPlanner.planFor(unassigned, currentSizes, 9);
 
         int placedInGroup1 = 0;
+        Set<Long> assignedIds = new HashSet<>();
         boolean anyNewGroup = false;
         for (SubgroupPlanner.Assignment a : plan.assignments) {
+            assignedIds.add(a.memberId);
             if (a.subgroupId == 1) {
                 placedInGroup1++;
                 assertFalse("group 1 already exists and must not be flagged new", a.isNewSubgroup);
@@ -70,27 +79,30 @@ public class SubgroupPlannerTest {
                 anyNewGroup = true;
             }
         }
-        // All three land in group 1: two fill its open slots, and the third -- which cannot form a
-        // viable group on its own -- falls back onto the group this plan just touched, a
-        // deliberate overfill to 10 rather than stranding somebody in a thread of one.
-        // (An earlier version of this test asserted 2 here while also asserting no new group and
-        // three total assignments, which cannot all hold at once.)
-        assertEquals(3, placedInGroup1);
+        // Exactly the 2 open slots in group 1 are filled; member 3L is left unassigned rather than
+        // overfilling group 1 to 10 or spinning up a new group of one.
+        assertEquals(2, placedInGroup1);
         assertFalse(anyNewGroup);
-        assertEquals(3, plan.assignments.size());
+        assertEquals(2, plan.assignments.size());
+        assertFalse("member 3L must not be assigned anywhere", assignedIds.contains(3L));
+        assertFalse("advisory note must explain the unassigned member", plan.advisoryNotes.isEmpty());
     }
 
     // ---- bulk placement with no stranding ----
 
     @Test
-    public void planFor_placesOneHundredUnassignedMembersExactlyOnceWithNoGroupBelowMinimum() {
+    public void planFor_placesOneHundredUnassignedMembersAtMostOnceWithNoGroupOverOrUnderSized() {
+        // 100 = 11 * 9 + 1: previously the trailing 1 was folded into the 11th group, making it a
+        // group of 10 and landing all 100 members somewhere. Under the new rule that trailing
+        // member is left unassigned instead, so every group is exactly targetSize (9) and exactly
+        // one member goes unplaced.
         List<Long> unassigned = new ArrayList<>();
         for (long i = 1; i <= 100; i++) {
             unassigned.add(i);
         }
         SubgroupPlanner.Plan plan = SubgroupPlanner.planFor(unassigned, new HashMap<>(), 9);
 
-        assertEquals(100, plan.assignments.size());
+        assertEquals(99, plan.assignments.size());
         Set<Long> seen = new HashSet<>();
         Map<Integer, Integer> groupCounts = new HashMap<>();
         for (SubgroupPlanner.Assignment a : plan.assignments) {
@@ -98,15 +110,21 @@ public class SubgroupPlannerTest {
             groupCounts.merge(a.subgroupId, 1, Integer::sum);
         }
         for (Map.Entry<Integer, Integer> e : groupCounts.entrySet()) {
-            assertTrue("group " + e.getKey() + " below minimum viable size: " + e.getValue(),
-                    e.getValue() >= SubgroupPlanner.MIN_NEW_SUBGROUP_SIZE);
+            assertEquals("group " + e.getKey() + " must be exactly target size", 9, (int) e.getValue());
         }
+        assertFalse("advisory note must explain the unassigned member", plan.advisoryNotes.isEmpty());
     }
 
     // ---- trailing remainder ----
 
     @Test
-    public void planFor_trailingRemainderOfOneDoesNotFormItsOwnSubgroup() {
+    public void planFor_trailingRemainderOfOneIsLeftUnassignedNotFoldedIntoTheNewGroup() {
+        // Previously this asserted the group of 9 was pulled up to 10 so the trailing 1 wasn't
+        // "stranded" -- protecting the old rule that a sub-group thread could be quietly
+        // overfilled to avoid a stub. The owner reversed that: overfilling risks the carrier's
+        // group-MMS recipient cap, and an unassigned member isn't stranded, they just get an
+        // individual SMS like everyone does today. Now this protects that the new group stays at
+        // exactly targetSize and the 10th member is left unassigned with an advisory note.
         List<Long> unassigned = new ArrayList<>();
         for (long i = 1; i <= 10; i++) { // 9 + 1 leftover
             unassigned.add(i);
@@ -114,15 +132,21 @@ public class SubgroupPlannerTest {
         SubgroupPlanner.Plan plan = SubgroupPlanner.planFor(unassigned, new HashMap<>(), 9);
 
         Map<Integer, Integer> groupCounts = new HashMap<>();
+        Set<Long> assignedIds = new HashSet<>();
         for (SubgroupPlanner.Assignment a : plan.assignments) {
             groupCounts.merge(a.subgroupId, 1, Integer::sum);
+            assignedIds.add(a.memberId);
         }
         assertEquals(1, groupCounts.size());
-        assertEquals(10, (int) groupCounts.values().iterator().next());
+        assertEquals(9, (int) groupCounts.values().iterator().next());
+        assertFalse("member 10 must be left unassigned, not folded in", assignedIds.contains(10L));
+        assertFalse("advisory note must explain the unassigned member", plan.advisoryNotes.isEmpty());
     }
 
     @Test
-    public void planFor_trailingRemainderOfTwoDoesNotFormItsOwnSubgroup() {
+    public void planFor_trailingRemainderOfTwoIsLeftUnassignedNotFoldedIntoTheNewGroup() {
+        // Same reversal as the remainder-of-one case above: the group of 9 must stay at 9, and
+        // the trailing 2 are left unassigned (individual SMS) rather than overfilled to 11.
         List<Long> unassigned = new ArrayList<>();
         for (long i = 1; i <= 11; i++) { // 9 + 2 leftover
             unassigned.add(i);
@@ -130,11 +154,54 @@ public class SubgroupPlannerTest {
         SubgroupPlanner.Plan plan = SubgroupPlanner.planFor(unassigned, new HashMap<>(), 9);
 
         Map<Integer, Integer> groupCounts = new HashMap<>();
+        Set<Long> assignedIds = new HashSet<>();
         for (SubgroupPlanner.Assignment a : plan.assignments) {
             groupCounts.merge(a.subgroupId, 1, Integer::sum);
+            assignedIds.add(a.memberId);
         }
         assertEquals(1, groupCounts.size());
-        assertEquals(11, (int) groupCounts.values().iterator().next());
+        assertEquals(9, (int) groupCounts.values().iterator().next());
+        assertFalse("member 10 must be left unassigned, not folded in", assignedIds.contains(10L));
+        assertFalse("member 11 must be left unassigned, not folded in", assignedIds.contains(11L));
+        assertFalse("advisory note must explain the unassigned members", plan.advisoryNotes.isEmpty());
+    }
+
+    // ---- leftover members left unassigned get individual SMS (new behaviour) ----
+
+    @Test
+    public void planFor_leftoverMemberIsUnassignedAndNoteExplainsIndividualSms() {
+        // Pins the owner's new rule end-to-end: a group that has room for 8 but 9 unassigned
+        // members are offered fills exactly 8 of them, leaving 1 leftover that cannot form its
+        // own group of MIN_NEW_SUBGROUP_SIZE and has no other under-full group to join. That
+        // member must be unassigned, and the advisory note is the only thing telling an admin
+        // reading the plan summary that the member is still covered -- via an individual text --
+        // rather than dropped.
+        List<Long> unassigned = new ArrayList<>();
+        for (long i = 1; i <= 9; i++) {
+            unassigned.add(i);
+        }
+        Map<Integer, Integer> currentSizes = new HashMap<>();
+        currentSizes.put(1, 1); // 8 open slots at target 9
+
+        SubgroupPlanner.Plan plan = SubgroupPlanner.planFor(unassigned, currentSizes, 9);
+
+        Set<Long> assignedIds = new HashSet<>();
+        for (SubgroupPlanner.Assignment a : plan.assignments) {
+            assignedIds.add(a.memberId);
+        }
+        assertEquals(8, assignedIds.size());
+        assertFalse("member 9L must be left unassigned", assignedIds.contains(9L));
+
+        boolean explainsIndividualSms = false;
+        for (String note : plan.advisoryNotes) {
+            String lower = note.toLowerCase();
+            if (lower.contains("unassigned") && lower.contains("individual")
+                    && lower.contains("sms")) {
+                explainsIndividualSms = true;
+            }
+        }
+        assertTrue("advisory note must tell the admin the leftover member gets an individual SMS",
+                explainsIndividualSms);
     }
 
     // ---- too few people, nowhere to put them ----

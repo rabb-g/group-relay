@@ -16,8 +16,10 @@ import com.sh7411usa.jrelay.util.Prefs;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class CommandProcessor {
 
@@ -629,6 +631,40 @@ public class CommandProcessor {
     }
 
     /**
+     * D3 (5.9 review): notifies admins that a group-MMS send failed. Not yet wired to anything -
+     * {@code SentReceiver.handleFailure} only ever calls the per-member
+     * {@link #alertAdminsOfFailures} path, gated on {@code item.memberId != null}, which is always
+     * null for a group-MMS outbox row (see {@code OutboxRepository#enqueueGroup}), so today a
+     * failed group send trips no admin alert at all. Wiring this up requires a branch in
+     * {@code SentReceiver.handleFailure} - when {@code item.memberId == null && item.subgroupId !=
+     * null}, call this instead of the member-failure-count path - which is out of scope here: this
+     * class does not own {@code SentReceiver.java}. Left in place, documented, for whoever does.
+     *
+     * <p>Per-member failure counting (the existing model) is the wrong shape for this case on
+     * purpose, not just by omission: {@code incrementFailedCount}/{@code getFailureAlertThreshold}
+     * are keyed to one member's number repeatedly failing - evidence that number itself is bad. A
+     * group MMS failure is a property of the SEND (one thread, one radio call, one result), not of
+     * any one recipient in it - the same failure hits every member of the sub-group identically,
+     * so counting it against a per-member streak would blame nine people for one failed thread and
+     * could trip nine separate alerts (or, worse, silently ride on whichever one member's counter
+     * happens to already be near a divisible-by-threshold value) for a single event. The right
+     * model is per-thread: alert once, immediately, for the sub-group itself, independent of any
+     * member's individual failure history - which is what this method does.
+     */
+    public void alertAdminsOfGroupFailure(long subgroupId) {
+        String formatted = context.getString(R.string.tpl_group_failure_alert, subgroupId);
+        List<Member> admins = memberRepository.getActiveAdmins();
+        for (Member admin : admins) {
+            if (admin.isMuted) {
+                continue;
+            }
+            enqueue(admin, formatted, "ADMIN");
+        }
+        NotificationHelper.showAdminMessage(context, formatted);
+        SmsSendService.start(context);
+    }
+
+    /**
      * Sends a one-off admin direct message to a member, regardless of their mute state. Clears
      * their reply-target pointer: this message didn't come from another member's post, so a Reply
      * Mode reply to it should fall through to the admin route rather than silently targeting
@@ -718,7 +754,82 @@ public class CommandProcessor {
         String formatted = context.getString(R.string.tpl_relay_prefix, safeNickname, safeBody);
         formatted = MessageSalt.applyEnqueueTime(prefs, sender.phoneE164, formatted);
         long postLogId = messageRepository.log(sender.id, "IN", "RELAYED", body);
-        broadcastExcept(sender.id, formatted, OutboxRepository.CATEGORY_RELAY, postLogId);
+
+        // DeliveryMode.SMS -> exactly today's behaviour, unchanged: one row per recipient via
+        // broadcastExcept, same as before this branch existed. GROUP_MMS is the only new path.
+        if (prefs.getDeliveryMode() == Prefs.DeliveryMode.GROUP_MMS) {
+            postToSubgroups(sender, formatted, postLogId);
+        } else {
+            broadcastExcept(sender.id, formatted, OutboxRepository.CATEGORY_RELAY, postLogId);
+        }
+    }
+
+    /**
+     * GROUP_MMS fan-out for a relayed post: one group-MMS row per eligible sub-group, plus an
+     * ordinary individual row for every active, unmuted member with no sub-group assignment.
+     * {@link SubgroupRouter#routePost} returns both halves precisely so neither can be dropped —
+     * the unassigned half is who silently stops receiving anything if it's ever skipped, since
+     * today every member is unassigned.
+     *
+     * <p>D1 (5.9 review): the unassigned half is built from
+     * {@link MemberRepository#getUnassignedActiveUnmutedMembers()}, not the unfiltered
+     * {@code getUnassignedActiveMembers()} - a muted member must not resume receiving relayed
+     * posts just because delivery mode switched to group MMS, same as the SMS path's
+     * {@link MemberRepository#getActiveRecipientsExcept}. The sub-group half is filtered the same
+     * way inside {@link MemberRepository#getSubgroupMembers(long)} itself, at send time.
+     *
+     * <p>D2/D4 (5.9 review): each sub-group's actual (unmuted) membership is logged into
+     * {@code message_log} one row per recipient here at enqueue time - mirroring what
+     * {@link #enqueue} already does for the individual half and for the plain SMS fan-out
+     * ({@link #broadcastExcept}) - so the dashboard feed and per-member history are not blank for
+     * group traffic. This does not add an extra outbox row (still exactly one
+     * {@code enqueueGroup} row per sub-group); it only restores the one message_log row per
+     * recipient the SMS path already wrote, bounding the added growth to the same order of
+     * magnitude group mode would have cost under individual SMS. Their {@code last_post_received_id}
+     * is stamped too, in the same call, so Reply Mode can resolve them as a target - the gap
+     * {@link SmsSendService}'s send-time re-resolution can reintroduce (a member muted/removed
+     * between enqueue and send) is the same enqueue-vs-send race the individual half already
+     * accepts.
+     */
+    private void postToSubgroups(Member sender, String formatted, long postLogId) {
+        Set<Long> activeSubgroupIds = new LinkedHashSet<>(memberRepository.getDistinctSubgroupIds());
+        List<Member> unassignedMembers = memberRepository.getUnassignedActiveUnmutedMembers();
+        List<Long> unassignedIds = new ArrayList<>(unassignedMembers.size());
+        for (Member m : unassignedMembers) {
+            unassignedIds.add(m.id);
+        }
+
+        SubgroupRouter.OutboundPlan plan = SubgroupRouter.routePost(
+                sender.id, sender.subgroupId, activeSubgroupIds, unassignedIds);
+
+        long holdUntil = prefs.isCoalescingEnabled()
+                ? System.currentTimeMillis() + prefs.getCoalesceWindowSeconds() * 1000L
+                : 0L;
+
+        List<Long> postRecipientIds = new ArrayList<>();
+        for (Long subgroupId : plan.subgroupIdsToRelay) {
+            outboxRepository.enqueueGroup(subgroupId, formatted, OutboxRepository.CATEGORY_RELAY, holdUntil, true);
+            List<Member> subgroupMembers = memberRepository.getSubgroupMembers(subgroupId);
+            for (Member m : subgroupMembers) {
+                messageRepository.log(m.id, "OUT", OutboxRepository.CATEGORY_RELAY, formatted);
+                postRecipientIds.add(m.id);
+            }
+        }
+
+        // The individual-members half: anyone with no sub-group cannot receive a group MMS at all.
+        // Wired explicitly here rather than dropped, exactly because the router returns it
+        // separately so a caller cannot miss it without visibly ignoring part of the result.
+        for (Long memberId : plan.individualMemberIds) {
+            Member m = memberRepository.findById(memberId);
+            if (m == null) {
+                continue;
+            }
+            enqueue(m, formatted, OutboxRepository.CATEGORY_RELAY);
+            postRecipientIds.add(m.id);
+        }
+        if (!postRecipientIds.isEmpty()) {
+            memberRepository.setLastPostReceivedIdForAll(postRecipientIds, postLogId);
+        }
     }
 
     /**

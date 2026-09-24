@@ -40,8 +40,10 @@ public final class SubgroupPlanner {
      *  two is little better — dev docs (§5.1/§5.2) treat a "thread of two" as effectively
      *  stranding someone, since the whole point of the sub-group is peer coverage, not just a
      *  channel back to jRelay. Three is the smallest group where losing or muting one member
-     *  still leaves a real peer conversation. Below this threshold we prefer to overfill an
-     *  existing under-full sub-group rather than spin up a new, thin one. */
+     *  still leaves a real peer conversation. Below this threshold we leave the remainder
+     *  unassigned rather than spin up a thin new sub-group or overfill an existing one past
+     *  target -- unassigned members simply get an individual SMS this pass, same as today,
+     *  and a carrier's group-MMS recipient cap is never tested by surprise. */
     public static final int MIN_NEW_SUBGROUP_SIZE = 3;
 
     private SubgroupPlanner() {
@@ -112,52 +114,26 @@ public final class SubgroupPlanner {
             }
         }
 
-        // Whatever is left forms new sub-groups of targetSize, except the leftover remainder,
-        // which must not be stranded below MIN_NEW_SUBGROUP_SIZE.
+        // Whatever is left forms new sub-groups of exactly targetSize. A trailing remainder that
+        // cannot reach MIN_NEW_SUBGROUP_SIZE is left unassigned rather than pulled into the group
+        // just created: doing so would grow that thread past targetSize, same overfill problem as
+        // folding into an existing group (see the note below and the class javadoc).
         int nextGroupId = sizes.isEmpty() ? 1 : sizes.lastKey() + 1;
         while (!remaining.isEmpty()) {
             int take = Math.min(targetSize, remaining.size());
-            int leftoverAfter = remaining.size() - take;
-            // If what would remain after this new group is a non-zero amount smaller than the
-            // minimum viable sub-group, pull it into this group now instead of leaving a stub.
-            if (leftoverAfter > 0 && leftoverAfter < MIN_NEW_SUBGROUP_SIZE) {
-                take = remaining.size();
-            }
             if (take < MIN_NEW_SUBGROUP_SIZE) {
-                // Too few members left to form a standalone sub-group. Prefer overfilling the
-                // most recently filled/created group over stranding people in a thread of one
-                // or two.
-                // Prefer a group this plan already touched: it had room a moment ago, so topping
-                // it up by one or two is a small, deliberate overfill.
-                int fallbackGroupId = -1;
-                if (!assignments.isEmpty()) {
-                    fallbackGroupId = assignments.get(assignments.size() - 1).subgroupId;
-                } else {
-                    // Nothing was placed, so every existing group was skipped as full. Fall back
-                    // only onto one that is genuinely UNDER target -- never onto an over-target
-                    // group. Doing so would contradict the advisory note this same plan emits
-                    // about that group, and it has a practical cost: carriers cap the recipient
-                    // count of a group MMS, so growing an already-oversized sub-group is how you
-                    // discover that limit. Lowest id wins, for determinism.
-                    for (Map.Entry<Integer, Integer> e : sizes.entrySet()) {
-                        if (e.getValue() < targetSize) {
-                            fallbackGroupId = e.getKey();
-                            break;
-                        }
-                    }
-                }
-                if (fallbackGroupId != -1) {
-                    for (Long id : remaining) {
-                        assignments.add(new Assignment(id, fallbackGroupId, false));
-                    }
-                    notes.add(remaining.size() + " leftover member(s) added to sub-group "
-                            + fallbackGroupId + " instead of forming a group of " + remaining.size()
-                            + " (below minimum viable size " + MIN_NEW_SUBGROUP_SIZE + ").");
-                } else {
-                    notes.add(remaining.size() + " member(s) could not be placed: not enough "
-                            + "people to form a sub-group of at least " + MIN_NEW_SUBGROUP_SIZE
-                            + " and no existing sub-group to add them to. Left unassigned.");
-                }
+                // Too few members left to form a standalone sub-group, and folding them into an
+                // existing sub-group is no longer an option: a "group of 9" already carries
+                // jRelay as a 10th participant, and carriers cap how many recipients a group MMS
+                // may have. Quietly growing an already-sized thread is how that cap gets
+                // discovered in production, on a message to real people. Leftover members are
+                // left unassigned instead; SubgroupRouter routes unassigned members to an
+                // individual SMS, exactly like everyone gets today, so nobody is stranded -- they
+                // just don't get folded into a group thread this pass.
+                notes.add(remaining.size() + " member(s) left unassigned: not enough people to "
+                        + "form a sub-group of at least " + MIN_NEW_SUBGROUP_SIZE + " and no "
+                        + "existing under-full sub-group left to add them to. They will receive "
+                        + "individual SMS instead of a group thread.");
                 remaining.clear();
                 break;
             }

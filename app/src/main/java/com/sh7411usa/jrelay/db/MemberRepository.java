@@ -108,6 +108,31 @@ public class MemberRepository {
         return count;
     }
 
+    /**
+     * THE RULE FOR EVERY QUERY THAT FEEDS A SEND PATH: send-eligibility is
+     * {@code active = 1 AND is_muted = 0}, plus whatever scope that particular send needs.
+     * Four queries in this class encode some version of it and they are NOT interchangeable:
+     *
+     * <ul>
+     *   <li>{@link #getActiveRecipientsExcept} - active, unmuted, not the sender. The SMS fan-out.</li>
+     *   <li>{@link #getSubgroupMembers} - active, unmuted, in one sub-group. The group-MMS fan-out.</li>
+     *   <li>{@link #getUnassignedActiveUnmutedMembers} - active, unmuted, no sub-group. The
+     *       individual half of a group-mode post.</li>
+     *   <li>{@link #getUnassignedActiveMembers} - active, ANY mute state, no sub-group.
+     *       <b>Deliberately unfiltered, and NOT for sending.</b> The admin assignment screen needs
+     *       to see muted members or they become unassignable.</li>
+     * </ul>
+     *
+     * <p>If you are adding a fifth query for a new send path, it needs {@code is_muted = 0}. This
+     * is not hypothetical: the group-MMS fan-out shipped in review with that clause missing,
+     * because it was written against the {@code active = 1} queries that already existed, and
+     * enabling group mode would have resumed sending to every member who had asked to be muted.
+     * Mute is a promise to a person. Copy from a sibling that sends, never from the admin one.
+     *
+     * <p>Once a fifth or sixth send query exists, extract the predicate to a shared constant
+     * rather than repeating it again - four is about where the repetition is still cheaper than
+     * the machinery.
+     */
     public List<Member> getActiveRecipientsExcept(long excludeId) {
         return query("active = 1 AND is_muted = 0 AND id != ?", new String[]{String.valueOf(excludeId)}, "created_at ASC");
     }
@@ -292,12 +317,26 @@ public class MemberRepository {
     }
 
     /**
-     * Members of one sub-group. Filtered to {@code active = 1} because a soft-removed member is
-     * not a routing target for anything, including sub-group sends - the same predicate every
-     * other send-eligible query in this class uses.
+     * Members of one sub-group who are eligible to actually receive a send: {@code active = 1},
+     * same as every other send-eligible query in this class, and (since D1 of the 5.9
+     * group-MMS-fan-out review) {@code is_muted = 0} - this is the query {@code SmsSendService}
+     * resolves at send time to build the group MMS recipient list, so a muted member excluded
+     * here is a muted member jRelay itself never sends to. It cannot, however, stop that member
+     * from seeing the thread at all: once any group MMS has gone out to a sub-group, every
+     * recipient's handset holds a single MMS conversation with every other recipient in it, and a
+     * muted member who was already in that thread before being muted still receives whatever
+     * their groupmates reply directly into it. jRelay only controls what IT sends; that part of
+     * the promise "muted means nothing more reaches you" cannot be kept under group delivery, and
+     * this method deliberately does not try to imply otherwise.
+     *
+     * <p>The only other caller this query had (MembershipActivity, for admin roster/assignment
+     * screens) does not exist - {@code getSubgroupMembers} is called exclusively from the
+     * send-time recipient resolution, so narrowing it here does not need a separate unmuted
+     * variant the way {@link #getUnassignedActiveMembers()} does below.
      */
     public List<Member> getSubgroupMembers(long subgroupId) {
-        return query("active = 1 AND subgroup_id = ?", new String[]{String.valueOf(subgroupId)}, "created_at ASC");
+        return query("active = 1 AND is_muted = 0 AND subgroup_id = ?",
+                new String[]{String.valueOf(subgroupId)}, "created_at ASC");
     }
 
     /**
@@ -343,6 +382,20 @@ public class MemberRepository {
      */
     public List<Member> getUnassignedActiveMembers() {
         return query("active = 1 AND subgroup_id IS NULL", null, "created_at ASC");
+    }
+
+    /**
+     * Same rows as {@link #getUnassignedActiveMembers()}, minus muted members - the variant for a
+     * send path (CommandProcessor#postToSubgroups' individual-member half) rather than an admin
+     * roster/assignment screen. Kept separate rather than adding {@code is_muted = 0} to the
+     * shared query: {@link #getUnassignedActiveMembers()}'s other caller, MembershipActivity's
+     * sub-group assignment planner, must still see a muted member as needing a sub-group
+     * assignment like anyone else - mute and sub-group membership are independent, and hiding a
+     * muted member from the planner would leave them permanently unassigned with no way for an
+     * admin to fix it from that screen.
+     */
+    public List<Member> getUnassignedActiveUnmutedMembers() {
+        return query("active = 1 AND is_muted = 0 AND subgroup_id IS NULL", null, "created_at ASC");
     }
 
     private void updateColumn(long id, String column, int value) {

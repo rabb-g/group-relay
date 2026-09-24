@@ -57,6 +57,25 @@
     <string name="admin_badge">(admin)</string>
     <string name="muted_badge">(muted)</string>
     <string name="no_members_yet">No members yet. Tap Add Member to get started.</string>
+    <string name="subgroup_section_title">Sub-groups</string>
+    <string name="label_subgroup_none">No sub-group</string>
+    <string name="action_suggest_subgroups">Suggest assignments</string>
+    <string name="subgroup_sizes_summary">Current sizes: %1$s</string>
+    <string name="subgroup_sizes_none">No sub-groups yet</string>
+    <string name="subgroup_size_line">Group %1$d: %2$d</string>
+    <string name="subgroup_row_badge">Group %1$d</string>
+    <string name="subgroup_row_unassigned_badge">No group</string>
+    <string name="subgroup_suggest_dialog_title">Suggest sub-groups</string>
+    <string name="subgroup_suggest_apply_action">Apply</string>
+    <string name="subgroup_assign_dialog_title">Assign %1$s</string>
+    <string name="subgroup_option_new">New sub-group</string>
+    <string name="subgroup_option_existing">Group %1$d (%2$d members)</string>
+    <string name="subgroup_option_clear">Clear assignment</string>
+    <string name="subgroup_confirm_assign_title">Assign to sub-group?</string>
+    <string name="subgroup_confirm_assign_detail">Put %1$s in group %2$d?</string>
+    <string name="subgroup_assigned_toast">%1$s is now in group %2$d.</string>
+    <string name="subgroup_cleared_toast">%1$s is no longer in a sub-group.</string>
+    <string name="warning_subgroup_visibility">Members of a sub-group will see each other\'s phone numbers. This cannot be undone — once a group message is sent, the numbers are on their phones. Right now, members only know this app\'s number.</string>
     <string name="menu_button_label">Menu</string>
     <string name="menu_export_csv">Export to CSV</string>
     <string name="menu_import_csv">Import from CSV</string>
@@ -249,6 +268,14 @@
     <string name="action_apply_to_non_customized">Apply to Members Without a Custom Limit</string>
     <string name="individual_limit_applied">Applied to %1$d member(s).</string>
 
+    <string name="settings_section_delivery">Delivery</string>
+    <string name="label_delivery_mode">How messages are sent</string>
+    <string name="delivery_mode_desc">Individually sends one text per member. Group threads send one message to each sub-group of about nine, which is far fewer messages — but members of a sub-group can then see each other\'s phone numbers, and jRelay cannot take that back.</string>
+    <string name="delivery_mode_sms">Individually (one text per member)</string>
+    <string name="delivery_mode_group_mms">Group threads (fewer messages)</string>
+    <string name="label_subgroup_target_size">People per group</string>
+    <string name="subgroup_target_size_desc">How many members share a thread. jRelay is an extra participant in each one.</string>
+
     <string name="settings_section_capacity">Group Capacity</string>
     <string name="label_max_members">Maximum members (0 = no limit)</string>
     <string name="max_members_desc">The most active members the group will hold. When it is full, anyone texting to join gets the message below. 0 means no limit.</string>
@@ -378,6 +405,7 @@
 
     <!-- Failure alert -->
     <string name="tpl_failure_alert">@system: %1$s has had %2$d failed messages.</string>
+    <string name="tpl_group_failure_alert">@system: Group message to sub-group %1$d failed. Those members did not receive it.</string>
     <string name="tpl_failed_with_reason">%1$s -- %2$s</string>
 
     <!-- Announcement / Group / Reply mode -->

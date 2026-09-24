@@ -52,6 +52,21 @@
                 android:text="@string/add_member_shortcut"
                 android:layout_marginBottom="16dp" />
 
+            <TextView
+                android:id="@+id/text_subgroup_sizes"
+                style="@style/TextAppearance.JRelay.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/button_suggest_subgroups"
+                style="@style/Widget.JRelay.Button.Small.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_suggest_subgroups"
+                android:layout_marginBottom="16dp" />
+
             <LinearLayout
                 android:id="@+id/container_members"
                 android:layout_width="match_parent"

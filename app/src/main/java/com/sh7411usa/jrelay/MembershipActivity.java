@@ -9,6 +9,7 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.TextWatcher;
 import android.text.style.BackgroundColorSpan;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
@@ -21,6 +22,7 @@ import com.sh7411usa.jrelay.db.MemberRepository;
 import com.sh7411usa.jrelay.model.Member;
 import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.PhoneNumberUtils;
+import com.sh7411usa.jrelay.sms.SubgroupPlanner;
 import com.sh7411usa.jrelay.util.CsvUtil;
 import com.sh7411usa.jrelay.util.Prefs;
 import com.sh7411usa.jrelay.util.UiUtil;
@@ -34,9 +36,12 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 public class MembershipActivity extends BaseActivity {
 
@@ -47,6 +52,7 @@ public class MembershipActivity extends BaseActivity {
     private CommandProcessor commandProcessor;
     private LinearLayout container;
     private EditText searchInput;
+    private TextView subgroupSizesView;
     private String currentQuery = "";
 
     @Override
@@ -57,10 +63,12 @@ public class MembershipActivity extends BaseActivity {
         commandProcessor = new CommandProcessor(this);
         container = findViewById(R.id.container_members);
         searchInput = findViewById(R.id.edit_search);
+        subgroupSizesView = findViewById(R.id.text_subgroup_sizes);
 
         findViewById(R.id.button_add_member).setOnClickListener(v ->
                 startActivity(new Intent(this, AddMemberActivity.class)));
         findViewById(R.id.button_membership_options).setOnClickListener(this::showOptionsMenu);
+        findViewById(R.id.button_suggest_subgroups).setOnClickListener(v -> suggestSubgroupAssignments());
 
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override
@@ -83,6 +91,152 @@ public class MembershipActivity extends BaseActivity {
     protected void onResume() {
         super.onResume();
         renderMembers();
+    }
+
+    private void renderSubgroupSizes() {
+        Map<Long, Integer> counts = memberRepository.countMembersPerSubgroup();
+        if (counts.isEmpty()) {
+            subgroupSizesView.setText(R.string.subgroup_sizes_none);
+            return;
+        }
+        // TreeMap for a stable, ascending display order regardless of the repository's map type.
+        TreeMap<Long, Integer> sorted = new TreeMap<>(counts);
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<Long, Integer> e : sorted.entrySet()) {
+            if (sb.length() > 0) {
+                sb.append("  ");
+            }
+            sb.append(getString(R.string.subgroup_size_line, e.getKey(), e.getValue()));
+        }
+        subgroupSizesView.setText(sb.toString());
+    }
+
+    /**
+     * Runs {@link SubgroupPlanner} over the currently-unassigned members and shows the proposal
+     * for the admin to confirm. Applies via {@link MemberRepository#assignSubgroup} only when the
+     * admin taps apply; the planner never touches the database itself, and neither does this
+     * method on cancel.
+     */
+    private void suggestSubgroupAssignments() {
+        List<Member> unassigned = memberRepository.getUnassignedActiveMembers();
+        List<Long> unassignedIds = new ArrayList<>();
+        for (Member m : unassigned) {
+            unassignedIds.add(m.id);
+        }
+
+        Map<Long, Integer> sizesByLongId = memberRepository.countMembersPerSubgroup();
+        Map<Integer, Integer> sizes = new LinkedHashMap<>();
+        for (Map.Entry<Long, Integer> e : sizesByLongId.entrySet()) {
+            sizes.put(e.getKey().intValue(), e.getValue());
+        }
+
+        int targetSize = new Prefs(this).getSubgroupTargetSize();
+        SubgroupPlanner.Plan plan = SubgroupPlanner.planFor(unassignedIds, sizes, targetSize);
+        String summary = SubgroupPlanner.summarize(plan);
+
+        if (plan.assignments.isEmpty()) {
+            // Nothing to apply, but the admin pressed the button and deserves to know why
+            // (advisoryNotes explains it) rather than seeing nothing happen.
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.subgroup_suggest_dialog_title)
+                    .setMessage(summary)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+            return;
+        }
+
+        String message = getString(R.string.warning_subgroup_visibility) + "\n\n" + summary;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.subgroup_suggest_dialog_title)
+                .setMessage(message)
+                .setPositiveButton(R.string.subgroup_suggest_apply_action, (dialog, which) -> {
+                    for (SubgroupPlanner.Assignment a : plan.assignments) {
+                        memberRepository.assignSubgroup(a.memberId, (long) a.subgroupId);
+                    }
+                    renderMembers();
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
+    /** Lets the admin assign, move, or clear one member's sub-group. Never applies a change
+     *  without a confirmation step, and that confirmation always carries the number-visibility
+     *  warning for any change that places the member into a group. */
+    private void showSubgroupAssignDialog(Member member) {
+        List<Long> existingIds = memberRepository.getDistinctSubgroupIds();
+        Map<Long, Integer> sizes = memberRepository.countMembersPerSubgroup();
+
+        List<CharSequence> options = new ArrayList<>();
+        List<Long> optionIds = new ArrayList<>();
+        for (Long id : existingIds) {
+            if (member.subgroupId != null && member.subgroupId.equals(id)) {
+                continue;
+            }
+            int count = sizes.containsKey(id) ? sizes.get(id) : 0;
+            options.add(getString(R.string.subgroup_option_existing, id, count));
+            optionIds.add(id);
+        }
+        options.add(getString(R.string.subgroup_option_new));
+        optionIds.add(null);
+
+        boolean canClear = member.subgroupId != null;
+        if (canClear) {
+            options.add(getString(R.string.subgroup_option_clear));
+        }
+
+        CharSequence[] items = options.toArray(new CharSequence[0]);
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.subgroup_assign_dialog_title, member.nickname))
+                .setItems(items, (dialog, which) -> {
+                    if (canClear && which == items.length - 1) {
+                        memberRepository.assignSubgroup(member.id, null);
+                        Toast.makeText(this, getString(R.string.subgroup_cleared_toast, member.nickname),
+                                Toast.LENGTH_SHORT).show();
+                        renderMembers();
+                        return;
+                    }
+                    Long chosen = optionIds.get(which);
+                    long targetGroupId = chosen != null ? chosen : nextSubgroupId(existingIds);
+                    confirmAndAssign(member, targetGroupId);
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
+    private long nextSubgroupId(List<Long> existingIds) {
+        long max = 0;
+        for (Long id : existingIds) {
+            if (id > max) {
+                max = id;
+            }
+        }
+        return max + 1;
+    }
+
+    /** The single choke point for actually placing a member into a sub-group: always shows the
+     *  irreversible-number-visibility warning first and only writes on explicit confirmation. */
+    private void confirmAndAssign(Member member, long subgroupId) {
+        String message = getString(R.string.warning_subgroup_visibility) + "\n\n"
+                + getString(R.string.subgroup_confirm_assign_detail, member.nickname, subgroupId);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.subgroup_confirm_assign_title)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    memberRepository.assignSubgroup(member.id, subgroupId);
+                    Toast.makeText(this, getString(R.string.subgroup_assigned_toast, member.nickname, subgroupId),
+                            Toast.LENGTH_SHORT).show();
+                    renderMembers();
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
+    /** Converts a dp value to px. No existing helper in {@link UiUtil} covers this (it only has
+     *  the divider factory), so a local, standard-form conversion is used rather than adding a
+     *  third copy elsewhere. */
+    private int dp(int value) {
+        return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value,
+                getResources().getDisplayMetrics()));
     }
 
     private void showOptionsMenu(View anchor) {
@@ -227,6 +381,7 @@ public class MembershipActivity extends BaseActivity {
 
     private void renderMembers() {
         container.removeAllViews();
+        renderSubgroupSizes();
         List<Member> allMembers = memberRepository.getActiveMembers();
 
         String query = currentQuery.trim();
@@ -281,6 +436,28 @@ public class MembershipActivity extends BaseActivity {
                     badgeView.setText(badge.toString());
                 }
             }
+
+            TextView subgroupBadge = new TextView(this);
+            subgroupBadge.setId(View.generateViewId());
+            LinearLayout.LayoutParams badgeParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            badgeParams.setMarginStart(dp(8));
+            subgroupBadge.setLayoutParams(badgeParams);
+            subgroupBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
+            subgroupBadge.setTextSize(12);
+            subgroupBadge.setClickable(true);
+            subgroupBadge.setFocusable(true);
+            subgroupBadge.setBackgroundResource(R.drawable.focus_highlight);
+            if (member.subgroupId != null) {
+                subgroupBadge.setText(getString(R.string.subgroup_row_badge, member.subgroupId));
+                subgroupBadge.setBackgroundResource(R.drawable.bg_badge_live);
+                subgroupBadge.setTextColor(getColor(R.color.success));
+            } else {
+                subgroupBadge.setText(R.string.subgroup_row_unassigned_badge);
+                subgroupBadge.setTextColor(getColor(R.color.text_secondary));
+            }
+            subgroupBadge.setOnClickListener(v -> showSubgroupAssignDialog(member));
+            ((LinearLayout) row).addView(subgroupBadge);
 
             long memberId = member.id;
             row.setOnClickListener(v -> {

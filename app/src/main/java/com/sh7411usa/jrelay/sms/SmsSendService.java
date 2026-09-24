@@ -13,6 +13,8 @@ import com.sh7411usa.jrelay.R;
 import com.sh7411usa.jrelay.db.MemberRepository;
 import com.sh7411usa.jrelay.db.MessageRepository;
 import com.sh7411usa.jrelay.db.OutboxRepository;
+import com.sh7411usa.jrelay.model.Member;
+import com.sh7411usa.jrelay.sms.mms.MmsSender;
 import com.sh7411usa.jrelay.util.MessageSalt;
 import com.sh7411usa.jrelay.util.NotificationHelper;
 import com.sh7411usa.jrelay.util.Prefs;
@@ -432,7 +434,7 @@ public class SmsSendService extends Service {
                             MemberRepository memberRepository, Prefs prefs, RateLimitConfig config,
                             Random random, List<OutboxRepository.OutboxItem> burst) {
         for (int i = 0; i < burst.size(); i++) {
-            sendOne(smsManager, outbox, prefs, burst.get(i));
+            sendOne(smsManager, outbox, memberRepository, prefs, burst.get(i));
             if (config.microspacingEnabled && i < burst.size() - 1) {
                 MicroSpacer.waitMillis(microspacingDelayMillis(config, random));
             }
@@ -469,7 +471,12 @@ public class SmsSendService extends Service {
      * reported back) can never resolve the new attempt: {@link SentReceiver} checks the token
      * against the row, not just the row id.
      */
-    private void sendOne(SmsManager smsManager, OutboxRepository outbox, Prefs prefs, OutboxRepository.OutboxItem item) {
+    private void sendOne(SmsManager smsManager, OutboxRepository outbox, MemberRepository memberRepository,
+                          Prefs prefs, OutboxRepository.OutboxItem item) {
+        if (item.subgroupId != null) {
+            sendGroup(outbox, memberRepository, prefs, item);
+            return;
+        }
         long token = System.currentTimeMillis();
         try {
             // Send-time salt: applied only to rows flagged for it (post-upgrade RELAY rows), once,
@@ -503,6 +510,48 @@ public class SmsSendService extends Service {
             outbox.markHandedOff(item.id, 0, token);
             SentReceiver.handleFailure(this, item, token, SentReceiver.RESULT_NOT_SENT);
         }
+    }
+
+    /**
+     * Dispatches a group-MMS outbox row ({@code item.subgroupId != null}) via {@link MmsSender}.
+     * Resolves the sub-group's members at SEND time, not enqueue time, so a member removed between
+     * enqueue and drain never receives the message.
+     * <p>
+     * If the sub-group now has zero active members, this is a bug upstream (routing should never
+     * have produced this row) — not a message to send. The row is resolved straight to FAILED,
+     * without going through the retry policy, since re-sending to nobody can never succeed.
+     */
+    private void sendGroup(OutboxRepository outbox, MemberRepository memberRepository, Prefs prefs,
+                            OutboxRepository.OutboxItem item) {
+        long token = System.currentTimeMillis();
+        List<Member> members = memberRepository.getSubgroupMembers(item.subgroupId);
+        if (members.isEmpty()) {
+            Log.e(TAG, "Sub-group " + item.subgroupId + " for outbox row " + item.id
+                    + " has zero active members at send time; failing the row instead of sending to nobody");
+            outbox.markHandedOff(item.id, 0, token);
+            outbox.markFailed(item.id, token);
+            return;
+        }
+
+        List<String> recipients = new ArrayList<>(members.size());
+        for (Member m : members) {
+            recipients.add(m.phoneE164);
+        }
+
+        String body = item.applySalt ? MessageSalt.applySendTime(prefs, item.body) : item.body;
+
+        // Recorded before the send call, same contract as sendOne's individual path: MmsSentReceiver
+        // matches a result back to this row via handed_off_at, so this must happen with the same
+        // token passed to MmsSender.send, before the radio is ever invoked.
+        outbox.markHandedOff(item.id, 1, token);
+        MmsSender.send(this, item.id, token, recipients, body, resultCode -> {
+            // Only reached for the cases MmsSentReceiver can never handle: empty recipient list
+            // (already ruled out above) or a synchronous throw that never reached the radio.
+            Log.e(TAG, "Failed to hand off group MMS for outbox row " + item.id + " (sub-group "
+                    + item.subgroupId + "), resultCode=" + resultCode);
+            outbox.markHandedOff(item.id, 0, token);
+            SentReceiver.handleFailure(this, item, token, resultCode);
+        });
     }
 
     @Override

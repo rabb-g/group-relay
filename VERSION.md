@@ -1,5 +1,63 @@
 # Version History
 
+## 5.9 - Group Sending, Built but Switched Off
+
+The machinery for sending one message to a whole sub-group instead of one message per person. It
+is complete, reviewed, and **deliberately unreachable** — there is no setting to turn it on, and
+that is on purpose. Read the last section before asking for one.
+
+With the app as shipped, nothing has changed: one text per member, exactly as before.
+
+- **One message to nine people instead of nine messages.** A post to a hundred members becomes
+  about twelve sends rather than ninety-nine. The underlying code was proven on your own phone
+  during the September spike: it arrived as a single group thread on every recipient, including a
+  flip phone.
+  - **Nine members plus the admin is the maximum, because ten works and eleven does not.** That is
+    recorded in the code as a measured limit, not a tidy number, with a note not to raise it — a
+    thread over the carrier's limit does not fail loudly, it fails as a message that never reaches
+    a whole sub-group.
+  - **Anybody left over stays on ordinary texts.** Earlier the code would round a group up to ten
+    or eleven to avoid leaving one person out; it no longer does. Being unassigned is not being
+    stranded — those members simply get a normal text, the same as everyone does today.
+- **Members can be put into sub-groups from the Membership screen**, with a suggestion tool that
+  proposes placements the admin can accept or ignore. It only ever proposes. It will not move
+  somebody who is already in a sub-group: doing that breaks a conversation living on nine other
+  phones and makes the contacts people saved point at the wrong person.
+- **A warning appears before any of this takes effect**, because one consequence cannot be undone:
+  everyone in a sub-group can see the other members' phone numbers, permanently, since the numbers
+  end up saved on their handsets. Today every member knows only this app's number.
+- **Muted members are not sent group messages.** This was caught in review, and was a genuine
+  defect — the new delivery path was written against queries that checked whether somebody was
+  still a member but not whether they had asked to be muted. Worth being honest about the limit,
+  though: a muted person still sits in the group conversation on everyone else's phone, so their
+  neighbours' replies still reach them. The app can stop sending to somebody; it cannot remove
+  them from a conversation that already exists.
+- **A failed group message now tells the admins.** When a normal text fails, one person misses it
+  and a counter eventually notices. When a group message fails, nine people miss it at once and
+  nothing was reporting it, because there is no per-person counter to trip. It now alerts
+  immediately, once, for the sub-group.
+- Group sends also appear in the activity feed and in each member's history, and Reply Mode works
+  for people reached this way — both were missing and found in review.
+
+### Why there is no switch to turn this on
+
+The other half is not built. When somebody replies inside a group conversation, that reply goes
+straight to the other nine people and the app only learns about it by reading it back out of the
+phone's message store. That reading is written and tested but not yet connected.
+
+Until it is, turning group sending on would mean every reply reaches nine people and never reaches
+the other ninety. The group would quietly split into a dozen conversations that cannot hear each
+other, and the only symptom would be people saying they never saw something. A switch that does
+that is worse than no switch.
+
+- Also still unanswered, and not answerable from the code: **whether the carrier counts a group
+  message as one message or as nine.** If it counts nine, most of the saving is illusory and only
+  the speed improvement is real. That is settled by running the group for a while and watching for
+  messages that quietly do not arrive — not by reading a bill.
+
+- Hebrew and Yiddish kept in sync with the twenty-seven new strings (379 in each of the three
+  files). Test suite 136.
+
 ## 5.8 - Groundwork for Sub-Groups (nothing visible yet)
 
 **This release changes nothing you can see or use.** It is the foundation for splitting the group

@@ -57,6 +57,25 @@
     <string name="admin_badge">(אדמין)</string>
     <string name="muted_badge">(פארשטומט)</string>
     <string name="no_members_yet">נאך קיין מיטגלידער נישטא. דריקט אויף \"צולייגן א מיטגליד\" צו אנהייבן.</string>
+    <string name="subgroup_section_title">תת-גרופעס</string>
+    <string name="label_subgroup_none">קיין תת-גרופע נישט</string>
+    <string name="action_suggest_subgroups">פֿאָרשלאָגן צוטיילונגען</string>
+    <string name="subgroup_sizes_summary">איצטיגע גרייסן: %1$s</string>
+    <string name="subgroup_sizes_none">נאך קיין תת-גרופעס נישטא</string>
+    <string name="subgroup_size_line">גרופע %1$d: %2$d</string>
+    <string name="subgroup_row_badge">גרופע %1$d</string>
+    <string name="subgroup_row_unassigned_badge">אָן גרופע</string>
+    <string name="subgroup_suggest_dialog_title">פֿאָרשלאָגן תת-גרופעס</string>
+    <string name="subgroup_suggest_apply_action">אָנווענדן</string>
+    <string name="subgroup_assign_dialog_title">צוטיילן %1$s</string>
+    <string name="subgroup_option_new">נײַע תת-גרופע</string>
+    <string name="subgroup_option_existing">גרופע %1$d (%2$d מיטגלידער)</string>
+    <string name="subgroup_option_clear">אָפּמעקן צוטיילונג</string>
+    <string name="subgroup_confirm_assign_title">צוטיילן צו א תת-גרופע?</string>
+    <string name="subgroup_confirm_assign_detail">אַרײַנטאָן %1$s אין גרופע %2$d?</string>
+    <string name="subgroup_assigned_toast">%1$s איז איצט אין גרופע %2$d.</string>
+    <string name="subgroup_cleared_toast">%1$s איז מער נישט אין קיין תת-גרופע.</string>
+    <string name="warning_subgroup_visibility">מיטגלידער פון א תת-גרופע וועלן זען איינער פונעם צווייטנס טעלעפאן נומערן. דאס קען מען נישט אומקערן - נאכדעם וואס א גרופע-ידיעה ווערט געשיקט, זײַנען די נומערן שוין אויף זייערע טעלעפאנען. איצט ווייסן מיטגלידער נאר דעם נומער פון דער אפליקאציע.</string>
     <string name="menu_button_label">מעניו</string>
     <string name="menu_export_csv">עקספּאָרטירן צו CSV</string>
     <string name="menu_import_csv">אימפּאָרטירן פון CSV</string>
@@ -249,6 +268,14 @@
     <string name="action_apply_to_non_customized">שטעלן נאר אויף מיטגלידער אָן א באזונדער גרענעץ</string>
     <string name="individual_limit_applied">געשטעלט אויף %1$d מיטגלידער.</string>
 
+    <string name="settings_section_delivery">צושטעלונג</string>
+    <string name="label_delivery_mode">ווי ידיעות ווערן געשיקט</string>
+    <string name="delivery_mode_desc">באזונדער שיקט איין ידיעה פאר יעדן מיטגליד. גרופע-שיחות שיקן איין ידיעה צו יעדער תת-גרופע פון בערך נײַן מיטגלידער, וואס איז א סך ווייניקער ידיעות - אבער מיטגלידער פון א תת-גרופע קענען דעמאלט זען איינער פונעם צווייטנס טעלעפאן נומערן, און jRelay קען דאס נישט צוריקנעמען.</string>
+    <string name="delivery_mode_sms">באזונדער (איין ידיעה פאר יעדן מיטגליד)</string>
+    <string name="delivery_mode_group_mms">גרופע-שיחות (ווייניקער ידיעות)</string>
+    <string name="label_subgroup_target_size">מענטשן פאר יעדער תת-גרופע</string>
+    <string name="subgroup_target_size_desc">וויפיל מיטגלידער טיילן א שיחה. jRelay איז אן עקסטרע באטייליגטער אין יעדער איינער.</string>
+
     <string name="settings_section_capacity">גרופעס קיבולת</string>
     <string name="label_max_members">מאקסימום מיטגלידער (0 = אָן א גרענעץ)</string>
     <string name="max_members_desc">די מערסטע אקטיווע מיטגלידער וואס די גרופע וועט האלטן. ווען זי איז פול, יעדער וואס שרייבט צו זיך אנשליסן באקומט די ידיעה אונטן. 0 מיינט אָן א גרענעץ.</string>
@@ -378,6 +405,7 @@
 
     <!-- Failure alert -->
     <string name="tpl_failure_alert">@system: %1$s האט געהאט %2$d נישט-געלונגענע ידיעות.</string>
+    <string name="tpl_group_failure_alert">@system: תת-גרופע %1$d האט נישט באקומען די גרופע-ידיעה.</string>
     <string name="tpl_failed_with_reason">%1$s - %2$s</string>
 
     <!-- Announcement / Group / Reply mode -->

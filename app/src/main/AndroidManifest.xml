@@ -8,6 +8,19 @@
 
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
+
+    <!-- Needed ONLY to read inbound group-MMS replies out of content://mms (see
+         sms/mms/MmsReader). When a sub-group is a real group thread, a member's reply goes
+         peer-to-peer to the whole thread; jRelay is a participant but only learns what was said
+         by reading the system MMS store. Without this the other sub-groups never hear it and the
+         group silently fragments.
+
+         Reading content://mms requires READ_SMS but is NOT reserved to the default SMS app, so
+         jRelay can stay a non-default app. Note this permission must also be REQUESTED at runtime
+         before inbound ingestion can work - declaring it is necessary but not sufficient, and the
+         natural moment to ask is when the owner switches delivery mode to group threads, since
+         that is the only mode where it is used. -->
+    <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
@@ -64,6 +77,10 @@
             android:name=".sms.SentReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".sms.mms.MmsSentReceiver"
+            android:exported="false" />
+
         <service
             android:name=".sms.SmsSendService"
             android:exported="false"
@@ -72,6 +89,12 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Relays SMS to group members on a paced schedule; the send must continue while the screen is off." />
         </service>
+
+        <provider
+            android:name=".sms.mms.MmsFileProvider"
+            android:authorities="com.sh7411usa.jrelay.mmsfileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true" />
 
     </application>
 

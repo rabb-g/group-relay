@@ -304,6 +304,18 @@ public class SentReceiver extends BroadcastReceiver {
                     new CommandProcessor(appContext).alertAdminsOfFailures(member, failedCount);
                 }
             }
+        } else if (item.subgroupId != null) {
+            // A group-MMS row has no single member, so the per-member counter above cannot run -
+            // and that is correct: the failure belongs to the THREAD, not to any one person's
+            // number, so charging it against nine individual failure streaks would misattribute
+            // one event nine ways and could trip several unrelated alerts at once.
+            //
+            // But it must not therefore be silent. A failed group send means nine people did not
+            // receive a message and nothing else in the app would ever say so - there is no
+            // counter to cross a threshold. This alerts immediately and once, keyed to the
+            // sub-group. It deliberately does NOT wait for a threshold the way the per-member path
+            // does, because there is no streak to accumulate: one failure is already nine people.
+            new CommandProcessor(appContext).alertAdminsOfGroupFailure(item.subgroupId);
         }
     }
 }

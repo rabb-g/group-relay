@@ -57,6 +57,25 @@
     <string name="admin_badge">(מנהל)</string>
     <string name="muted_badge">(מושתק)</string>
     <string name="no_members_yet">אין חברים עדיין. הקישו על הוספת חבר כדי להתחיל.</string>
+    <string name="subgroup_section_title">תת-קבוצות</string>
+    <string name="label_subgroup_none">ללא תת-קבוצה</string>
+    <string name="action_suggest_subgroups">הצעת שיוך</string>
+    <string name="subgroup_sizes_summary">גדלים נוכחיים: %1$s</string>
+    <string name="subgroup_sizes_none">עדיין אין תת-קבוצות</string>
+    <string name="subgroup_size_line">קבוצה %1$d: %2$d</string>
+    <string name="subgroup_row_badge">קבוצה %1$d</string>
+    <string name="subgroup_row_unassigned_badge">אין תת-קבוצה</string>
+    <string name="subgroup_suggest_dialog_title">הצעת תת-קבוצות</string>
+    <string name="subgroup_suggest_apply_action">החל</string>
+    <string name="subgroup_assign_dialog_title">שיוך %1$s</string>
+    <string name="subgroup_option_new">תת-קבוצה חדשה</string>
+    <string name="subgroup_option_existing">קבוצה %1$d (%2$d חברים)</string>
+    <string name="subgroup_option_clear">ביטול השיוך</string>
+    <string name="subgroup_confirm_assign_title">לשייך לתת-קבוצה?</string>
+    <string name="subgroup_confirm_assign_detail">לשייך את %1$s לקבוצה %2$d?</string>
+    <string name="subgroup_assigned_toast">%1$s נמצא/ת כעת בקבוצה %2$d.</string>
+    <string name="subgroup_cleared_toast">%1$s אינו/ה עוד בתת-קבוצה.</string>
+    <string name="warning_subgroup_visibility">חברי תת-קבוצה יוכלו לראות זה את מספר הטלפון של זה. אי אפשר לבטל זאת - ברגע שנשלחת הודעת קבוצה, המספרים כבר נשמרים בטלפונים שלהם. כרגע, חברים מכירים רק את המספר של האפליקציה.</string>
     <string name="menu_button_label">תפריט</string>
     <string name="menu_export_csv">ייצוא ל-CSV</string>
     <string name="menu_import_csv">ייבוא מ-CSV</string>
@@ -249,6 +268,14 @@
     <string name="action_apply_to_non_customized">החלה על חברים ללא מגבלה מותאמת אישית</string>
     <string name="individual_limit_applied">הוחל על %1$d חברים.</string>
 
+    <string name="settings_section_delivery">משלוח</string>
+    <string name="label_delivery_mode">איך הודעות נשלחות</string>
+    <string name="delivery_mode_desc">שליחה בנפרד מעבירה הודעה אחת לכל חבר. שרשורי קבוצה שולחים הודעה אחת לכל תת-קבוצה של כתשעה חברים, וזה הרבה פחות הודעות - אך חברי תת-הקבוצה יוכלו לראות זה את מספר הטלפון של זה, ו-jRelay לא יוכל לבטל זאת.</string>
+    <string name="delivery_mode_sms">בנפרד (הודעה אחת לכל חבר)</string>
+    <string name="delivery_mode_group_mms">שרשורי קבוצה (פחות הודעות)</string>
+    <string name="label_subgroup_target_size">אנשים לכל תת-קבוצה</string>
+    <string name="subgroup_target_size_desc">כמה חברים חולקים שרשור. jRelay הוא משתתף נוסף בכל אחד מהם.</string>
+
     <string name="settings_section_capacity">קיבולת הקבוצה</string>
     <string name="label_max_members">מספר חברים מרבי (0 = ללא הגבלה)</string>
     <string name="max_members_desc">מספר החברים הפעילים המרבי שהקבוצה תכיל. כשהיא מלאה, כל מי ששולח הודעה כדי להצטרף יקבל את ההודעה שלהלן. 0 פירושו ללא הגבלה.</string>
@@ -378,6 +405,7 @@
 
     <!-- Failure alert -->
     <string name="tpl_failure_alert">@system: ל-%1$s היו %2$d הודעות שנכשלו.</string>
+    <string name="tpl_group_failure_alert">@system: הודעת קבוצה לתת-קבוצה %1$d נכשלה. החברים לא קיבלו אותה.</string>
     <string name="tpl_failed_with_reason">%1$s - %2$s</string>
 
     <!-- Announcement / Group / Reply mode -->

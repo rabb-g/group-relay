@@ -11,6 +11,30 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * The outbox holds TWO row shapes, and {@code subgroup_id} is the discriminant - never the phone
+ * number.
+ *
+ * <ul>
+ *   <li><b>Individual row</b> ({@code subgroup_id IS NULL}): one recipient, addressed by
+ *       {@code member_id} and {@code phone_e164}. Every row before v5.9 is one of these, and every
+ *       row is one of these while delivery mode is SMS.</li>
+ *   <li><b>Group row</b> ({@code subgroup_id} set): one group MMS to a whole sub-group. It has no
+ *       single recipient, so {@code phone_e164} is an empty-string sentinel purely because the
+ *       column is NOT NULL, and {@code member_id} is null. The recipient list is resolved from the
+ *       sub-group at SEND time, not stored here.</li>
+ * </ul>
+ *
+ * <p><b>Read {@code subgroupId} to tell them apart. Do not infer the row shape from an empty
+ * phone.</b> The sentinel is a schema fill-in, not a second source of truth, and treating it as
+ * one would mean two places had to agree about what an empty phone means. Anything that reads
+ * {@code phoneE164} must establish it is an individual row first - on a group row that field is
+ * meaningless, not merely blank.
+ *
+ * <p>The same care applies to anything counted per row: a group row is ONE pending message and up
+ * to nine deliveries. {@code countPending} and friends count rows, which is the honest number for
+ * carrier metering and an understatement of how many people are waiting.
+ */
 public class OutboxRepository {
 
     /** Outbox category for a relayed group post: the only kind that is held for coalescing and salted at send. */
@@ -37,6 +61,9 @@ public class OutboxRepository {
         public int attempts;
         public String category;
         public boolean applySalt;
+        /** NULL for an ordinary per-recipient SMS row. Non-null identifies the sub-group this
+         *  group-MMS row is addressed to; the sender uses this to decide how to dispatch the row. */
+        public Long subgroupId;
     }
 
     private final DbHelper dbHelper;
@@ -82,6 +109,37 @@ public class OutboxRepository {
         }
         cv.put("hold_until", holdUntilMillis);
         cv.put("apply_salt", applySalt ? 1 : 0);
+        db.insert(DbHelper.TABLE_OUTBOX, null, cv);
+    }
+
+    /**
+     * Enqueues one group-MMS row addressed to {@code subgroupId} instead of a single recipient.
+     * {@code member_id} is left null (no single member owns this row) and {@code phone_e164} -
+     * NOT NULL in the schema - is set to {@code ""}, a sentinel that can never collide with a real
+     * E.164 number: for a group row, {@code subgroup_id} is the sole address and the sender must
+     * resolve the sub-group's actual recipient list itself, never read {@code phoneE164} for one.
+     *
+     * <p>Deliberately not routed through {@link #enqueue}'s existing signature so a future caller
+     * cannot accidentally construct a group row with a stray non-empty phone number, or an
+     * individual row with a non-null subgroupId - the two shapes stay mutually exclusive by
+     * construction.
+     */
+    public void enqueueGroup(long subgroupId, String body, String category,
+                              long holdUntilMillis, boolean applySalt) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("phone_e164", "");
+        cv.put("body", body);
+        cv.put("enqueued_at", System.currentTimeMillis());
+        cv.put("status", "PENDING");
+        if (category != null) {
+            cv.put("category", category);
+        } else {
+            cv.putNull("category");
+        }
+        cv.put("hold_until", holdUntilMillis);
+        cv.put("apply_salt", applySalt ? 1 : 0);
+        cv.put("subgroup_id", subgroupId);
         db.insert(DbHelper.TABLE_OUTBOX, null, cv);
     }
 
@@ -438,12 +496,23 @@ public class OutboxRepository {
         return item;
     }
 
-    /** Released pending RELAY-category rows, grouped-by-recipient upstream. Oldest first. */
+    /**
+     * Released pending RELAY-category rows, grouped-by-recipient upstream. Oldest first.
+     *
+     * <p>Excludes group-MMS rows ({@code subgroup_id IS NOT NULL}) even though nothing currently
+     * enqueues one under {@link #CATEGORY_RELAY}. {@code applyMerge}, fed from this method's
+     * result, folds several rows into one by rewriting the kept row's body and keys the merge on
+     * {@code phone_e164} upstream - a group row's {@code phone_e164} is the empty-string sentinel
+     * (see {@link #enqueueGroup}), not a real recipient, so merging it with anything by that key
+     * is meaningless at best and would silently fold two different sub-groups' messages together
+     * at worst. This filter makes that exclusion structural instead of relying on every future
+     * enqueue call site to remember never to pass {@code CATEGORY_RELAY} for a group row.
+     */
     public List<OutboxItem> takeReleasedRelayRows() {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
         List<OutboxItem> items = new ArrayList<>();
         Cursor c = db.query(DbHelper.TABLE_OUTBOX, null,
-                "status = ? AND category = ? AND hold_until <= ?",
+                "status = ? AND category = ? AND hold_until <= ? AND subgroup_id IS NULL",
                 new String[]{"PENDING", CATEGORY_RELAY, String.valueOf(System.currentTimeMillis())},
                 null, null, "enqueued_at ASC");
         while (c.moveToNext()) {
@@ -514,6 +583,8 @@ public class OutboxRepository {
         item.attempts = c.getInt(c.getColumnIndexOrThrow("attempts"));
         item.category = c.getString(c.getColumnIndexOrThrow("category"));
         item.applySalt = c.getInt(c.getColumnIndexOrThrow("apply_salt")) != 0;
+        int subgroupIdx = c.getColumnIndexOrThrow("subgroup_id");
+        item.subgroupId = c.isNull(subgroupIdx) ? null : c.getLong(subgroupIdx);
         return item;
     }
 }

@@ -21,7 +21,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "jrelay.db";
-    private static final int DB_VERSION = 8;
+    private static final int DB_VERSION = 9;
 
     public static final String TABLE_MEMBERS = "members";
     public static final String TABLE_MESSAGE_LOG = "message_log";
@@ -89,7 +89,8 @@ public class DbHelper extends SQLiteOpenHelper {
                 "apply_salt INTEGER NOT NULL DEFAULT 0," +
                 "last_result INTEGER," +
                 "parts_pending INTEGER NOT NULL DEFAULT 0," +
-                "handed_off_at INTEGER NOT NULL DEFAULT 0" +
+                "handed_off_at INTEGER NOT NULL DEFAULT 0," +
+                "subgroup_id INTEGER" +
                 ")");
 
         createIndexes(db);
@@ -169,6 +170,14 @@ public class DbHelper extends SQLiteOpenHelper {
             // Nullable, additive: every pre-existing row gets NULL (unassigned), never 0 - see
             // Member#subgroupId and MemberRepository#fromCursor for how that is preserved on read.
             db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN subgroup_id INTEGER");
+        }
+        if (oldVersion < 9) {
+            // NULL = an ordinary per-recipient SMS row (every row before this migration, and every
+            // individual-SMS row after it). Non-null = one group-MMS row addressed to that
+            // sub-group. Nullable, additive, no DEFAULT: every pre-existing row gets NULL, never 0
+            // - see OutboxRepository#mapCursor's explicit isNull check, which is the same
+            // NULL-vs-0 trap already documented above for members.subgroup_id.
+            db.execSQL("ALTER TABLE " + TABLE_OUTBOX + " ADD COLUMN subgroup_id INTEGER");
         }
     }
 

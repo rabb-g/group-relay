@@ -21,6 +21,12 @@ public class Prefs {
 
     public enum JoinPolicy { OFF, ALLOW, REQUIRE_APPROVAL }
 
+    /**
+     * Whether outgoing messages are relayed as individual SMS (one-to-one, today's behaviour)
+     * or as a single group MMS per sub-group, with every sub-group member visible to the others.
+     */
+    public enum DeliveryMode { SMS, GROUP_MMS }
+
     /** Sentinel for {@link #getPauseUntilMillis()}: paused with no scheduled end, until manually resumed. */
     public static final long PAUSE_INDEFINITE = Long.MAX_VALUE;
 
@@ -87,6 +93,8 @@ public class Prefs {
 
     private static final String KEY_GROUP_MODE = "group_mode";
     private static final String KEY_JOIN_POLICY = "join_policy";
+    private static final String KEY_DELIVERY_MODE = "delivery_mode";
+    private static final String KEY_SUBGROUP_TARGET_SIZE = "subgroup_target_size";
     private static final String KEY_PAUSE_UNTIL_MILLIS = "pause_until_millis";
 
     private static final String KEY_REPLY_WINDOW_HOURS = "reply_window_hours";
@@ -120,6 +128,27 @@ public class Prefs {
 
     private static final int DEFAULT_COALESCE_WINDOW_SECONDS = 45;
     private static final int DEFAULT_MAX_MERGED_SEGMENTS = 3;
+    /**
+     * Members per group MMS thread, NOT counting jRelay, which is always an additional
+     * participant — so this many plus one.
+     *
+     * <p><b>9 is the empirical maximum, not a round number.</b> Owner-reported, 2026-09-24: a
+     * thread of 10 works and 11 does not. jRelay is always an extra participant, so 9 members
+     * makes 10 — exactly at the limit that works, and one below the one that fails.
+     *
+     * <p>Do not raise this without retesting. Exceeding the carrier's cap does not fail loudly;
+     * it fails as a message that never reaches an entire sub-group, which is the failure mode this
+     * app can least afford and least easily detect. Note also that the Phase 3 spike itself only
+     * ever sent to TWO recipients — the 10-works/11-fails figure comes from the owner, not from
+     * that test — so a send to a full nine-member sub-group is still unproven end to end. The
+     * spike harness is installed and can confirm it in minutes; record the result in
+     * docs/phase3-device-spike.md when it is done.
+     *
+     * <p>Confirmed by the owner: the working configuration is nine members plus the admin, i.e.
+     * ten participants in the thread. So 9 here is the maximum, not a cautious choice — there is
+     * no headroom above it and nothing to gain by testing higher.
+     */
+    private static final int DEFAULT_SUBGROUP_TARGET_SIZE = 9;
 
     private final Context appContext;
     private final SharedPreferences prefs;
@@ -561,6 +590,42 @@ public class Prefs {
 
     public void setGroupFullMessage(String message) {
         prefs.edit().putString(KEY_GROUP_FULL_MESSAGE, message).apply();
+    }
+
+    /**
+     * Whether outgoing messages go out as individual SMS or as one group MMS per sub-group.
+     * <p>
+     * Defaults to {@link DeliveryMode#SMS} and must stay that way as the fallback for any
+     * unrecognised stored value ({@link #parseEnum} never falls back to {@code GROUP_MMS}).
+     * Switching to {@code GROUP_MMS} is permanent and irreversible in effect: every member's
+     * phone number becomes visible to the other members of their sub-group the moment the
+     * first group message is sent, and it cannot be undone because the numbers are then on
+     * their handsets. It also opens a channel jRelay does not control — a member who has left
+     * the group remains a participant in a thread on the other members' phones, and the app
+     * can neither remove them nor stop replies from reaching them. See
+     * {@code docs/phase3-redesign.md} §4 and §5.1.
+     * <p>
+     * The UI that sets this value is required to warn the owner before switching to
+     * {@code GROUP_MMS}; this must be a deliberate, informed choice, never a default anyone
+     * drifts into. The feature is also incomplete until inbound MMS ingestion exists: without
+     * it, a reply inside a sub-group thread reaches only that sub-group's members and never
+     * reaches the rest of the group.
+     */
+    public DeliveryMode getDeliveryMode() {
+        return parseEnum(prefs.getString(KEY_DELIVERY_MODE, null), DeliveryMode.class, DeliveryMode.SMS);
+    }
+
+    public void setDeliveryMode(DeliveryMode mode) {
+        prefs.edit().putString(KEY_DELIVERY_MODE, mode.name()).apply();
+    }
+
+    /** Members per group MMS thread, not counting jRelay itself (the tenth participant). */
+    public int getSubgroupTargetSize() {
+        return prefs.getInt(KEY_SUBGROUP_TARGET_SIZE, DEFAULT_SUBGROUP_TARGET_SIZE);
+    }
+
+    public void setSubgroupTargetSize(int size) {
+        prefs.edit().putInt(KEY_SUBGROUP_TARGET_SIZE, size).apply();
     }
 
     private <E extends Enum<E>> E parseEnum(String stored, Class<E> type, E defaultValue) {
