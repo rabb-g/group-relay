@@ -573,17 +573,27 @@ public class SettingsActivity extends BaseActivity {
         // to send to and the post would vanish silently. Falling back to SMS is the safe default
         // (see Prefs#getDeliveryMode), so on refusal we both un-tick the box and write SMS rather
         // than leaving the stored mode untouched.
-        if (groupDeliveryCheckbox.isChecked() && memberRepository.getDistinctSubgroupIds().isEmpty()) {
+        boolean groupDeliveryRefused =
+                groupDeliveryCheckbox.isChecked() && memberRepository.getDistinctSubgroupIds().isEmpty();
+        if (groupDeliveryRefused) {
             groupDeliveryCheckbox.setChecked(false);
             prefs.setDeliveryMode(Prefs.DeliveryMode.SMS);
-            Toast.makeText(this, R.string.error_group_delivery_no_subgroups, Toast.LENGTH_LONG).show();
         } else {
             prefs.setDeliveryMode(groupDeliveryCheckbox.isChecked()
                     ? Prefs.DeliveryMode.GROUP_MMS
                     : Prefs.DeliveryMode.SMS);
         }
 
-        Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
+        // On refusal show ONLY the explanation. Every other setting on this screen was still
+        // saved, but following "assign members to sub-groups first" with "Saved." reads as
+        // confirmation that group delivery went on — the admin walks away believing it is enabled
+        // when the box was forced back off, and the failure of a group post to arrive is silent.
+        // The more specific message is the one worth showing.
+        Toast.makeText(this,
+                groupDeliveryRefused
+                        ? R.string.error_group_delivery_no_subgroups
+                        : R.string.rate_limit_member_saved,
+                groupDeliveryRefused ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT).show();
     }
 
     private void saveReportingSettings() {

@@ -22,6 +22,7 @@ import com.sh7411usa.jrelay.db.MemberRepository;
 import com.sh7411usa.jrelay.model.Member;
 import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.PhoneNumberUtils;
+import com.sh7411usa.jrelay.sms.SmsSendService;
 import com.sh7411usa.jrelay.sms.SubgroupPlanner;
 import com.sh7411usa.jrelay.util.CsvUtil;
 import com.sh7411usa.jrelay.util.Prefs;
@@ -70,6 +71,7 @@ public class MembershipActivity extends BaseActivity {
         findViewById(R.id.button_membership_options).setOnClickListener(this::showOptionsMenu);
         findViewById(R.id.button_suggest_subgroups).setOnClickListener(v -> suggestSubgroupAssignments());
         findViewById(R.id.button_send_rosters).setOnClickListener(v -> sendSubgroupRosters());
+        findViewById(R.id.button_merge_subgroups).setOnClickListener(v -> mergeSmallSubgroups());
 
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override
@@ -151,9 +153,13 @@ public class MembershipActivity extends BaseActivity {
                 .setTitle(R.string.subgroup_suggest_dialog_title)
                 .setMessage(message)
                 .setPositiveButton(R.string.subgroup_suggest_apply_action, (dialog, which) -> {
+                    java.util.LinkedHashSet<Long> affected = new java.util.LinkedHashSet<>();
                     for (SubgroupPlanner.Assignment a : plan.assignments) {
                         memberRepository.assignSubgroup(a.memberId, (long) a.subgroupId);
+                        affected.add((long) a.subgroupId);
                     }
+                    // One roster per sub-group that actually changed, not one per sub-group.
+                    rosterAndDrain(affected);
                     renderMembers();
                 })
                 .setNegativeButton(R.string.action_cancel, null)
@@ -166,6 +172,77 @@ public class MembershipActivity extends BaseActivity {
      * and because the admin, not the app, decides when the membership has settled enough to be
      * worth publishing. See {@link CommandProcessor#sendSubgroupRosters()}.
      */
+    /**
+     * Queues a roster for each of the given sub-groups and kicks the send service, so an automatic
+     * re-roster leaves the queue the same way a manual one does rather than waiting for the next
+     * inbound message to drain it.
+     *
+     * <p>Takes the affected ids rather than re-rostering everything: only the threads whose
+     * membership actually changed can see the change, and re-sending to the rest would multiply
+     * the cost of a one-person edit by the number of sub-groups.
+     */
+    private void rosterAndDrain(java.util.Collection<Long> subgroupIds) {
+        CommandProcessor processor = new CommandProcessor(this);
+        for (Long subgroupId : subgroupIds) {
+            processor.sendRosterFor(subgroupId);
+        }
+        SmsSendService.start(this);
+    }
+
+    /**
+     * Proposes folding any sub-group that has shrunk to {@link SubgroupPlanner#MERGE_THRESHOLD} or
+     * fewer members into another sub-group with room, and re-rosters both ends on confirmation.
+     *
+     * <p>Deliberately a button rather than something that fires on every departure. A merge costs
+     * a fresh roster to everyone involved and a new thread to everyone who moved, so rebalancing
+     * each time a member leaves would cost far more traffic than a thin group ever wastes. The
+     * admin decides when a group has actually got too small to be worth keeping.
+     */
+    private void mergeSmallSubgroups() {
+        Map<Integer, List<Long>> subgroupMembers = new TreeMap<>();
+        for (Long subgroupId : memberRepository.getDistinctSubgroupIds()) {
+            List<Long> ids = new ArrayList<>();
+            for (Member m : memberRepository.getActiveSubgroupMembers(subgroupId)) {
+                ids.add(m.id);
+            }
+            subgroupMembers.put(subgroupId.intValue(), ids);
+        }
+
+        SubgroupPlanner.Plan plan = SubgroupPlanner.planMerges(
+                subgroupMembers, new Prefs(this).getSubgroupTargetSize());
+        String summary = SubgroupPlanner.summarize(plan);
+
+        if (plan.assignments.isEmpty()) {
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.merge_dialog_title)
+                    .setMessage(summary.isEmpty() ? getString(R.string.merge_none) : summary)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.merge_dialog_title)
+                .setMessage(getString(R.string.warning_subgroup_visibility) + "\n\n" + summary)
+                .setPositiveButton(R.string.merge_apply_action, (dialog, which) -> {
+                    java.util.LinkedHashSet<Long> affected = new java.util.LinkedHashSet<>();
+                    for (SubgroupPlanner.Assignment a : plan.assignments) {
+                        // The source group the member is leaving is re-rostered too: its remaining
+                        // members keep a list naming people who are no longer in their thread.
+                        Member before = memberRepository.findById(a.memberId);
+                        if (before != null && before.subgroupId != null) {
+                            affected.add(before.subgroupId);
+                        }
+                        memberRepository.assignSubgroup(a.memberId, (long) a.subgroupId);
+                        affected.add((long) a.subgroupId);
+                    }
+                    rosterAndDrain(affected);
+                    renderMembers();
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
     private void sendSubgroupRosters() {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.action_send_rosters)
@@ -213,7 +290,15 @@ public class MembershipActivity extends BaseActivity {
                 .setTitle(getString(R.string.subgroup_assign_dialog_title, member.nickname))
                 .setItems(items, (dialog, which) -> {
                     if (canClear && which == items.length - 1) {
+                        Long vacated = member.subgroupId;
                         memberRepository.assignSubgroup(member.id, null);
+                        // The group they just left still holds a roster naming them, so its
+                        // members would keep a saved contact for somebody no longer in their
+                        // thread. Re-roster the group that was vacated; there is no destination
+                        // to re-roster here because the member is now unassigned.
+                        if (vacated != null) {
+                            rosterAndDrain(java.util.Collections.singletonList(vacated));
+                        }
                         Toast.makeText(this, getString(R.string.subgroup_cleared_toast, member.nickname),
                                 Toast.LENGTH_SHORT).show();
                         renderMembers();
@@ -246,7 +331,23 @@ public class MembershipActivity extends BaseActivity {
                 .setTitle(R.string.subgroup_confirm_assign_title)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    // Captured BEFORE the write: on a move (A -> B) both ends change, and once
+                    // assignSubgroup has run there is no record of where the member came from.
+                    Long vacated = member.subgroupId;
                     memberRepository.assignSubgroup(member.id, subgroupId);
+                    // Re-roster the destination immediately. Everyone already in that thread holds
+                    // a list without this person on it, so until it is re-sent the newcomer posts
+                    // as a bare string of digits -- the exact problem the roster exists to solve,
+                    // reappearing for whoever joined last. The group they LEFT is re-rostered too,
+                    // for the mirror-image reason: its list still names somebody who is no longer
+                    // in that thread. Only these two sub-groups are touched; the rest cannot see
+                    // this change and must not pay for it.
+                    java.util.LinkedHashSet<Long> affected = new java.util.LinkedHashSet<>();
+                    affected.add(subgroupId);
+                    if (vacated != null && vacated != subgroupId) {
+                        affected.add(vacated);
+                    }
+                    rosterAndDrain(affected);
                     Toast.makeText(this, getString(R.string.subgroup_assigned_toast, member.nickname, subgroupId),
                             Toast.LENGTH_SHORT).show();
                     renderMembers();

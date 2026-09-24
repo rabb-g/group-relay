@@ -340,6 +340,27 @@ public class MemberRepository {
     }
 
     /**
+     * Every active member of a sub-group, <b>including muted ones</b> — unlike
+     * {@link #getSubgroupMembers(long)}, which excludes them because it answers "who should
+     * receive this relayed post?".
+     *
+     * <p>This answers a different question: "who is in this thread?". Under group MMS a muted
+     * member is still a participant of the real MMS thread and can still write into it; muting
+     * only governs what jRelay relays. So for anything about the composition of the group —
+     * planning a merge, or composing the roster that tells people which number is whose — the
+     * muted member must be counted and listed, or the roster would omit somebody whose messages
+     * the others will nonetheless see, which is the exact confusion the roster exists to remove.
+     *
+     * <p>It also keeps merge planning consistent with {@link #countMembersPerSubgroup()}, which
+     * counts every active member; sizing a group by one query and listing it by another that
+     * filters differently is how a merge would silently overfill its destination.
+     */
+    public List<Member> getActiveSubgroupMembers(long subgroupId) {
+        return query("active = 1 AND subgroup_id = ?",
+                new String[]{String.valueOf(subgroupId)}, "created_at ASC");
+    }
+
+    /**
      * Distinct sub-group ids currently in use by an active member. Filtered to {@code active = 1}
      * so a sub-group whose only members have all been removed does not show up as a group still
      * needing a send target; NULL (unassigned) is excluded since it is not a sub-group id.

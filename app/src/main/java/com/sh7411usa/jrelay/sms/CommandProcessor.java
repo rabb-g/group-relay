@@ -821,20 +821,40 @@ public class CommandProcessor {
      *         rather than sent a header-only message.
      */
     public int sendSubgroupRosters() {
-        String groupName = prefs.getGroupName();
-        String header = context.getString(R.string.roster_header);
-        String footer = context.getString(R.string.roster_footer);
         int queued = 0;
         for (Long subgroupId : memberRepository.getDistinctSubgroupIds()) {
-            List<Member> members = memberRepository.getSubgroupMembers(subgroupId);
-            if (members.isEmpty()) {
-                continue;
+            if (sendRosterFor(subgroupId)) {
+                queued++;
             }
-            String body = RosterComposer.compose(header, groupName, footer, members);
-            outboxRepository.enqueueGroup(subgroupId, body, "SYSTEM", 0L, false);
-            queued++;
         }
         return queued;
+    }
+
+    /**
+     * Queues the roster for one sub-group. This is the form the automatic paths use, so that
+     * adding a member to sub-group 3 costs one roster to sub-group 3 and nothing at all to the
+     * other nine -- re-rostering every group on every membership edit would cost roughly ten times
+     * the traffic for a change that only one thread can see.
+     *
+     * <p>Membership comes from {@link MemberRepository#getActiveSubgroupMembers}, which includes
+     * muted members: they are participants of the real MMS thread whatever jRelay relays, so
+     * omitting them would leave exactly the unidentifiable number the roster exists to name.
+     *
+     * @return true if a roster was queued; false for a sub-group with no active members, which is
+     *         skipped rather than sent a header with nothing under it.
+     */
+    public boolean sendRosterFor(long subgroupId) {
+        List<Member> members = memberRepository.getActiveSubgroupMembers(subgroupId);
+        if (members.isEmpty()) {
+            return false;
+        }
+        String body = RosterComposer.compose(
+                context.getString(R.string.roster_header),
+                prefs.getGroupName(),
+                context.getString(R.string.roster_footer),
+                members);
+        outboxRepository.enqueueGroup(subgroupId, body, "SYSTEM", 0L, false);
+        return true;
     }
 
     private void postToSubgroups(Member sender, String formatted, long postLogId) {

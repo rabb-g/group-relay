@@ -223,6 +223,10 @@
     <string name="action_send_rosters">Send sub-group rosters</string>
     <string name="roster_queued">Rosters queued for %1$d sub-group(s).</string>
     <string name="roster_none">No sub-groups to send a roster to.</string>
+    <string name="action_merge_subgroups">Merge small sub-groups</string>
+    <string name="merge_dialog_title">Merge small sub-groups</string>
+    <string name="merge_apply_action">Merge</string>
+    <string name="merge_none">No sub-group is small enough to merge, or none has room to take one.</string>
     <string name="error_group_delivery_no_subgroups">Assign members to sub-groups first, on the Membership screen.</string>
 
     <string name="checkbox_added_reporting_enabled">Notify group when a member is added</string>

@@ -2,8 +2,10 @@ package com.sh7411usa.jrelay.sms;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -143,6 +145,122 @@ public final class SubgroupPlanner {
             }
             group.clear();
             nextGroupId++;
+        }
+
+        return new Plan(assignments, notes);
+    }
+
+    /**
+     * At or below this size, a sub-group is a candidate to be folded into another one.
+     *
+     * <p>Chosen as 4 deliberately, and deliberately above {@link #MIN_NEW_SUBGROUP_SIZE}: the
+     * point is <b>not</b> to rebalance every time somebody leaves. Every merge costs a fresh
+     * roster to everyone involved and a brand-new thread for the people who moved, so churning
+     * groups on each departure would cost more traffic than the thin group ever wastes. A group
+     * only becomes a problem once it is small enough that a couple more departures would strand
+     * whoever is left, and 4 is where that starts — one below it is
+     * {@link #MIN_NEW_SUBGROUP_SIZE}, the size we would not have been willing to create in the
+     * first place.
+     */
+    public static final int MERGE_THRESHOLD = 4;
+
+    /**
+     * Proposes folding under-populated sub-groups into other sub-groups that have room.
+     *
+     * <p>A sub-group is a candidate only when it has at most {@link #MERGE_THRESHOLD} members
+     * <i>and</i> some other sub-group can absorb all of them without exceeding
+     * {@code targetSize}. Both halves matter: without the second, a merge would push the
+     * destination past the carrier's tested recipient ceiling, which is the one limit in this
+     * system that fails silently. A candidate with nowhere to go is left exactly as it is and
+     * reported in {@link Plan#advisoryNotes}, because a thin group that still works beats a
+     * destination group that stops delivering.
+     *
+     * <p>Members are never split across destinations — the whole source group moves together or
+     * not at all. Splitting would hand two sets of strangers to two existing threads and cost two
+     * rosters to fix what is meant to be a simplification.
+     *
+     * <p>Sources are considered smallest-first so the thinnest group is rescued first when room is
+     * scarce; ties and destinations both resolve by ascending sub-group id, so the same input
+     * always yields the same plan. A merged-away source is removed from consideration as a
+     * destination in the same pass, so two thin groups never propose absorbing each other.
+     *
+     * @param subgroupMembers sub-group id -> that sub-group's member ids. The member ids are
+     *                        needed (unlike {@link #planFor}) because a merge moves specific
+     *                        people, not a count.
+     * @param targetSize      the per-sub-group ceiling a merge must not breach, same meaning as in
+     *                        {@link #planFor}.
+     * @return a {@link Plan} whose assignments move every member of each merged source into its
+     *         destination. Empty if nothing should move.
+     */
+    public static Plan planMerges(Map<Integer, List<Long>> subgroupMembers, int targetSize) {
+        List<String> notes = new ArrayList<>();
+        List<Assignment> assignments = new ArrayList<>();
+
+        SortedMap<Integer, List<Long>> groups = new TreeMap<>();
+        if (subgroupMembers != null) {
+            for (Map.Entry<Integer, List<Long>> e : subgroupMembers.entrySet()) {
+                if (e.getValue() != null && !e.getValue().isEmpty()) {
+                    groups.put(e.getKey(), new ArrayList<>(e.getValue()));
+                }
+            }
+        }
+
+        if (groups.size() < 2) {
+            notes.add("Fewer than two sub-groups exist; nothing to merge.");
+            return new Plan(assignments, notes);
+        }
+
+        // Smallest source first, ascending id to break ties. Collected up front so the live sizes
+        // below can change underneath us without disturbing the order we consider sources in.
+        List<Integer> sources = new ArrayList<>();
+        for (Map.Entry<Integer, List<Long>> e : groups.entrySet()) {
+            if (e.getValue().size() <= MERGE_THRESHOLD) {
+                sources.add(e.getKey());
+            }
+        }
+        sources.sort((a, b) -> {
+            int bySize = Integer.compare(groups.get(a).size(), groups.get(b).size());
+            return bySize != 0 ? bySize : Integer.compare(a, b);
+        });
+
+        if (sources.isEmpty()) {
+            notes.add("No sub-group is at or below " + MERGE_THRESHOLD + " members; nothing to merge.");
+            return new Plan(assignments, notes);
+        }
+
+        Set<Integer> dissolved = new LinkedHashSet<>();
+        for (Integer sourceId : sources) {
+            if (dissolved.contains(sourceId)) {
+                continue;
+            }
+            List<Long> movers = groups.get(sourceId);
+            Integer destinationId = null;
+            for (Map.Entry<Integer, List<Long>> candidate : groups.entrySet()) {
+                int candidateId = candidate.getKey();
+                if (candidateId == sourceId || dissolved.contains(candidateId)) {
+                    continue;
+                }
+                if (candidate.getValue().size() + movers.size() <= targetSize) {
+                    destinationId = candidateId;
+                    break;
+                }
+            }
+
+            if (destinationId == null) {
+                notes.add("Sub-group " + sourceId + " has only " + movers.size()
+                        + " member(s), but no other sub-group has room for all of them without "
+                        + "exceeding " + targetSize + "; left as-is.");
+                continue;
+            }
+
+            for (Long memberId : movers) {
+                assignments.add(new Assignment(memberId, destinationId, false));
+            }
+            groups.get(destinationId).addAll(movers);
+            dissolved.add(sourceId);
+            notes.add("Sub-group " + sourceId + " (" + movers.size()
+                    + " member(s)) folds into sub-group " + destinationId + ", which becomes "
+                    + groups.get(destinationId).size() + "/" + targetSize + ".");
         }
 
         return new Plan(assignments, notes);

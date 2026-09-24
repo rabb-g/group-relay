@@ -223,6 +223,10 @@
     <string name="action_send_rosters">שלח רשימות תת-קבוצה</string>
     <string name="roster_queued">רשימות נשלחו ל-%1$d תת-קבוצות.</string>
     <string name="roster_none">אין תת-קבוצות לשליחת רשימה.</string>
+    <string name="action_merge_subgroups">מזג תת-קבוצות קטנות</string>
+    <string name="merge_dialog_title">מיזוג תת-קבוצות קטנות</string>
+    <string name="merge_apply_action">מזג</string>
+    <string name="merge_none">אין תת-קבוצה קטנה מספיק למיזוג, או שאין מקום באף אחת אחרת.</string>
     <string name="error_group_delivery_no_subgroups">שייך תחילה חברים לתת-קבוצות, במסך החברים.</string>
 
     <string name="checkbox_added_reporting_enabled">הודעה לקבוצה כשמתווסף חבר</string>

@@ -223,6 +223,10 @@
     <string name="action_send_rosters">שיק ווינקל-גרופע רשימות</string>
     <string name="roster_queued">רשימות געשיקט פאר %1$d ווינקל-גרופעס.</string>
     <string name="roster_none">קיין ווינקל-גרופעס צו שיקן א רשימה.</string>
+    <string name="action_merge_subgroups">צוזאמענשטעלן קליינע ווינקל-גרופעס</string>
+    <string name="merge_dialog_title">צוזאמענשטעלן קליינע ווינקל-גרופעס</string>
+    <string name="merge_apply_action">צוזאמענשטעלן</string>
+    <string name="merge_none">קיין ווינקל-גרופע איז ניט קליין גענוג, אדער קיינער האט ניט קיין פלאץ.</string>
     <string name="error_group_delivery_no_subgroups">צוטייל צוערשט מיטגלידער אין ווינקל-גרופעס, אויףן מיטגלידער-שירים.</string>
 
     <string name="checkbox_added_reporting_enabled">מודעה צו דער גרופע ווען א מיטגליד ווערט צוגעלייגט</string>
