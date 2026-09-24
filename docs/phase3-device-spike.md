@@ -4,6 +4,43 @@ Read `jrelay-handoff.md`'s Phase 3 section before running this. This procedure e
 
 ---
 
+## 0. RESULT — H1 PASSED, 2026-09-23
+
+**A non-default SMS app holding only `SEND_SMS` sent a multi-recipient MMS, and it arrived as ONE
+GROUP THREAD on every recipient — including a flip phone.**
+
+Host: Samsung SM-F711U (Galaxy Z Flip 3), Android 15 / API 35, AT&T, LTE/VoLTE.
+Harness: `../mms-spike`, package `com.sh7411usa.mmsspike`, `SEND_SMS` as its only permission.
+
+Evidence:
+- PDU composed at 147 bytes with **two separate `0x97` To headers** in one `m-send-req` — the
+  construction the whole question turns on. Full annotated hex dump captured in logcat before
+  sending, and the same composer's output was independently verified byte-by-byte against
+  WSP/MMS encapsulation by compiling and running it on the desktop.
+- `sendMultimediaMessage()` returned without throwing, and the `sentIntent` broadcast came back
+  **`resultCode = -1 (RESULT_OK)`**. We did not rely on "the call didn't throw" — this is the real
+  asynchronous result.
+- **Both recipients received a single group thread**, confirmed by looking at the handsets. This
+  is the observation that actually settles H1; RESULT_OK alone only proves the platform accepted
+  and dispatched it.
+
+**What this unlocks:** delivery to sub-groups instead of individuals. A post to ~100 members at
+9 per sub-group becomes roughly **12 sends instead of 99** — about an 8x reduction, and larger
+than coalescing, salting and pacing put together. Against a ~1,000/day CTIA ceiling that is the
+difference between roughly 10 posts a day and roughly 90.
+
+**Still open: H2** (can a non-default app read an inbound group-MMS reply back out of
+`content://mms`?). Without it, member replies land in the stock Messages app and never reach the
+group, and Phase 3 is send-only — useful but half a feature. Procedure in §4; it needs no app
+code, only `adb shell content query` against a real inbound reply.
+
+Note for whoever builds Phase 3: the harness deliberately does NOT vendor AOSP's
+`PduComposer`/`SendReq`/`PduHeaders` hierarchy. `mms-spike/.../pdu/MmsPduWriter.java` hand-rolls
+the ~147 bytes this message needs in ~255 commented lines. That file is a working, verified
+starting point for the real implementation.
+
+---
+
 ## 1. What we are proving and why it matters
 
 Phase 3's entire value proposition — 12 sends instead of 100 for a 100-member group — depends on one text-only MMS reaching an entire sub-group as a single carrier-level delivery, and on jRelay being able to read replies back out of Android's MMS content provider without ever becoming the default SMS app (a role it deliberately avoids so the stock Messages app can keep doing MMS download/storage duty). Both of those are assumptions, not verified facts. Two things could each independently sink the phase:
