@@ -452,4 +452,4 @@ The same text is bundled in the app itself (`app/src/main/assets/license.html`) 
 ./gradlew assembleDebug
 ```
 
-Requires Android SDK with `compileSdk 36` / `minSdk 24`. See `VERSION.md` for the full change history.
+Requires Android SDK with `compileSdk 36` / `minSdk 24`. See the commit history for changes.
