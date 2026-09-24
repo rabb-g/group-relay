@@ -19,12 +19,20 @@ import java.util.TreeSet;
  *
  * <p><b>Why "participants minus exactly one element":</b> the relay phone's own number is
  * unknown to the app, but it is guaranteed to be exactly one of the inbound participants (the
- * relay only ever sees MMS on threads it is part of). So the candidate signatures are the full
- * participant set (covers the case where, for whatever reason, the relay's number is not among
- * the addresses handed to us) and every "remove one participant" subset (covers the normal case,
- * where removing the relay's own number should reproduce exactly the signature jRelay recorded
- * when it created the thread). Removing more than one, or fewer than what the recorded signature
- * needs, is never attempted: {@link #match} only trusts an EXACT signature hit.
+ * relay only ever sees MMS on threads it is part of). So the candidates are every "remove exactly
+ * one participant" subset: removing the relay's own number reproduces exactly the signature
+ * jRelay recorded when it created the thread. Removing more than one is never attempted, and
+ * {@link #match} only trusts an EXACT signature hit.
+ *
+ * <p><b>The full, un-reduced participant set is deliberately NOT a candidate.</b> Verified on the
+ * target device (2026-09-24, Galaxy Z Flip3, stock Samsung Messages): every inbound group MMS
+ * lists the relay's own number among its TO addresses. A genuine thread therefore always has
+ * exactly one extra. Accepting the full set as well would add nothing for a real thread, and it
+ * would open a leak: a private chat of one whole sub-group plus one outsider (a spouse, say),
+ * which does include the relay, reduces to "sub-group + outsider" and misses; but if the relay were
+ * ever absent from the list, the same chat would reduce to exactly the sub-group and be broadcast
+ * to everyone. If a future device is found that omits the relay's own number, the fix is to learn
+ * that number, not to accept the full set.
  *
  * <p><b>Why this stops broadcast leakage:</b> the design rule is that a message is bridged only
  * if its participant set is exactly a set jRelay itself sent to, optionally plus one extra (the
@@ -81,9 +89,9 @@ public final class ThreadMatcher {
      * Determines which sub-group (if any) an inbound group MMS belongs to.
      *
      * <p>Participants = {@code {sender} ∪ recipients}, normalized and de-duplicated. Candidates
-     * are tried in this order: {@code signature(participants)} itself, then
-     * {@code signature(participants minus exactly one element)} for each element, iterating
-     * elements in sorted order. A candidate is a hit only if {@code lookup.subgroupFor(candidate)}
+     * are {@code signature(participants minus exactly one element)} for each element, iterating
+     * elements in sorted order. The full participant set is never itself a candidate (see the
+     * class javadoc). A candidate is a hit only if {@code lookup.subgroupFor(candidate)}
      * is non-null AND the candidate's participant set still contains the normalized sender (a
      * sender cannot match a thread it has been removed from). If every hit agrees on one
      * sub-group id, that sub-group is returned (with the first hit's signature); if there are no
@@ -115,7 +123,6 @@ public final class ThreadMatcher {
         }
 
         List<List<String>> candidateSets = new ArrayList<>();
-        candidateSets.add(new ArrayList<>(participants));
         for (String toRemove : participants) {
             List<String> subset = new ArrayList<>(participants);
             subset.remove(toRemove);
