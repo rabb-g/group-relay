@@ -180,7 +180,9 @@ public class CommandProcessor {
         memberRepository.softRemove(sender.id);
         String groupName = prefs.getGroupName();
         reply(sender, context.getString(R.string.tpl_removed_you, groupName));
-        broadcastExcept(sender.id, context.getString(R.string.tpl_left_other, sender.nickname));
+        if (prefs.isNotifyMemberLeftEnabled()) {
+            broadcastExcept(sender.id, context.getString(R.string.tpl_left_other, sender.nickname));
+        }
     }
 
     private void handleList(Member requester) {
@@ -217,14 +219,19 @@ public class CommandProcessor {
         String oldNickname = sender.nickname;
         memberRepository.setNickname(sender.id, newNickname);
         reply(sender, context.getString(R.string.tpl_name_changed_confirm, newNickname));
-        broadcastExcept(sender.id, context.getString(R.string.tpl_name_changed_self_other, oldNickname, newNickname));
+        if (prefs.isNotifyNameChangedEnabled()) {
+            broadcastExcept(sender.id, context.getString(R.string.tpl_name_changed_self_other, oldNickname, newNickname));
+        }
     }
 
     /** Renames a member from the app UI and notifies the rest of the group. changedByLabel is typically "An Admin". */
     public void renameMemberFromApp(Member target, String newNickname, String changedByLabel) {
         String oldNickname = target.nickname;
         memberRepository.setNickname(target.id, newNickname);
-        broadcastExcept(target.id, context.getString(R.string.tpl_name_changed_admin_other, changedByLabel, oldNickname, newNickname));
+        enqueue(target, context.getString(R.string.tpl_name_changed_confirm, newNickname), "SYSTEM");
+        if (prefs.isNotifyNameChangedEnabled()) {
+            broadcastExcept(target.id, context.getString(R.string.tpl_name_changed_admin_other, changedByLabel, oldNickname, newNickname));
+        }
         SmsSendService.start(context);
     }
 
@@ -277,6 +284,14 @@ public class CommandProcessor {
         if (existing != null && existing.active) {
             reply(sender, context.getString(R.string.error_duplicate_number));
             return;
+        }
+        int maxMembers = prefs.getMaxMembers();
+        if (maxMembers > 0) {
+            int activeCount = memberRepository.countActiveMembers();
+            if (activeCount >= maxMembers) {
+                reply(sender, context.getString(R.string.tpl_group_full_admin, activeCount, maxMembers));
+                return;
+            }
         }
         addMember(normalized, nickname, sender.nickname);
     }
@@ -373,7 +388,9 @@ public class CommandProcessor {
         memberRepository.softRemove(target.id);
         String groupName = prefs.getGroupName();
         enqueue(target, context.getString(R.string.tpl_removed_you, groupName), "SYSTEM");
-        broadcastExcept(target.id, context.getString(R.string.tpl_removed_other, removedByLabel, target.nickname));
+        if (prefs.isNotifyMemberRemovedEnabled()) {
+            broadcastExcept(target.id, context.getString(R.string.tpl_removed_other, removedByLabel, target.nickname));
+        }
         SmsSendService.start(context);
     }
 
@@ -396,8 +413,10 @@ public class CommandProcessor {
      */
     public void changeGroupName(String newName, String changedByLabel, long excludeId) {
         prefs.setGroupName(newName);
-        String message = context.getString(R.string.tpl_group_name_changed, changedByLabel, newName);
-        broadcastExcept(excludeId, message, "SYSTEM");
+        if (prefs.isNotifyGroupRenamedEnabled()) {
+            String message = context.getString(R.string.tpl_group_name_changed, changedByLabel, newName);
+            broadcastExcept(excludeId, message, "SYSTEM");
+        }
         SmsSendService.start(context);
     }
 
@@ -478,21 +497,23 @@ public class CommandProcessor {
      */
     public void setGroupMode(Prefs.GroupMode newMode, String changedByLabel, long excludeId) {
         prefs.setGroupMode(newMode);
-        int changeNoticeRes;
-        switch (newMode) {
-            case ANNOUNCEMENT:
-                changeNoticeRes = R.string.tpl_mode_changed_announcement;
-                break;
-            case REPLY:
-                changeNoticeRes = R.string.tpl_mode_changed_reply;
-                break;
-            case GROUP:
-            default:
-                changeNoticeRes = R.string.tpl_mode_changed_group;
-                break;
+        if (prefs.isNotifyModeChangedEnabled()) {
+            int changeNoticeRes;
+            switch (newMode) {
+                case ANNOUNCEMENT:
+                    changeNoticeRes = R.string.tpl_mode_changed_announcement;
+                    break;
+                case REPLY:
+                    changeNoticeRes = R.string.tpl_mode_changed_reply;
+                    break;
+                case GROUP:
+                default:
+                    changeNoticeRes = R.string.tpl_mode_changed_group;
+                    break;
+            }
+            String changeNotice = context.getString(changeNoticeRes, changedByLabel);
+            broadcastExcept(excludeId, changeNotice, "SYSTEM");
         }
-        String changeNotice = context.getString(changeNoticeRes, changedByLabel);
-        broadcastExcept(excludeId, changeNotice, "SYSTEM");
         SmsSendService.start(context);
     }
 
@@ -525,6 +546,14 @@ public class CommandProcessor {
         String nickname = stripLeadingWord(text).trim();
         if (nickname.isEmpty()) {
             nickname = MessageSalt.localDigits(senderE164);
+        }
+
+        int maxMembers = prefs.getMaxMembers();
+        if (maxMembers > 0 && memberRepository.countActiveMembers() >= maxMembers) {
+            // Refuse before either path below, so a full group doesn't spam admins with join
+            // requests they can't approve (REQUIRE_APPROVAL) or silently overfill (ALLOW).
+            replyToNumber(senderE164, prefs.getGroupFullMessage());
+            return;
         }
 
         if (policy == Prefs.JoinPolicy.ALLOW) {

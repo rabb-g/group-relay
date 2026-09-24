@@ -70,6 +70,7 @@
     <string name="csv_import_report_usual">געוויינטליך (מודעה צו אלעמען, ווי מ\'לייגט צו איינציקווייז)</string>
     <string name="csv_import_report_streamlined">פארקירצט (זאָגן די אלטע מיטגלידער נאר ווי פיל האבן זיך אנגעשלאסן)</string>
     <string name="csv_import_report_none">אָן מודעה (צולייגן שטיל)</string>
+    <string name="toast_import_hit_limit">די גרופע איז פול. %d שורות זענען נישט אימפּאָרטירט געוואָרן.</string>
 
     <!-- Add Member -->
     <string name="add_member_title">צולייגן א מיטגליד</string>
@@ -247,6 +248,22 @@
     <string name="action_apply_to_non_customized">שטעלן נאר אויף מיטגלידער אָן א באזונדער גרענעץ</string>
     <string name="individual_limit_applied">געשטעלט אויף %1$d מיטגלידער.</string>
 
+    <string name="settings_section_capacity">גרופעס קיבולת</string>
+    <string name="label_max_members">מאקסימום מיטגלידער (0 = אָן א גרענעץ)</string>
+    <string name="max_members_desc">די מערסטע אקטיווע מיטגלידער וואס די גרופע וועט האלטן. ווען זי איז פול, יעדער וואס שרייבט צו זיך אנשליסן באקומט די ידיעה אונטן. 0 מיינט אָן א גרענעץ.</string>
+    <string name="label_group_full_message">ידיעה ווען די גרופע איז פול</string>
+    <string name="group_full_message_desc">ווערט אויטאמאטיש געשיקט צו יעדן וואס פרובירט זיך אנצושליסן צו א פולע גרופע. לאזט ליידיג כדי צו נוצן דעם ברירת-מחדל נוסח.</string>
+    <string name="capacity_saved">די קיבולת-אײנשטעלונגען זענען אָפּגעהיט געוואָרן.</string>
+
+    <string name="settings_section_notices">מודעות פאר דער גרופע</string>
+    <string name="notices_desc">יעדע פון די מודעות ווערט געשיקט צו יעדן מיטגליד פון דער גרופע. ביי 100 מיטגלידער איז דאס 100 ידיעות פאר יעדן געשעעניש, קעגן אייער טעגליכע גרענעץ. דער וואס עס איז ספעציעל וועגן אים ווערט תמיד געזאגט אזוי צי אזוי.</string>
+    <string name="label_notify_member_left">מודעה ווען עמעצער פארלאזט</string>
+    <string name="label_notify_name_changed">מודעה וועגן צונאמען-בייטן</string>
+    <string name="label_notify_member_removed">מודעה ווען אן אדמין נעמט ארויס עמעצן</string>
+    <string name="label_notify_group_renamed">מודעה וועגן נאמען-בייטן פון דער גרופע</string>
+    <string name="label_notify_mode_changed">מודעה וועגן מאדוס-בייטן</string>
+    <string name="notices_saved">די מודעה-אײנשטעלונגען זענען אָפּגעהיט געוואָרן.</string>
+
     <string name="rate_limit_system_section">Android\'ס גרענעץ פאר ארויסגייענדיקע ידיעות</string>
     <string name="rate_limit_system_desc">Android אליין וואָרנט/פארמאכט אן אפליקאציע וואס שיקט צופיל ידיעות צו גיך. דאס זענען די סיסטעם-שיעורים.</string>
     <string name="label_system_max_count">מאקסימום ידיעות איידער א וואָרענונג</string>
@@ -319,6 +336,9 @@
     <string name="tpl_left_other">%1$s האט פארלאזט די גרופע.</string>
     <string name="tpl_last_admin_refused">איר זענט דער איינציקער אדמין. מאכט עמעצער אנדערש אן אדמין פון דער אפליקאציע איידער איר פארלאזט די גרופע.</string>
     <string name="tpl_muted_confirm">איר זענט יעצט פארשטומט. ענטפערט #unmute כדי ווידער צו באקומען ידיעות.</string>
+    <string name="tpl_group_full_default">די גרופע האט שוין די מאקסימאלע צאל מיטגלידער. פרובירט שפעטער.</string>
+    <string name="tpl_group_full_admin">די גרופע איז פול (%1$d פון %2$d מיטגלידער). פארגרעסערט די מיטגלידער-גרענעץ אין אײנשטעלונגען כדי צוצולייגן מער.</string>
+    <string name="tpl_capacity_status">איר האט %d אקטיווע מיטגלידער.</string>
     <string name="tpl_unmuted_confirm">דער שטום איז אָפּגענומען געוואָרן. איר וועט ווידער באקומען ידיעות.</string>
     <string name="tpl_name_changed_confirm">אייער נאמען איז געביטן געוואָרן צו %1$s.</string>
     <string name="tpl_name_changed_self_other">%1$s האט געביטן זיין/איר נאמען צו %2$s.</string>

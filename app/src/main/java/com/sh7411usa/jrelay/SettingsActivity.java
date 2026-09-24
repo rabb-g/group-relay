@@ -124,9 +124,21 @@ public class SettingsActivity extends BaseActivity {
     // Delivery shuffle
     private CheckBox deliveryShuffleCheckbox;
 
-    // Member reporting / Join requests
+    // Group Notices
     private CheckBox addedReportingEnabledCheckbox;
+    private CheckBox notifyMemberLeftCheckbox;
+    private CheckBox notifyNameChangedCheckbox;
+    private CheckBox notifyMemberRemovedCheckbox;
+    private CheckBox notifyGroupRenamedCheckbox;
+    private CheckBox notifyModeChangedCheckbox;
+
+    // Join requests
     private Spinner joinPolicySpinner;
+
+    // Group Capacity
+    private EditText maxMembersInput;
+    private EditText groupFullMessageInput;
+    private TextView capacityStatusView;
 
     // Message content / Salting
     private CheckBox appendSenderNumberCheckbox;
@@ -180,6 +192,7 @@ public class SettingsActivity extends BaseActivity {
         loadSystemSettings();
         updateClearHistoryButtonLabel();
         refreshGroupDailyLimitStatus();
+        refreshCapacityStatus();
         pauseStatusHandler.post(pauseStatusTick);
     }
 
@@ -237,7 +250,16 @@ public class SettingsActivity extends BaseActivity {
         deliveryShuffleCheckbox = findViewById(R.id.checkbox_delivery_shuffle);
 
         addedReportingEnabledCheckbox = findViewById(R.id.checkbox_added_reporting_enabled);
+        notifyMemberLeftCheckbox = findViewById(R.id.checkbox_notify_member_left);
+        notifyNameChangedCheckbox = findViewById(R.id.checkbox_notify_name_changed);
+        notifyMemberRemovedCheckbox = findViewById(R.id.checkbox_notify_member_removed);
+        notifyGroupRenamedCheckbox = findViewById(R.id.checkbox_notify_group_renamed);
+        notifyModeChangedCheckbox = findViewById(R.id.checkbox_notify_mode_changed);
         joinPolicySpinner = findViewById(R.id.spinner_join_policy);
+
+        maxMembersInput = findViewById(R.id.edit_max_members);
+        groupFullMessageInput = findViewById(R.id.edit_group_full_message);
+        capacityStatusView = findViewById(R.id.text_capacity_status);
 
         appendSenderNumberCheckbox = findViewById(R.id.checkbox_append_sender_number);
         stripPhoneNumbersCheckbox = findViewById(R.id.checkbox_strip_phone_numbers);
@@ -307,7 +329,16 @@ public class SettingsActivity extends BaseActivity {
         deliveryShuffleCheckbox.setChecked(prefs.isDeliveryShuffleEnabled());
 
         addedReportingEnabledCheckbox.setChecked(prefs.isAddedReportingEnabled());
+        notifyMemberLeftCheckbox.setChecked(prefs.isNotifyMemberLeftEnabled());
+        notifyNameChangedCheckbox.setChecked(prefs.isNotifyNameChangedEnabled());
+        notifyMemberRemovedCheckbox.setChecked(prefs.isNotifyMemberRemovedEnabled());
+        notifyGroupRenamedCheckbox.setChecked(prefs.isNotifyGroupRenamedEnabled());
+        notifyModeChangedCheckbox.setChecked(prefs.isNotifyModeChangedEnabled());
         joinPolicySpinner.setSelection(prefs.getJoinPolicy().ordinal());
+
+        maxMembersInput.setText(String.valueOf(prefs.getMaxMembers()));
+        groupFullMessageInput.setText(prefs.getGroupFullMessage());
+        refreshCapacityStatus();
 
         appendSenderNumberCheckbox.setChecked(prefs.isAppendSenderNumberEnabled());
         stripPhoneNumbersCheckbox.setChecked(prefs.isStripPhoneNumbersEnabled());
@@ -344,6 +375,8 @@ public class SettingsActivity extends BaseActivity {
         findViewById(R.id.button_save_commands).setOnClickListener(v -> saveCommandsSettings());
         findViewById(R.id.button_save).setOnClickListener(v -> savePacingSettings());
         findViewById(R.id.button_save_reporting).setOnClickListener(v -> saveReportingSettings());
+        findViewById(R.id.button_save_notices).setOnClickListener(v -> saveNoticesSettings());
+        findViewById(R.id.button_save_capacity).setOnClickListener(v -> saveCapacitySettings());
         findViewById(R.id.button_save_content).setOnClickListener(v -> saveContentSettings());
         findViewById(R.id.button_save_failures).setOnClickListener(v -> saveFailureSettings());
         findViewById(R.id.button_save_group_limit).setOnClickListener(v -> saveGroupLimitSettings());
@@ -536,9 +569,32 @@ public class SettingsActivity extends BaseActivity {
     }
 
     private void saveReportingSettings() {
-        prefs.setAddedReportingEnabled(addedReportingEnabledCheckbox.isChecked());
         prefs.setJoinPolicy(Prefs.JoinPolicy.values()[joinPolicySpinner.getSelectedItemPosition()]);
         Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
+    }
+
+    private void saveNoticesSettings() {
+        prefs.setAddedReportingEnabled(addedReportingEnabledCheckbox.isChecked());
+        prefs.setNotifyMemberLeftEnabled(notifyMemberLeftCheckbox.isChecked());
+        prefs.setNotifyNameChangedEnabled(notifyNameChangedCheckbox.isChecked());
+        prefs.setNotifyMemberRemovedEnabled(notifyMemberRemovedCheckbox.isChecked());
+        prefs.setNotifyGroupRenamedEnabled(notifyGroupRenamedCheckbox.isChecked());
+        prefs.setNotifyModeChangedEnabled(notifyModeChangedCheckbox.isChecked());
+        Toast.makeText(this, R.string.notices_saved, Toast.LENGTH_SHORT).show();
+    }
+
+    private void saveCapacitySettings() {
+        int maxMembers = Math.max(0, parseOrDefault(maxMembersInput, prefs.getMaxMembers()));
+        prefs.setMaxMembers(maxMembers);
+        maxMembersInput.setText(String.valueOf(maxMembers));
+        prefs.setGroupFullMessage(groupFullMessageInput.getText().toString().trim());
+        refreshCapacityStatus();
+        Toast.makeText(this, R.string.capacity_saved, Toast.LENGTH_SHORT).show();
+    }
+
+    private void refreshCapacityStatus() {
+        int activeCount = memberRepository.countActiveMembers();
+        capacityStatusView.setText(getString(R.string.tpl_capacity_status, activeCount));
     }
 
     private void saveContentSettings() {

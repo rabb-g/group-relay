@@ -70,6 +70,7 @@
     <string name="csv_import_report_usual">Usual (notify everyone, like adding one at a time)</string>
     <string name="csv_import_report_streamlined">Streamlined (tell old members how many joined)</string>
     <string name="csv_import_report_none">No reporting (add silently)</string>
+    <string name="toast_import_hit_limit">The group is full. %d rows were not imported.</string>
 
     <!-- Add Member -->
     <string name="add_member_title">Add Member</string>
@@ -247,6 +248,22 @@
     <string name="action_apply_to_non_customized">Apply to Members Without a Custom Limit</string>
     <string name="individual_limit_applied">Applied to %1$d member(s).</string>
 
+    <string name="settings_section_capacity">Group Capacity</string>
+    <string name="label_max_members">Maximum members (0 = no limit)</string>
+    <string name="max_members_desc">The most active members the group will hold. When it is full, anyone texting to join gets the message below. 0 means no limit.</string>
+    <string name="label_group_full_message">Message when the group is full</string>
+    <string name="group_full_message_desc">Sent automatically to anyone who tries to join a full group. Leave empty to use the default wording.</string>
+    <string name="capacity_saved">Capacity settings saved.</string>
+
+    <string name="settings_section_notices">Group Notices</string>
+    <string name="notices_desc">Each of these texts every member of the group. At 100 members that is 100 messages per event, against your daily limit. The person directly affected is always told either way.</string>
+    <string name="label_notify_member_left">Announce when someone leaves</string>
+    <string name="label_notify_name_changed">Announce nickname changes</string>
+    <string name="label_notify_member_removed">Announce when an admin removes someone</string>
+    <string name="label_notify_group_renamed">Announce group name changes</string>
+    <string name="label_notify_mode_changed">Announce mode changes</string>
+    <string name="notices_saved">Notice settings saved.</string>
+
     <string name="rate_limit_system_section">Android Outgoing SMS Limit</string>
     <string name="rate_limit_system_desc">Android itself warns/blocks an app that sends too many texts too quickly. These are the system-wide thresholds.</string>
     <string name="label_system_max_count">Max messages before warning</string>
@@ -319,6 +336,9 @@
     <string name="tpl_left_other">%1$s left the group.</string>
     <string name="tpl_last_admin_refused">You are the only admin. Make someone else an admin from the app before leaving the group.</string>
     <string name="tpl_muted_confirm">You are now muted. Reply #unmute to resume receiving messages.</string>
+    <string name="tpl_group_full_default">Sorry, this group has reached its maximum capacity. Please try again later.</string>
+    <string name="tpl_group_full_admin">The group is full (%1$d of %2$d members). Raise the member limit in Settings to add more.</string>
+    <string name="tpl_capacity_status">You have %d active members.</string>
     <string name="tpl_unmuted_confirm">You are now unmuted. You will resume receiving messages.</string>
     <string name="tpl_name_changed_confirm">Your name has been changed to %1$s.</string>
     <string name="tpl_name_changed_self_other">%1$s changed their name to %2$s.</string>

@@ -3,6 +3,8 @@ package com.sh7411usa.jrelay.util;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.sh7411usa.jrelay.R;
+
 public class Prefs {
 
     public enum BurstMode { RANDOM_RANGE, FIXED, ALL_AT_ONCE }
@@ -69,6 +71,20 @@ public class Prefs {
     private static final String KEY_THEME_CHOICE = "theme_choice";
 
     private static final String KEY_ADDED_REPORTING_ENABLED = "added_reporting_enabled";
+
+    // These gate GROUP-WIDE announcements only — the member directly affected by an
+    // action is always notified regardless of these settings.
+    // NOTE: notify_member_left / notify_name_changed / notify_member_removed /
+    // notify_group_renamed default to false, which CHANGES existing behaviour for
+    // anyone upgrading (these announcements previously always fired). This is the
+    // owner's explicit intent: at ~100 members these broadcasts were burning through
+    // a ~1,000/day SMS ceiling on messages that carry no real conversation.
+    private static final String KEY_NOTIFY_MEMBER_LEFT = "notify_member_left";
+    private static final String KEY_NOTIFY_NAME_CHANGED = "notify_name_changed";
+    private static final String KEY_NOTIFY_MEMBER_REMOVED = "notify_member_removed";
+    private static final String KEY_NOTIFY_GROUP_RENAMED = "notify_group_renamed";
+    private static final String KEY_NOTIFY_MODE_CHANGED = "notify_mode_changed";
+
     private static final String KEY_GROUP_MODE = "group_mode";
     private static final String KEY_JOIN_POLICY = "join_policy";
     private static final String KEY_PAUSE_UNTIL_MILLIS = "pause_until_millis";
@@ -79,6 +95,9 @@ public class Prefs {
 
     private static final String KEY_COALESCE_WINDOW_SECONDS = "coalesce_window_seconds";
     private static final String KEY_MAX_MERGED_SEGMENTS = "max_merged_segments";
+
+    private static final String KEY_MAX_MEMBERS = "max_members";
+    private static final String KEY_GROUP_FULL_MESSAGE = "group_full_message";
 
     private static final String DEFAULT_GROUP_NAME = "jRelay";
     private static final int DEFAULT_BURST_MIN = 3;
@@ -102,10 +121,12 @@ public class Prefs {
     private static final int DEFAULT_COALESCE_WINDOW_SECONDS = 45;
     private static final int DEFAULT_MAX_MERGED_SEGMENTS = 3;
 
+    private final Context appContext;
     private final SharedPreferences prefs;
 
     public Prefs(Context context) {
-        prefs = context.getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        appContext = context.getApplicationContext();
+        prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 
     public boolean isConsentAccepted() {
@@ -387,6 +408,57 @@ public class Prefs {
         prefs.edit().putBoolean(KEY_ADDED_REPORTING_ENABLED, enabled).apply();
     }
 
+    /** Whether a member leaving the group sends a group-wide announcement. */
+    public boolean isNotifyMemberLeftEnabled() {
+        return prefs.getBoolean(KEY_NOTIFY_MEMBER_LEFT, false);
+    }
+
+    public void setNotifyMemberLeftEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_NOTIFY_MEMBER_LEFT, enabled).apply();
+    }
+
+    /** Whether a member's nickname change sends a group-wide announcement. */
+    public boolean isNotifyNameChangedEnabled() {
+        return prefs.getBoolean(KEY_NOTIFY_NAME_CHANGED, false);
+    }
+
+    public void setNotifyNameChangedEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_NOTIFY_NAME_CHANGED, enabled).apply();
+    }
+
+    /** Whether removing a member sends a group-wide announcement. */
+    public boolean isNotifyMemberRemovedEnabled() {
+        return prefs.getBoolean(KEY_NOTIFY_MEMBER_REMOVED, false);
+    }
+
+    public void setNotifyMemberRemovedEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_NOTIFY_MEMBER_REMOVED, enabled).apply();
+    }
+
+    /** Whether renaming the group sends a group-wide announcement. */
+    public boolean isNotifyGroupRenamedEnabled() {
+        return prefs.getBoolean(KEY_NOTIFY_GROUP_RENAMED, false);
+    }
+
+    public void setNotifyGroupRenamedEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_NOTIFY_GROUP_RENAMED, enabled).apply();
+    }
+
+    /**
+     * Whether a group-mode change sends a group-wide announcement. Defaults to true,
+     * unlike the other four notify_* settings: in Reply Mode a plain reply reaches only
+     * the last poster, and members must prefix #all to reach everyone. If nobody is
+     * told the mode changed, their next message silently goes to one person instead of
+     * the whole group — this announcement is the only thing preventing that.
+     */
+    public boolean isNotifyModeChangedEnabled() {
+        return prefs.getBoolean(KEY_NOTIFY_MODE_CHANGED, true);
+    }
+
+    public void setNotifyModeChangedEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_NOTIFY_MODE_CHANGED, enabled).apply();
+    }
+
     public GroupMode getGroupMode() {
         return parseEnum(prefs.getString(KEY_GROUP_MODE, null), GroupMode.class, GroupMode.GROUP);
     }
@@ -467,6 +539,28 @@ public class Prefs {
             return false;
         }
         return until == PAUSE_INDEFINITE || System.currentTimeMillis() < until;
+    }
+
+    /** Maximum number of members allowed in the group. 0 = unlimited. */
+    public int getMaxMembers() {
+        return prefs.getInt(KEY_MAX_MEMBERS, 0);
+    }
+
+    public void setMaxMembers(int max) {
+        prefs.edit().putInt(KEY_MAX_MEMBERS, max).apply();
+    }
+
+    /** Message sent to someone trying to join a full group. Falls back to the localised default when unset or blank. */
+    public String getGroupFullMessage() {
+        String stored = prefs.getString(KEY_GROUP_FULL_MESSAGE, null);
+        if (stored == null || stored.trim().isEmpty()) {
+            return appContext.getString(R.string.tpl_group_full_default);
+        }
+        return stored;
+    }
+
+    public void setGroupFullMessage(String message) {
+        prefs.edit().putString(KEY_GROUP_FULL_MESSAGE, message).apply();
     }
 
     private <E extends Enum<E>> E parseEnum(String stored, Class<E> type, E defaultValue) {

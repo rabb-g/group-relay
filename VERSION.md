@@ -1,5 +1,56 @@
 # Version History
 
+## 5.6 - Group Capacity, and an End to Announcement Spam
+
+Two features, both about the same thing: not spending your daily message budget on things that
+aren't conversation.
+
+- **Group Notices: every announcement is now individually switchable, and most are off.** Until
+  now, six ordinary events each sent a text to *every* member — someone leaving, a nickname
+  change (by them or by an admin), a removal, a group rename, and a mode change. At a hundred
+  members that is a hundred messages per event, none of it anyone's actual message, and they were
+  never merged with anything. Five admin actions in a day came to roughly five hundred texts, on a
+  line whose safe ceiling is about a thousand.
+  - There is now a **Group Notices** section in Settings with one switch per announcement. The
+    setting that already existed for "member added" has been moved in there too, so all six live
+    in one place instead of five being invisible and one being somewhere else.
+  - **Five of the six now default to off.** That is a deliberate change from how the app behaved
+    before, not an oversight.
+  - **Mode changes still announce by default, and that one is worth leaving alone.** In Reply Mode
+    a plain text reaches only the person whose post you are replying to — you have to write `#all`
+    in front of a message meant for everyone. If the mode changes and nobody is told, the next
+    message a member sends goes quietly to one person instead of the group, with nothing to
+    indicate it. That announcement is the only thing standing in the way of it.
+  - **Whoever an action actually happens to is always told, regardless of every switch above.** If
+    you are removed you hear about it; if your name changes you hear about it. Only the
+    group-wide announcement is affected. While wiring this up we found a case where that was not
+    true: an admin renaming someone from the app told nobody at all, not even the person renamed,
+    whose name then appeared differently on every message they sent. They are now told. That was
+    survivable when the group announcement always fired and they would have heard it second-hand;
+    with announcements off it would have been silent, so it is fixed here rather than left.
+- **A maximum group size, with an automatic reply when it is reached.** Set the number in Settings
+  → Group Capacity; 0 means no limit, which is how it ships, so nothing changes unless you ask for
+  it. The section also shows how many active members you currently have, so you are choosing a
+  number against a real one.
+  - Someone texting `#join` when the group is full gets an automatic reply and is not added. The
+    wording of that reply is yours to edit in Settings; leave the field empty and it falls back to
+    the built-in text.
+  - The refusal happens **before** admins are notified, so a full group does not send every admin
+    a request they have no way to accept.
+  - **The limit applies to admins too** — adding by text or in the app is refused the same way,
+    with a message naming the current count and the limit so it is obvious what to change.
+    A cap only admins can walk around is not a cap, and raising it is one screen away.
+  - **A CSV import fills up to the limit rather than failing.** Import 120 rows into a group
+    capped at 100 and you get 100 members, with the rest reported as skipped and a note saying the
+    group filled up — not an all-or-nothing rejection, and not a silent overfill.
+  - Only active members count. Somebody who left does not hold a seat, and re-adding a member who
+    is already in the group was never a new seat and still isn't.
+- Hebrew and Yiddish kept in sync with the eighteen new strings (346 in each of the three files).
+  The Hebrew and Yiddish "group is full" replies deliberately drop the English "Sorry" — partly to
+  fit inside a single message segment, and partly because none of the app's other outgoing texts
+  open with an apology.
+- Updated `README.md` and `VERSION.md`.
+
 ## 5.5 - Audit Fixes, Part One
 
 A full adversarial audit of the whole codebase found around sixty real problems (written up in

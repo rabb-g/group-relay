@@ -4,11 +4,13 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.sh7411usa.jrelay.db.MemberRepository;
 import com.sh7411usa.jrelay.model.Member;
 import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.PhoneNumberUtils;
+import com.sh7411usa.jrelay.util.Prefs;
 
 public class AddMemberActivity extends BaseActivity {
 
@@ -47,6 +49,15 @@ public class AddMemberActivity extends BaseActivity {
         if (existing != null && existing.active) {
             showError(R.string.error_duplicate_number);
             return;
+        }
+
+        int maxMembers = new Prefs(this).getMaxMembers();
+        if (maxMembers > 0) {
+            int activeCount = memberRepository.countActiveMembers();
+            if (activeCount >= maxMembers) {
+                Toast.makeText(this, getString(R.string.tpl_group_full_admin, activeCount, maxMembers), Toast.LENGTH_LONG).show();
+                return;
+            }
         }
 
         new CommandProcessor(this).addMember(normalized, nickname, getString(R.string.default_added_by_admin));

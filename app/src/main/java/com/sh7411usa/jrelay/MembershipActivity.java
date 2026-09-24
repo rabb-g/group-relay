@@ -22,6 +22,7 @@ import com.sh7411usa.jrelay.model.Member;
 import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.PhoneNumberUtils;
 import com.sh7411usa.jrelay.util.CsvUtil;
+import com.sh7411usa.jrelay.util.Prefs;
 import com.sh7411usa.jrelay.util.UiUtil;
 
 import java.io.BufferedReader;
@@ -168,6 +169,11 @@ public class MembershipActivity extends BaseActivity {
         Set<String> stagedPhones = new HashSet<>();
         int skipped = 0;
         boolean firstLine = true;
+
+        int maxMembers = new Prefs(this).getMaxMembers();
+        int runningCount = maxMembers > 0 ? memberRepository.countActiveMembers() : 0;
+        boolean hitLimit = false;
+
         try (InputStream in = getContentResolver().openInputStream(uri);
              BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
             String line;
@@ -199,11 +205,20 @@ public class MembershipActivity extends BaseActivity {
                     skipped++;
                     continue;
                 }
+                if (maxMembers > 0 && runningCount >= maxMembers) {
+                    hitLimit = true;
+                    skipped++;
+                    continue;
+                }
                 stagedPhones.add(normalized);
                 toImport.add(new String[]{normalized, nickname});
+                runningCount++;
             }
             int imported = commandProcessor.importMembers(toImport, getString(R.string.default_added_by_admin), mode);
             Toast.makeText(this, getString(R.string.import_summary, imported, skipped), Toast.LENGTH_LONG).show();
+            if (hitLimit) {
+                Toast.makeText(this, getString(R.string.tpl_group_full_admin, maxMembers, maxMembers), Toast.LENGTH_LONG).show();
+            }
             renderMembers();
         } catch (IOException e) {
             Toast.makeText(this, R.string.import_failed, Toast.LENGTH_LONG).show();

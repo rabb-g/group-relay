@@ -456,19 +456,19 @@
                 android:text="@string/checkbox_delivery_shuffle"
                 android:layout_marginBottom="28dp" />
 
-            <!-- Member Reporting -->
+            <!-- Group Notices -->
             <TextView
                 style="@style/TextAppearance.JRelay.Subtitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/section_member_reporting"
+                android:text="@string/settings_section_notices"
                 android:layout_marginBottom="4dp" />
 
             <TextView
                 style="@style/TextAppearance.JRelay.Caption"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/member_reporting_desc"
+                android:text="@string/notices_desc"
                 android:layout_marginBottom="8dp" />
 
             <CheckBox
@@ -477,6 +477,54 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/checkbox_added_reporting_enabled"
+                android:layout_marginBottom="8dp" />
+
+            <CheckBox
+                android:id="@+id/checkbox_notify_member_left"
+                style="@style/Widget.JRelay.CheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_notify_member_left"
+                android:layout_marginBottom="8dp" />
+
+            <CheckBox
+                android:id="@+id/checkbox_notify_name_changed"
+                style="@style/Widget.JRelay.CheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_notify_name_changed"
+                android:layout_marginBottom="8dp" />
+
+            <CheckBox
+                android:id="@+id/checkbox_notify_member_removed"
+                style="@style/Widget.JRelay.CheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_notify_member_removed"
+                android:layout_marginBottom="8dp" />
+
+            <CheckBox
+                android:id="@+id/checkbox_notify_group_renamed"
+                style="@style/Widget.JRelay.CheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_notify_group_renamed"
+                android:layout_marginBottom="8dp" />
+
+            <CheckBox
+                android:id="@+id/checkbox_notify_mode_changed"
+                style="@style/Widget.JRelay.CheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_notify_mode_changed"
+                android:layout_marginBottom="12dp" />
+
+            <Button
+                android:id="@+id/button_save_notices"
+                style="@style/Widget.JRelay.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_save"
                 android:layout_marginBottom="28dp" />
 
             <!-- Join Requests -->
@@ -510,6 +558,71 @@
 
             <Button
                 android:id="@+id/button_save_reporting"
+                style="@style/Widget.JRelay.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_save"
+                android:layout_marginBottom="28dp" />
+
+            <!-- Group Capacity -->
+            <TextView
+                style="@style/TextAppearance.JRelay.Subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_section_capacity"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_max_members" />
+
+            <EditText
+                android:id="@+id/edit_max_members"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/max_members_desc"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_group_full_message" />
+
+            <EditText
+                android:id="@+id/edit_group_full_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine|textCapSentences"
+                android:minLines="3"
+                android:gravity="top|start"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/group_full_message_desc"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/text_capacity_status"
+                style="@style/TextAppearance.JRelay.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp" />
+
+            <Button
+                android:id="@+id/button_save_capacity"
                 style="@style/Widget.JRelay.Button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

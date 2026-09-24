@@ -70,6 +70,7 @@
     <string name="csv_import_report_usual">רגיל (הודעה לכולם, כמו הוספה אחת בכל פעם)</string>
     <string name="csv_import_report_streamlined">מקוצר (לספר לחברים הוותיקים כמה הצטרפו)</string>
     <string name="csv_import_report_none">ללא דיווח (הוספה שקטה)</string>
+    <string name="toast_import_hit_limit">הקבוצה מלאה. %d שורות לא יובאו.</string>
 
     <!-- Add Member -->
     <string name="add_member_title">הוספת חבר</string>
@@ -247,6 +248,22 @@
     <string name="action_apply_to_non_customized">החלה על חברים ללא מגבלה מותאמת אישית</string>
     <string name="individual_limit_applied">הוחל על %1$d חברים.</string>
 
+    <string name="settings_section_capacity">קיבולת הקבוצה</string>
+    <string name="label_max_members">מספר חברים מרבי (0 = ללא הגבלה)</string>
+    <string name="max_members_desc">מספר החברים הפעילים המרבי שהקבוצה תכיל. כשהיא מלאה, כל מי ששולח הודעה כדי להצטרף יקבל את ההודעה שלהלן. 0 פירושו ללא הגבלה.</string>
+    <string name="label_group_full_message">הודעה כשהקבוצה מלאה</string>
+    <string name="group_full_message_desc">נשלחת אוטומטית לכל מי שמנסה להצטרף לקבוצה מלאה. השאירו ריק כדי להשתמש בנוסח ברירת המחדל.</string>
+    <string name="capacity_saved">הגדרות הקיבולת נשמרו.</string>
+
+    <string name="settings_section_notices">הודעות לקבוצה</string>
+    <string name="notices_desc">כל אחת מההודעות האלה נשלחת לכל חבר בקבוצה. עם 100 חברים זו 100 הודעות לכל אירוע, כנגד המגבלה היומית שלכם. מי שנוגע לו הדבר ישירות תמיד מקבל הודעה בכל מקרה.</string>
+    <string name="label_notify_member_left">הודעה כשמישהו עוזב</string>
+    <string name="label_notify_name_changed">הודעה על שינויי כינוי</string>
+    <string name="label_notify_member_removed">הודעה כשמנהל מסיר מישהו</string>
+    <string name="label_notify_group_renamed">הודעה על שינוי שם הקבוצה</string>
+    <string name="label_notify_mode_changed">הודעה על שינויי מצב</string>
+    <string name="notices_saved">הגדרות ההודעות נשמרו.</string>
+
     <string name="rate_limit_system_section">מגבלת המסרונים היוצאים של Android</string>
     <string name="rate_limit_system_desc">מערכת Android עצמה מזהירה/חוסמת אפליקציה ששולחת יותר מדי מסרונים מהר מדי. אלו הם הספים ברמת המערכת.</string>
     <string name="label_system_max_count">מספר הודעות מקסימלי לפני אזהרה</string>
@@ -319,6 +336,9 @@
     <string name="tpl_left_other">%1$s עזב/ה את הקבוצה.</string>
     <string name="tpl_last_admin_refused">את/ה המנהל/ת היחיד/ה. הפכו מישהו אחר למנהל/ת מהאפליקציה לפני שתעזבו את הקבוצה.</string>
     <string name="tpl_muted_confirm">את/ה מושתק/ת כעת. השיבו #unmute כדי לחדש קבלת הודעות.</string>
+    <string name="tpl_group_full_default">הקבוצה הגיעה למספר החברים המרבי. נסו שוב מאוחר יותר.</string>
+    <string name="tpl_group_full_admin">הקבוצה מלאה (%1$d מתוך %2$d חברים). הגדילו את מגבלת החברים בהגדרות כדי להוסיף עוד.</string>
+    <string name="tpl_capacity_status">יש לכם %d חברים פעילים.</string>
     <string name="tpl_unmuted_confirm">ההשתקה בוטלה. תחזור/י לקבל הודעות.</string>
     <string name="tpl_name_changed_confirm">שמך שונה ל-%1$s.</string>
     <string name="tpl_name_changed_self_other">%1$s שינה/תה את שמו/ה ל-%2$s.</string>

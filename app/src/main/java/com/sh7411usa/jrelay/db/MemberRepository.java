@@ -91,6 +91,23 @@ public class MemberRepository {
         return count;
     }
 
+    /**
+     * Count of active members, matching the same {@code active = 1} predicate as the other
+     * active-member queries. Backs the group capacity check (CommandProcessor#handleJoinRequest,
+     * #handleAdd) against {@code Prefs.getMaxMembers()}.
+     */
+    public int countActiveMembers() {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT COUNT(*) FROM " + DbHelper.TABLE_MEMBERS + " WHERE active = 1", null);
+        int count = 0;
+        if (c.moveToFirst()) {
+            count = c.getInt(0);
+        }
+        c.close();
+        return count;
+    }
+
     public List<Member> getActiveRecipientsExcept(long excludeId) {
         return query("active = 1 AND is_muted = 0 AND id != ?", new String[]{String.valueOf(excludeId)}, "created_at ASC");
     }
