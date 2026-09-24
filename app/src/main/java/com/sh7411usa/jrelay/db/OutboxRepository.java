@@ -287,6 +287,33 @@ public class OutboxRepository {
                 "status IN ('PENDING', 'SENDING', '" + STATUS_SEND_FAILED + "')", null);
     }
 
+    /**
+     * Unsent group rows addressed to any of the given sub-groups, using the same definition of
+     * "unsent" as {@link #countUnsent()}.
+     *
+     * <p>Exists to gate a sub-group merge. {@code SmsSendService#sendGroup} resolves a group row's
+     * recipients at SEND time from the sub-group's current membership, not at enqueue time. So if
+     * sub-group A is folded into B while a post for A is still queued, that row later finds A
+     * empty and is failed — the members who moved miss the post whenever B's copy has already
+     * gone, and the failure raises an admin alert that is itself an outgoing SMS. Refusing the
+     * merge until both ends have drained is far cheaper than any of that.
+     */
+    public int countUnsentForSubgroups(java.util.Collection<Long> subgroupIds) {
+        if (subgroupIds == null || subgroupIds.isEmpty()) {
+            return 0;
+        }
+        StringBuilder placeholders = new StringBuilder();
+        List<String> args = new ArrayList<>();
+        for (Long id : subgroupIds) {
+            placeholders.append(placeholders.length() == 0 ? "?" : ",?");
+            args.add(String.valueOf(id));
+        }
+        return (int) queryScalar("COUNT(*)",
+                "status IN ('PENDING', 'SENDING', '" + STATUS_SEND_FAILED + "') AND subgroup_id IN ("
+                        + placeholders + ")",
+                args.toArray(new String[0]));
+    }
+
     public int countPending() {
         return (int) queryScalar("COUNT(*)", "status = 'PENDING'", null);
     }

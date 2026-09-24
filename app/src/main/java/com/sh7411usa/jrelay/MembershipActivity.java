@@ -19,6 +19,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.sh7411usa.jrelay.db.MemberRepository;
+import com.sh7411usa.jrelay.db.OutboxRepository;
 import com.sh7411usa.jrelay.model.Member;
 import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.PhoneNumberUtils;
@@ -225,16 +226,32 @@ public class MembershipActivity extends BaseActivity {
                 .setTitle(R.string.merge_dialog_title)
                 .setMessage(getString(R.string.warning_subgroup_visibility) + "\n\n" + summary)
                 .setPositiveButton(R.string.merge_apply_action, (dialog, which) -> {
+                    // Both ends of every move, captured BEFORE any write: once assignSubgroup has
+                    // run there is no record of which group a member came from. The source is
+                    // re-rostered too, since its remaining members keep a list naming people who
+                    // are no longer in their thread.
                     java.util.LinkedHashSet<Long> affected = new java.util.LinkedHashSet<>();
                     for (SubgroupPlanner.Assignment a : plan.assignments) {
-                        // The source group the member is leaving is re-rostered too: its remaining
-                        // members keep a list naming people who are no longer in their thread.
                         Member before = memberRepository.findById(a.memberId);
                         if (before != null && before.subgroupId != null) {
                             affected.add(before.subgroupId);
                         }
-                        memberRepository.assignSubgroup(a.memberId, (long) a.subgroupId);
                         affected.add((long) a.subgroupId);
+                    }
+
+                    // Checked here, at the moment of confirmation, not when the dialog opened:
+                    // the queue can change while the admin is reading. A group row resolves its
+                    // recipients at send time, so merging while one is still queued for either end
+                    // empties the source under it -- see
+                    // OutboxRepository#countUnsentForSubgroups. Nothing has been written yet, so
+                    // refusing here leaves every member exactly where they were.
+                    if (new OutboxRepository(this).countUnsentForSubgroups(affected) > 0) {
+                        Toast.makeText(this, R.string.merge_blocked_pending, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    for (SubgroupPlanner.Assignment a : plan.assignments) {
+                        memberRepository.assignSubgroup(a.memberId, (long) a.subgroupId);
                     }
                     rosterAndDrain(affected);
                     renderMembers();

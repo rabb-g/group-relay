@@ -227,6 +227,7 @@
     <string name="merge_dialog_title">צוזאמענשטעלן קליינע ווינקל-גרופעס</string>
     <string name="merge_apply_action">צוזאמענשטעלן</string>
     <string name="merge_none">קיין ווינקל-גרופע איז ניט קליין גענוג, אדער קיינער האט ניט קיין פלאץ.</string>
+    <string name="merge_blocked_pending">מען שיקט נאך מעלדונגען צו איינע פון די ווינקל-גרופעס. ווארט א רגע און פרוביר נאכאמאל.</string>
     <string name="error_group_delivery_no_subgroups">צוטייל צוערשט מיטגלידער אין ווינקל-גרופעס, אויףן מיטגלידער-שירים.</string>
 
     <string name="checkbox_added_reporting_enabled">מודעה צו דער גרופע ווען א מיטגליד ווערט צוגעלייגט</string>
