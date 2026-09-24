@@ -403,6 +403,10 @@
     <!-- CSV import reporting -->
     <string name="tpl_csv_import_streamlined_notice">%1$s הוסיף/ה %2$d חברים חדשים.</string>
 
+    <!-- Sub-group roster -->
+    <string name="tpl_roster_header">חברי קבוצת %1$s:</string>
+    <string name="tpl_roster_footer">שמרו את המספרים כדי לדעת מי כותב/ת.</string>
+
     <!-- SMS send result -->
     <string name="send_result_ok">נמסר לספק</string>
     <string name="send_result_generic">הספק דחה את ההודעה</string>

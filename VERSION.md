@@ -1,5 +1,44 @@
 # Version History
 
+## 5.8 - Groundwork for Sub-Groups (nothing visible yet)
+
+**This release changes nothing you can see or use.** It is the foundation for splitting the group
+into smaller threads, built so the next release can stand on it. The app behaves exactly as 5.7
+did: one message per member, everybody knowing only the relay's number.
+
+The reason for building it separately is that the part which *does* something — actually sending
+one message to nine people at once — is only worth building once we know whether the carrier
+treats that as one message or as nine. That question is not answerable from the code, and it is
+what the pilot is for.
+
+- **Members can now belong to a sub-group.** A new, optional field on each member. Left empty, as
+  it is for everyone today, nothing changes anywhere — and that has to stay true, because the app
+  must keep working normally for anyone who never uses this.
+- **The app can work out who should go where.** Given the people not yet in a sub-group, it
+  proposes where to put them. It is a proposal only: an admin applies it or ignores it.
+  - **It will never move somebody who is already in a sub-group.** That is a firm rule, not a
+    preference. Once a sub-group is a real group thread, moving a person leaves a conversation
+    running on nine other phones and makes the contacts everyone saved wrong.
+  - It fills a sub-group that has room before starting a new one, and it will not leave anybody
+    in a thread of one or two — it would rather make a group of ten than strand somebody.
+  - If the only sub-group available is already too big, it now leaves the person out and says so,
+    rather than making a crowded group worse. This was a genuine bug: the code added them anyway,
+    while printing a warning about that same group being oversized in the same breath. There is a
+    practical reason too — carriers limit how many people a group message can reach, and quietly
+    growing an oversized group is how you find that limit the hard way.
+- **The roster message is written.** When a sub-group is created, its members are sent a list of
+  who is in it with their numbers, so people can save each other. This exists because inside a
+  group thread the app is not in the middle any more and cannot put a name in front of each
+  message the way it does today — without saved contacts a flip phone just shows a number.
+  - A member with no number on file is still listed by name. Leaving them out would let everyone
+    else conclude they are not in the group.
+  - An international number keeps its `+`. Without it the number cannot be dialled — found by
+    running the code rather than reading it.
+  - Nine names and numbers is about four messages' worth in Hebrew or Yiddish. That is one of the
+    very few places this app deliberately sends a long message, and it is sent once per sub-group.
+- Hebrew and Yiddish kept in sync with the two new strings (352 in each of the three files).
+- Test suite 110 to 135.
+
 ## 5.7 - The Rest of the Audit
 
 The second and largest remediation wave. Thirteen parallel units, and it clears most of what the

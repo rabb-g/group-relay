@@ -272,6 +272,79 @@ public class MemberRepository {
         }
     }
 
+    /**
+     * Assigns (or, with {@code subgroupId == null}, unassigns) a member to a sub-group for
+     * phase-3 group-MMS routing. This does not send anything - see the class-level note on
+     * {@link DbHelper} for what a caller must do before and after calling this. In particular:
+     * once a sub-group's roster has been sent by MMS, that member's phone number is visible to
+     * the other members of the group permanently, and moving them to a different sub_group id
+     * later does not undo it - it only starts routing future sends elsewhere.
+     */
+    public void assignSubgroup(long id, Long subgroupId) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        if (subgroupId != null) {
+            cv.put("subgroup_id", subgroupId);
+        } else {
+            cv.putNull("subgroup_id");
+        }
+        db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
+    }
+
+    /**
+     * Members of one sub-group. Filtered to {@code active = 1} because a soft-removed member is
+     * not a routing target for anything, including sub-group sends - the same predicate every
+     * other send-eligible query in this class uses.
+     */
+    public List<Member> getSubgroupMembers(long subgroupId) {
+        return query("active = 1 AND subgroup_id = ?", new String[]{String.valueOf(subgroupId)}, "created_at ASC");
+    }
+
+    /**
+     * Distinct sub-group ids currently in use by an active member. Filtered to {@code active = 1}
+     * so a sub-group whose only members have all been removed does not show up as a group still
+     * needing a send target; NULL (unassigned) is excluded since it is not a sub-group id.
+     */
+    public List<Long> getDistinctSubgroupIds() {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery("SELECT DISTINCT subgroup_id FROM " + DbHelper.TABLE_MEMBERS +
+                " WHERE active = 1 AND subgroup_id IS NOT NULL ORDER BY subgroup_id ASC", null);
+        List<Long> ids = new ArrayList<>();
+        while (c.moveToNext()) {
+            ids.add(c.getLong(0));
+        }
+        c.close();
+        return ids;
+    }
+
+    /**
+     * Active member count per sub-group, keyed by subgroup_id. Used to size sub-groups (the
+     * redesign's target is ~9 per group) and to find the smallest group for a new join. Filtered
+     * to {@code active = 1} for the same reason as {@link #getDistinctSubgroupIds()} - a removed
+     * member should not count toward a group's size. Unassigned members (NULL) are excluded; use
+     * {@link #getUnassignedActiveMembers()} for those.
+     */
+    public java.util.Map<Long, Integer> countMembersPerSubgroup() {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery("SELECT subgroup_id, COUNT(*) FROM " + DbHelper.TABLE_MEMBERS +
+                " WHERE active = 1 AND subgroup_id IS NOT NULL GROUP BY subgroup_id", null);
+        java.util.Map<Long, Integer> counts = new java.util.LinkedHashMap<>();
+        while (c.moveToNext()) {
+            counts.put(c.getLong(0), c.getInt(1));
+        }
+        c.close();
+        return counts;
+    }
+
+    /**
+     * Active members with no sub-group assignment - the pool an admin assignment or auto-balance
+     * step draws from. Filtered to {@code active = 1} because a removed member should never be
+     * newly assigned to a sub-group.
+     */
+    public List<Member> getUnassignedActiveMembers() {
+        return query("active = 1 AND subgroup_id IS NULL", null, "created_at ASC");
+    }
+
     private void updateColumn(long id, String column, int value) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues cv = new ContentValues();
@@ -298,6 +371,8 @@ public class MemberRepository {
         m.failedCount = c.getInt(c.getColumnIndexOrThrow("failed_count"));
         int lastPostIdx = c.getColumnIndexOrThrow("last_post_received_id");
         m.lastPostReceivedId = c.isNull(lastPostIdx) ? null : c.getLong(lastPostIdx);
+        int subgroupIdx = c.getColumnIndexOrThrow("subgroup_id");
+        m.subgroupId = c.isNull(subgroupIdx) ? null : c.getLong(subgroupIdx);
         return m;
     }
 

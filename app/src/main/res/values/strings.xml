@@ -403,6 +403,10 @@
     <!-- CSV import reporting -->
     <string name="tpl_csv_import_streamlined_notice">%1$s added %2$d new members.</string>
 
+    <!-- Sub-group roster -->
+    <string name="tpl_roster_header">%1$s — the people in your group:</string>
+    <string name="tpl_roster_footer">Save these numbers so you can see who is writing.</string>
+
     <!-- SMS send result -->
     <string name="send_result_ok">Delivered to carrier</string>
     <string name="send_result_generic">Carrier rejected the message</string>

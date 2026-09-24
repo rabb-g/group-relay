@@ -4,10 +4,24 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+/**
+ * Schema note on {@code members.subgroup_id} (v8, phase 3 layer 1): stable, admin-assigned
+ * grouping used to route group-MMS sends to ~9-person sub-groups instead of individual SMS to
+ * everyone. NULL means unassigned and must remain a permanently safe, fully-functional state -
+ * every existing member has NULL after this migration and the app must behave exactly as before
+ * for them. See {@code docs/phase3-redesign.md}.
+ *
+ * <p>This table only records the assignment. It does not decide who gets assigned where (that is
+ * separate, testable balancing logic) and it does not send anything. Whoever wires sending must
+ * read docs/phase3-redesign.md &sect;4 and &sect;5.1 first: the moment a group MMS is sent to a
+ * sub-group, that member's phone number becomes visible to the other eight, permanently and
+ * irreversibly - the old thread survives on every handset even after a member is reassigned or
+ * removed, and jRelay cannot recall or unsend it.
+ */
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "jrelay.db";
-    private static final int DB_VERSION = 7;
+    private static final int DB_VERSION = 8;
 
     public static final String TABLE_MEMBERS = "members";
     public static final String TABLE_MESSAGE_LOG = "message_log";
@@ -49,7 +63,8 @@ public class DbHelper extends SQLiteOpenHelper {
                 "daily_limit_bonus INTEGER NOT NULL DEFAULT 0," +
                 "daily_limit_bonus_window_start INTEGER NOT NULL DEFAULT 0," +
                 "failed_count INTEGER NOT NULL DEFAULT 0," +
-                "last_post_received_id INTEGER" +
+                "last_post_received_id INTEGER," +
+                "subgroup_id INTEGER" +
                 ")");
 
         db.execSQL("CREATE TABLE " + TABLE_MESSAGE_LOG + " (" +
@@ -101,6 +116,13 @@ public class DbHelper extends SQLiteOpenHelper {
      *       {@code status = ? AND category = ? AND hold_until <= ?} (status is by far the more
      *       selective column here, so it leads).
      * </ul>
+     *
+     * No index was added for {@code members.subgroup_id} (v8). The queries against it -
+     * {@code subgroup_id = ?}, {@code SELECT DISTINCT subgroup_id}, a {@code GROUP BY subgroup_id}
+     * count, and {@code subgroup_id IS NULL} - all scan the {@code members} table, which this
+     * deployment caps at roughly 100 rows (see {@code Prefs.getMaxMembers()}). A full scan of 100
+     * rows is not worth the write-amplification of a permanent index; revisit only if that cap is
+     * ever raised by an order of magnitude.
      */
     private static void createIndexes(SQLiteDatabase db) {
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_message_log_timestamp ON " + TABLE_MESSAGE_LOG + "(timestamp)");
@@ -142,6 +164,11 @@ public class DbHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 7) {
             createIndexes(db);
+        }
+        if (oldVersion < 8) {
+            // Nullable, additive: every pre-existing row gets NULL (unassigned), never 0 - see
+            // Member#subgroupId and MemberRepository#fromCursor for how that is preserved on read.
+            db.execSQL("ALTER TABLE " + TABLE_MEMBERS + " ADD COLUMN subgroup_id INTEGER");
         }
     }
 
