@@ -103,6 +103,7 @@
     <string name="error_duplicate_number">המספר הזה כבר רשום כחבר.</string>
     <string name="error_empty_nickname">הכינוי לא יכול להיות ריק.</string>
     <string name="error_invalid_nickname">אי אפשר להשתמש בשם הזה. בחרו שם ללא : או # שלא מתחיל ב-[ או @.</string>
+    <string name="tpl_join_name_required">כדי להצטרף, שלחו #join ואחריו את שמכם הפרטי ושם המשפחה. לדוגמה: #join משה כהן</string>
     <string name="error_last_admin">חבר זה הוא המנהל היחיד. הפכו מישהו אחר למנהל לפני שתסירו אותו או תבטלו את הרשאתו.</string>
 
     <!-- Member Detail -->

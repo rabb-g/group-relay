@@ -553,9 +553,7 @@ public class CommandProcessor {
         }
 
         String nickname = stripLeadingWord(text).trim();
-        if (nickname.isEmpty()) {
-            nickname = MessageSalt.localDigits(senderE164);
-        } else if (!MessageIntent.isValidNickname(nickname)) {
+        if (!nickname.isEmpty() && !MessageIntent.isValidNickname(nickname)) {
             // Audit 2.3: same forgery risk as #name — a nickname is rendered verbatim as the
             // attribution prefix of every relayed post. #join is the one command a non-member can
             // send, so there's no Member row yet to reply(); use replyToNumber instead.
@@ -568,6 +566,16 @@ public class CommandProcessor {
             // Refuse before either path below, so a full group doesn't spam admins with join
             // requests they can't approve (REQUIRE_APPROVAL) or silently overfill (ALLOW).
             replyToNumber(senderE164, prefs.getGroupFullMessage());
+            return;
+        }
+
+        // A name is required (owner decision, 2026-09-24). A bare "#join" used to fall back to the
+        // last digits of the number, and every post from that member then arrived as "4564: ..." --
+        // unreadable to a hundred neighbours. Reply once with instructions instead of adding them.
+        // Checked AFTER the capacity check on purpose: when the group is full, telling someone to
+        // resend with a name only to refuse them on the second try would waste two texts.
+        if (nickname.isEmpty()) {
+            replyToNumber(senderE164, context.getString(R.string.tpl_join_name_required));
             return;
         }
 

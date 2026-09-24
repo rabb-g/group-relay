@@ -103,6 +103,7 @@
     <string name="error_duplicate_number">This number is already a member.</string>
     <string name="error_empty_nickname">Nickname cannot be empty.</string>
     <string name="error_invalid_nickname">That name can\'t be used. Please pick a name without : or # and not starting with [ or @.</string>
+    <string name="tpl_join_name_required">To join, text #join followed by your first and last name. For example: #join Moshe Cohen</string>
     <string name="error_last_admin">This member is the only admin. Make someone else an admin before removing or demoting them.</string>
 
     <!-- Member Detail -->

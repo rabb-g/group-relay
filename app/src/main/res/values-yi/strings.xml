@@ -103,6 +103,7 @@
     <string name="error_duplicate_number">דער נומער איז שוין א מיטגליד.</string>
     <string name="error_empty_nickname">דער צונאמען קען נישט זיין ליידיק.</string>
     <string name="error_invalid_nickname">דעם נאמען קען מען נישט ניצן. קלייבט א נאמען אָן : אָדער # וואס הייבט זיך נישט אן מיט [ אָדער @.</string>
+    <string name="tpl_join_name_required">כדי זיך אנצושליסן, שיקט #join און דערנאך אייער ערשטן נאמען און פאמיליע-נאמען. למשל: #join משה כהן</string>
     <string name="error_last_admin">דער מיטגליד איז דער איינציקער אדמין. מאכט עמעצער אנדערש אן אדמין איידער איר נעמט אים אַרויס אָדער נעמט אָפּ זיין אדמין רעכטן.</string>
 
     <!-- Member Detail -->
