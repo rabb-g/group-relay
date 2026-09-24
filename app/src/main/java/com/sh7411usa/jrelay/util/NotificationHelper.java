@@ -57,7 +57,8 @@ public class NotificationHelper {
             // On API 33+ (and whenever the user has disabled the channel/app),
             // notify() below silently does nothing and reports no error. This
             // is the only trace that an admin alert was ever attempted.
-            Log.e(TAG, "Admin alert suppressed, notifications disabled: " + text);
+            Log.e(TAG, "Admin alert suppressed, notifications disabled ("
+                    + (text == null ? 0 : text.length()) + " chars)");
             return;
         }
 

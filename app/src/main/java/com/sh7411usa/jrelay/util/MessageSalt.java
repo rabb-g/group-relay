@@ -100,6 +100,7 @@ public final class MessageSalt {
         return digits;
     }
 
+    /** If you change this format, update TRAILING_BRACKET_SALT / isEchoOf and EchoNormalizeTest. */
     public static String appendTimestampSalt(String body, Prefs.SaltTimestampFormat format) {
         return body + " [" + formatTimestamp(format, System.currentTimeMillis()) + "]";
     }
@@ -118,6 +119,10 @@ public final class MessageSalt {
         }
     }
 
+    /**
+     * If you change this format, update LEADING_HEX_SALT / TRAILING_BRACKET_SALT / isEchoOf and
+     * EchoNormalizeTest.
+     */
     public static String applyHexSalt(String body, Prefs.SaltHexPosition position) {
         String hex = String.format(Locale.US, "%03X", RANDOM.nextInt(0x1000));
         return position == Prefs.SaltHexPosition.PREPEND ? "[" + hex + "] " + body : body + " [" + hex + "]";
@@ -125,7 +130,10 @@ public final class MessageSalt {
 
     private static final char ZERO_WIDTH_SPACE = 0x200B;
 
-    /** Randomly injects U+200B (zero-width space) at some word boundaries so the body is byte-unique per send. */
+    /**
+     * Randomly injects U+200B (zero-width space) at some word boundaries so the body is byte-unique
+     * per send. If you change this, update normalizeEchoBody / isEchoOf and EchoNormalizeTest.
+     */
     public static String applyZwsp(String body) {
         String[] words = body.split(" ");
         if (words.length <= 1) {
@@ -140,5 +148,62 @@ public final class MessageSalt {
             sb.append(words[i]);
         }
         return sb.toString();
+    }
+
+    // ---- Salt reversal for the self-loop breaker (CommandProcessor.isSelfEcho). ----
+    // These are the inverse of the salt formats above and live next to them on purpose: if a salt
+    // format changes and these do not, echoes stop matching and the relay loops on its own number.
+
+    /** applyHexSalt with PREPEND: "[ABC] " at the very start. */
+    private static final Pattern LEADING_HEX_SALT = Pattern.compile("^\\[[0-9A-F]{3}] ");
+    /**
+     * The appended salts: " [ABC]" (applyHexSalt, APPEND) and " [12:34:56]" / " [1727200000]" /
+     * " [66f2a1b0]" (appendTimestampSalt, every format). One bracketed token with no spaces inside.
+     */
+    private static final Pattern TRAILING_BRACKET_SALT = Pattern.compile(" \\[[0-9A-Fa-f:]{3,16}]$");
+
+    /**
+     * Body comparison form for the echo check: every U+200B removed (the only character
+     * {@link #applyZwsp} inserts INSIDE a body), then trimmed. Null becomes "". Pure Java, no Android.
+     */
+    public static String normalizeEchoBody(String body) {
+        if (body == null) {
+            return "";
+        }
+        return body.replace(String.valueOf(ZERO_WIDTH_SPACE), "").trim();
+    }
+
+    /**
+     * True when {@code received} is {@code sent} as it looks after {@link #applySendTime}: ZWSPs
+     * anywhere, optionally a leading "[ABC] " hex salt, and up to two trailing bracketed salts
+     * (timestamp, then hex when both are appended). Only salt-shaped text that is NOT in the
+     * sent body is peeled off the received side, so a genuinely different body never matches.
+     * Pure Java, no Android.
+     */
+    public static boolean isEchoOf(String sent, String received) {
+        String s = normalizeEchoBody(sent);
+        String r = normalizeEchoBody(received);
+        if (s.isEmpty() || r.isEmpty()) {
+            return false;
+        }
+        String withoutLeading = LEADING_HEX_SALT.matcher(r).replaceFirst("");
+        for (String candidate : new String[]{r, withoutLeading}) {
+            // Compare after 0, 1 and 2 trailing peels, stopping early once nothing more peels.
+            String peeled = candidate;
+            for (int peels = 0; ; peels++) {
+                if (s.equals(peeled.trim())) {
+                    return true;
+                }
+                if (peels == 2) {
+                    break;
+                }
+                String next = TRAILING_BRACKET_SALT.matcher(peeled).replaceFirst("");
+                if (next.equals(peeled)) {
+                    break;
+                }
+                peeled = next;
+            }
+        }
+        return false;
     }
 }

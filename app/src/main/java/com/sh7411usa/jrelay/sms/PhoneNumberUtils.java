@@ -78,6 +78,14 @@ public class PhoneNumberUtils {
         return null;
     }
 
+    /** Last four digits only, for logs. Null or four characters or fewer becomes "****". */
+    public static String mask(String phone) {
+        if (phone == null || phone.length() <= 4) {
+            return "****";
+        }
+        return "***" + phone.substring(phone.length() - 4);
+    }
+
     /** Characters permitted in a phone number besides digits, for {@link #normalizeStrict}. */
     private static final String STRICT_ALLOWED_NON_DIGITS = "+()-. \t";
 

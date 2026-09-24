@@ -26,31 +26,38 @@
                 style="@style/Widget.JRelay.Button.Small.Outline"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
                 android:text="@string/menu_button_label" />
 
         </LinearLayout>
 
         <LinearLayout
+            style="@style/Widget.JRelay.Page"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="vertical">
 
-            <!-- Pending #join requests under "Require Approval". Hidden when there are none. -->
+            <!-- Section 1: pending #join requests under "Require Approval". Hidden when there are
+                 none. Entries are built in MembershipActivity#renderJoinRequests. -->
             <LinearLayout
                 android:id="@+id/section_join_requests"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginBottom="16dp"
                 android:visibility="gone">
 
                 <TextView
                     android:id="@+id/text_join_requests_header"
-                    style="@style/TextAppearance.JRelay.Subtitle"
+                    style="@style/Widget.JRelay.SectionTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <TextView
+                    style="@style/TextAppearance.JRelay.Caption"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp" />
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/membership_join_requests_caption" />
 
                 <LinearLayout
                     android:id="@+id/container_join_requests"
@@ -60,28 +67,28 @@
 
             </LinearLayout>
 
-            <EditText
-                android:id="@+id/edit_search"
+            <!-- Section 2: sub-group summary and bulk tools. Kept above the member list, not
+                 below it, so a DPAD user reaches them in a few presses instead of stepping
+                 through every member row first. -->
+            <TextView
+                style="@style/Widget.JRelay.SectionTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/hint_membership_search"
-                android:inputType="text"
-                android:layout_marginBottom="12dp" />
-
-            <Button
-                android:id="@+id/button_add_member"
-                style="@style/Widget.JRelay.Button"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/add_member_shortcut"
-                android:layout_marginBottom="16dp" />
+                android:text="@string/subgroup_section_title" />
 
             <TextView
-                android:id="@+id/text_subgroup_sizes"
                 style="@style/TextAppearance.JRelay.Caption"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp" />
+                android:layout_marginBottom="8dp"
+                android:text="@string/membership_subgroups_caption" />
+
+            <TextView
+                android:id="@+id/text_subgroup_sizes"
+                style="@style/TextAppearance.JRelay.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp" />
 
             <Button
                 android:id="@+id/button_suggest_subgroups"
@@ -104,8 +111,38 @@
                 style="@style/Widget.JRelay.Button.Small.Outline"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/action_send_rosters"
-                android:layout_marginBottom="16dp" />
+                android:text="@string/action_send_rosters" />
+
+            <!-- Section 3: the members themselves. Last because it is the long one (~100 rows). -->
+            <TextView
+                android:id="@+id/text_members_section_title"
+                style="@style/Widget.JRelay.SectionTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="@string/membership_members_caption" />
+
+            <EditText
+                android:id="@+id/edit_search"
+                style="@style/Widget.JRelay.EditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_membership_search"
+                android:inputType="text"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/button_add_member"
+                style="@style/Widget.JRelay.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/add_member_shortcut"
+                android:layout_marginBottom="12dp" />
 
             <LinearLayout
                 android:id="@+id/container_members"

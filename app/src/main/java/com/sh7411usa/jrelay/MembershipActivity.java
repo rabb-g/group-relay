@@ -29,6 +29,7 @@ import com.sh7411usa.jrelay.sms.SmsSendService;
 import com.sh7411usa.jrelay.sms.SubgroupPlanner;
 import com.sh7411usa.jrelay.util.CsvUtil;
 import com.sh7411usa.jrelay.util.Prefs;
+import com.sh7411usa.jrelay.util.RelayIdentity;
 import com.sh7411usa.jrelay.util.UiUtil;
 
 import java.io.BufferedReader;
@@ -39,6 +40,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,7 +63,24 @@ public class MembershipActivity extends BaseActivity {
     private LinearLayout joinRequestsContainer;
     private EditText searchInput;
     private TextView subgroupSizesView;
+    private TextView membersTitleView;
     private String currentQuery = "";
+
+    /** Member rows and sub-group badges from the last render, keyed by member id, plus the ids in
+     *  display order. A rebuild destroys every row, so these let it put DPAD focus back on the same
+     *  member (or its nearest neighbour) instead of dropping it at the top of a ~100-row list. */
+    private final Map<Long, View> memberRowViews = new HashMap<>();
+    private final Map<Long, View> memberBadgeViews = new HashMap<>();
+    private final List<Long> renderedMemberIds = new ArrayList<>();
+    /** The member whose row was opened into MemberDetailActivity, consumed by the rebuild in
+     *  onResume on the way back. */
+    private Long pendingFocusMemberId;
+
+    /** Approve/Decline buttons from the last render of the join requests, by position, plus each
+     *  request's number, so an approve or decline can move focus on to the next request. */
+    private final List<View> joinApproveButtons = new ArrayList<>();
+    private final List<View> joinDeclineButtons = new ArrayList<>();
+    private final List<String> renderedJoinPhones = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,6 +95,7 @@ public class MembershipActivity extends BaseActivity {
         joinRequestsContainer = findViewById(R.id.container_join_requests);
         searchInput = findViewById(R.id.edit_search);
         subgroupSizesView = findViewById(R.id.text_subgroup_sizes);
+        membersTitleView = findViewById(R.id.text_members_section_title);
 
         findViewById(R.id.button_add_member).setOnClickListener(v ->
                 startActivity(new Intent(this, AddMemberActivity.class)));
@@ -113,10 +133,27 @@ public class MembershipActivity extends BaseActivity {
      *  section entirely when there are none. Name, number, then Approve and Decline stacked full
      *  width so each gets its own DPAD stop on a small screen. */
     private void renderJoinRequests() {
+        // Which request button held focus, captured before the rebuild destroys it.
+        View focused = getCurrentFocus();
+        int focusIndex = joinApproveButtons.indexOf(focused);
+        boolean focusDecline = false;
+        if (focusIndex < 0) {
+            focusIndex = joinDeclineButtons.indexOf(focused);
+            focusDecline = focusIndex >= 0;
+        }
+        String focusPhone = focusIndex >= 0 ? renderedJoinPhones.get(focusIndex) : null;
+        joinApproveButtons.clear();
+        joinDeclineButtons.clear();
+        renderedJoinPhones.clear();
+
         joinRequestsContainer.removeAllViews();
         List<JoinRequestRepository.JoinRequest> requests = joinRequestRepository.getAll();
         if (requests.isEmpty()) {
             joinRequestsSection.setVisibility(View.GONE);
+            if (focusIndex >= 0 && !container.isInTouchMode()) {
+                // The last request is gone: carry on into the sub-group section below it.
+                findViewById(R.id.button_suggest_subgroups).requestFocus();
+            }
             return;
         }
         joinRequestsSection.setVisibility(View.VISIBLE);
@@ -126,13 +163,16 @@ public class MembershipActivity extends BaseActivity {
             JoinRequestRepository.JoinRequest request = requests.get(i);
             LinearLayout entry = new LinearLayout(this);
             entry.setOrientation(LinearLayout.VERTICAL);
-            entry.setPadding(0, dp(8), 0, dp(8));
+            entry.setPadding(0, dp(12), 0, dp(12));
 
-            TextView nameView = new TextView(this, null, 0, R.style.TextAppearance_JRelay_Body);
+            TextView nameView = new TextView(this, null, 0, R.style.TextAppearance_JRelay_RowTitle);
             nameView.setText(request.nickname);
             entry.addView(nameView);
 
-            TextView phoneView = new TextView(this, null, 0, R.style.TextAppearance_JRelay_Caption);
+            TextView phoneView = new TextView(this, null, 0, R.style.TextAppearance_JRelay_RowCaption);
+            // LTR so the leading "+" of an E.164 number stays in front under Hebrew/Yiddish.
+            phoneView.setTextDirection(View.TEXT_DIRECTION_LTR);
+            phoneView.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
             phoneView.setText(request.phoneE164);
             entry.addView(phoneView);
 
@@ -149,6 +189,20 @@ public class MembershipActivity extends BaseActivity {
             joinRequestsContainer.addView(entry);
             if (i < requests.size() - 1) {
                 joinRequestsContainer.addView(UiUtil.createDivider(this, R.color.divider));
+            }
+            joinApproveButtons.add(approve);
+            joinDeclineButtons.add(decline);
+            renderedJoinPhones.add(request.phoneE164);
+        }
+
+        if (focusIndex >= 0 && !container.isInTouchMode()) {
+            int samePhone = renderedJoinPhones.indexOf(focusPhone);
+            if (samePhone >= 0) {
+                // Still pending (e.g. a plain onResume): same request, same button.
+                (focusDecline ? joinDeclineButtons : joinApproveButtons).get(samePhone).requestFocus();
+            } else {
+                // Handled: the next request now sits at its old position.
+                joinApproveButtons.get(Math.min(focusIndex, joinApproveButtons.size() - 1)).requestFocus();
             }
         }
     }
@@ -173,6 +227,9 @@ public class MembershipActivity extends BaseActivity {
                             break;
                         case ALREADY_MEMBER:
                             toast = getString(R.string.join_already_member_toast, request.nickname);
+                            break;
+                        case OWN_NUMBER:
+                            toast = getString(R.string.error_own_relay_number);
                             break;
                         default:
                             toast = getString(R.string.join_group_full_toast);
@@ -592,6 +649,11 @@ public class MembershipActivity extends BaseActivity {
                     skipped++;
                     continue;
                 }
+                // The relay's own number would send every post to itself; count it as skipped.
+                if (RelayIdentity.isOwnNumber(this, normalized)) {
+                    skipped++;
+                    continue;
+                }
                 Member existing = memberRepository.findByPhone(normalized);
                 if ((existing != null && existing.active) || stagedPhones.contains(normalized)) {
                     skipped++;
@@ -618,14 +680,45 @@ public class MembershipActivity extends BaseActivity {
     }
 
     private void renderMembers() {
+        // Remember which member held focus, and whether on the row or its sub-group badge, before
+        // removeAllViews destroys it. Live focus wins; the pending id covers the return from
+        // MemberDetailActivity. Anything else focused (e.g. the search box) is left alone.
+        View focused = getCurrentFocus();
+        Long focusId = null;
+        boolean focusBadge = false;
+        for (Map.Entry<Long, View> e : memberBadgeViews.entrySet()) {
+            if (e.getValue() == focused) {
+                focusId = e.getKey();
+                focusBadge = true;
+            }
+        }
+        for (Map.Entry<Long, View> e : memberRowViews.entrySet()) {
+            if (e.getValue() == focused) {
+                focusId = e.getKey();
+            }
+        }
+        if (focusId == null) {
+            focusId = pendingFocusMemberId;
+        }
+        pendingFocusMemberId = null;
+        int focusIndex = focusId != null ? renderedMemberIds.indexOf(focusId) : -1;
+        memberRowViews.clear();
+        memberBadgeViews.clear();
+        renderedMemberIds.clear();
+
         container.removeAllViews();
         renderSubgroupSizes();
         List<Member> allMembers = memberRepository.getActiveMembers();
+        membersTitleView.setText(getString(R.string.membership_members_count, allMembers.size()));
 
         String query = currentQuery.trim();
         String queryLower = query.toLowerCase(Locale.US);
         String queryDigits = digitsOnly(query);
-        boolean adminMode = queryLower.contains("admin");
+        // The English word always works, and so does the localized badge word without its brackets.
+        String adminWord = getString(R.string.admin_badge)
+                .replaceAll("[()\\[\\]]", "").trim().toLowerCase(Locale.ROOT);
+        boolean adminMode = queryLower.contains("admin")
+                || (!adminWord.isEmpty() && queryLower.contains(adminWord));
 
         List<Member> filtered = new ArrayList<>();
         for (Member m : allMembers) {
@@ -635,9 +728,10 @@ public class MembershipActivity extends BaseActivity {
         }
 
         if (filtered.isEmpty()) {
-            TextView empty = new TextView(this);
+            TextView empty = new TextView(this, null, 0, R.style.Widget_JRelay_EmptyState);
             empty.setText(allMembers.isEmpty() ? R.string.no_members_yet : R.string.no_search_results);
             container.addView(empty);
+            restoreMemberFocus(focusId, focusBadge, focusIndex);
             return;
         }
 
@@ -669,46 +763,88 @@ public class MembershipActivity extends BaseActivity {
                 badgeView.setBackgroundResource(member.isAdmin ? R.drawable.bg_badge_admin : R.drawable.bg_badge_muted);
                 badgeView.setTextColor(getColor(member.isAdmin ? R.color.primary : R.color.warning));
                 if (adminMode && member.isAdmin) {
-                    setHighlightedText(badgeView, badge.toString(), "admin");
+                    setHighlightedText(badgeView, badge.toString(), adminWord);
                 } else {
                     badgeView.setText(badge.toString());
                 }
             }
 
+            // The sub-group badge always comes first on the badge line, so it sits in the same
+            // spot on every row: green pill when assigned, neutral outlined pill when not.
             TextView subgroupBadge = new TextView(this);
             subgroupBadge.setId(View.generateViewId());
-            LinearLayout.LayoutParams badgeParams = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            badgeParams.setMarginStart(dp(8));
-            subgroupBadge.setLayoutParams(badgeParams);
-            subgroupBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
+            subgroupBadge.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
             subgroupBadge.setTextSize(12);
+            subgroupBadge.setTypeface(subgroupBadge.getTypeface(), android.graphics.Typeface.BOLD);
             subgroupBadge.setClickable(true);
             subgroupBadge.setFocusable(true);
-            subgroupBadge.setBackgroundResource(R.drawable.focus_highlight);
+            int restingBackground;
+            int restingTextColor;
+            int focusedTextColor;
             if (member.subgroupId != null) {
                 subgroupBadge.setText(getString(R.string.subgroup_row_badge, member.subgroupId));
-                subgroupBadge.setBackgroundResource(R.drawable.bg_badge_live);
-                subgroupBadge.setTextColor(getColor(R.color.success));
+                restingBackground = R.drawable.bg_badge_live;
+                restingTextColor = getColor(R.color.success);
+                // Green on the focus fill falls short of 4.5:1, so it reads as primary text while focused.
+                focusedTextColor = getColor(R.color.text_primary);
             } else {
                 subgroupBadge.setText(R.string.subgroup_row_unassigned_badge);
-                subgroupBadge.setTextColor(getColor(R.color.text_secondary));
+                restingBackground = R.drawable.bg_stat_tile;
+                restingTextColor = getColor(R.color.text_secondary);
+                focusedTextColor = restingTextColor;
             }
+            subgroupBadge.setTextColor(restingTextColor);
+            subgroupBadge.setBackgroundResource(restingBackground);
+            subgroupBadge.setPadding(dp(8), dp(4), dp(8), dp(4));
+            // The pill drawables have no focused state, so swap in the shared focus highlight
+            // while the badge holds DPAD focus; otherwise focus on it would be invisible.
+            subgroupBadge.setOnFocusChangeListener((v, hasFocus) -> {
+                v.setBackgroundResource(hasFocus ? R.drawable.focus_highlight : restingBackground);
+                v.setPadding(dp(8), dp(4), dp(8), dp(4));
+                ((TextView) v).setTextColor(hasFocus ? focusedTextColor : restingTextColor);
+            });
             subgroupBadge.setOnClickListener(v -> showSubgroupAssignDialog(member));
-            ((LinearLayout) row).addView(subgroupBadge);
+            ((LinearLayout) row.findViewById(R.id.layout_member_badges)).addView(subgroupBadge, 0);
 
             long memberId = member.id;
             row.setOnClickListener(v -> {
                 Intent intent = new Intent(MembershipActivity.this, MemberDetailActivity.class);
                 intent.putExtra(MemberDetailActivity.EXTRA_MEMBER_ID, memberId);
+                pendingFocusMemberId = memberId;
                 startActivity(intent);
             });
             container.addView(row);
+            memberRowViews.put(memberId, row);
+            memberBadgeViews.put(memberId, subgroupBadge);
+            renderedMemberIds.add(memberId);
 
             if (i < filtered.size() - 1) {
                 container.addView(UiUtil.createDivider(this, R.color.divider));
             }
         }
+        restoreMemberFocus(focusId, focusBadge, focusIndex);
+    }
+
+    /** Puts DPAD focus back on the given member's row or badge after a rebuild, or, if that member
+     *  is gone (removed or filtered out), on whoever now sits at its old position. Skipped in touch
+     *  mode so touch users are not scrolled around. The ScrollView scrolls the target into view by
+     *  itself once the rebuilt list has been laid out. */
+    private void restoreMemberFocus(Long focusId, boolean badge, int oldIndex) {
+        if (focusId == null || container.isInTouchMode()) {
+            return;
+        }
+        Map<Long, View> views = badge ? memberBadgeViews : memberRowViews;
+        View target = views.get(focusId);
+        if (target == null && !renderedMemberIds.isEmpty()) {
+            int index = Math.max(0, Math.min(oldIndex, renderedMemberIds.size() - 1));
+            target = views.get(renderedMemberIds.get(index));
+        }
+        if (target == null) {
+            // No rows left at all: the nearest stop is the button just above the list.
+            target = findViewById(R.id.button_add_member);
+        }
+        target.requestFocus();
     }
 
     private boolean matchesQuery(Member member, String queryLower, String queryDigits, boolean adminMode) {

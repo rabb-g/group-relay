@@ -25,6 +25,7 @@ import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.PhoneNumberUtils;
 import com.sh7411usa.jrelay.sms.SmsSendService;
 import com.sh7411usa.jrelay.util.Prefs;
+import com.sh7411usa.jrelay.util.RelayIdentity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,6 +55,24 @@ public class MmsIngestService extends Service {
      */
     private static final long SETTLE_MILLIS = 120_000L;
 
+    /**
+     * True from onCreate until onDestroy, cleared early if startForeground is refused. Static and
+     * process-local on purpose: process death resets it to false, which is the truth -- nothing is
+     * watching content://mms then. Read by the Dashboard banner and by {@code Watchdog}.
+     */
+    private static volatile boolean running;
+
+    /**
+     * Serializes every scan, the service's own and {@link #scanOnce}'s, so two can never run at the
+     * same time in this process. This is belt and braces, not the double-bridge guard: that is
+     * {@link ThreadRepository#markIngested}, a persistent INSERT OR IGNORE done BEFORE forwarding,
+     * which only one caller can ever win for a given MMS id.
+     */
+    private static final Object SCAN_LOCK = new Object();
+
+    /** What a scan asks its caller to do afterwards. Only the service acts on these. */
+    private enum ScanOutcome { DONE, MODE_OFF, DEFERRED }
+
     private HandlerThread thread;
     private Handler handler;
     private ContentObserver observer;
@@ -67,6 +86,14 @@ public class MmsIngestService extends Service {
      * Starts the service if group MMS delivery is on. Mirrors {@link SmsSendService#start}: catches
      * the exception a background-start restriction throws on API 26+ rather than letting it crash
      * the caller, since ingestion resuming late (on the next trigger) is far better than a crash.
+     * <p>
+     * On API 31+ a foreground service may only be started from the background by an exempt
+     * trigger. Exempt among our callers: BOOT_COMPLETED and MY_PACKAGE_REPLACED (BootReceiver),
+     * SMS_RECEIVED and WAP_PUSH_RECEIVED (SmsReceiver, WapPushReceiver), and any start while an
+     * activity is visible (MainActivity, SettingsActivity). NOT exempt: the periodic
+     * {@code WatchdogJobService}, unless the app is exempt from battery optimisation. There the
+     * start throws ForegroundServiceStartNotAllowedException, caught below, and the watchdog falls
+     * back to {@link #scanOnce}.
      */
     public static void start(Context context) {
         if (new Prefs(context).getDeliveryMode() != Prefs.DeliveryMode.GROUP_MMS) {
@@ -84,9 +111,34 @@ public class MmsIngestService extends Service {
         }
     }
 
+    /** Whether the service is alive in this process (see {@link #running}). */
+    public static boolean isRunning() {
+        return running;
+    }
+
+    /**
+     * Runs one scan synchronously, without the service, for when the service could not be started
+     * (a background FGS start refused on API 31+). Must be called off the main thread. Blocks while
+     * the service's own scan runs, via {@link #SCAN_LOCK}. A message still inside the settle window
+     * is left unmarked and simply picked up by the next scan or watchdog run.
+     */
+    public static void scanOnce(Context context) {
+        if (new Prefs(context).getDeliveryMode() != Prefs.DeliveryMode.GROUP_MMS) {
+            return;
+        }
+        try {
+            synchronized (SCAN_LOCK) {
+                scan(context.getApplicationContext());
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "One-off MMS ingest scan failed", t);
+        }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
+        running = true;
         thread = new HandlerThread("MmsIngestWorker");
         thread.start();
         handler = new Handler(thread.getLooper());
@@ -114,6 +166,7 @@ public class MmsIngestService extends Service {
             startForeground(NOTIFICATION_ID, buildNotification());
         } catch (IllegalStateException e) {
             Log.e(TAG, "Not allowed to start in the foreground right now; will resume on next trigger", e);
+            running = false;
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -137,7 +190,19 @@ public class MmsIngestService extends Service {
 
     private void runScanLoop() {
         try {
-            scan();
+            ScanOutcome outcome;
+            synchronized (SCAN_LOCK) {
+                outcome = scan(this);
+            }
+            if (outcome == ScanOutcome.MODE_OFF) {
+                // Group delivery was switched off while this service was running. Stop rather than
+                // sit in the foreground doing nothing.
+                stopSelf();
+            } else if (outcome == ScanOutcome.DEFERRED) {
+                // One re-scan after the settle window, so a message caught mid-write is retried even
+                // if nothing else changes in content://mms in the meantime.
+                handler.postDelayed(this::requestScan, SETTLE_MILLIS + 5_000L);
+            }
         } catch (Throwable t) {
             Log.e(TAG, "MMS ingest scan failed", t);
         } finally {
@@ -150,24 +215,25 @@ public class MmsIngestService extends Service {
         }
     }
 
-    private void scan() {
-        Prefs prefs = new Prefs(this);
+    /**
+     * One pass over recent inbound MMS. Static so {@link #scanOnce} can run it without the service;
+     * callers must hold {@link #SCAN_LOCK}. Never bridges in SMS mode.
+     */
+    private static ScanOutcome scan(Context context) {
+        Prefs prefs = new Prefs(context);
         if (prefs.getDeliveryMode() != Prefs.DeliveryMode.GROUP_MMS) {
-            // Group delivery was switched off while this service was running. Stop rather than
-            // sit in the foreground doing nothing -- and never bridge in SMS mode.
-            stopSelf();
-            return;
+            return ScanOutcome.MODE_OFF;
         }
         long since = prefs.getMmsIngestSinceSeconds();
         if (since == 0) {
             // Never bridge history that predates enabling group delivery: seed the watermark to
             // "now" and pick up from the next change instead of scanning backward.
             prefs.setMmsIngestSinceSeconds(System.currentTimeMillis() / 1000L);
-            return;
+            return ScanOutcome.DONE;
         }
 
-        MemberRepository memberRepository = new MemberRepository(this);
-        ThreadRepository threadRepository = new ThreadRepository(this);
+        MemberRepository memberRepository = new MemberRepository(context);
+        ThreadRepository threadRepository = new ThreadRepository(context);
 
         // Idempotent re-seed of every sub-group's thread signature, so a thread created by an
         // earlier build (before this feature existed) is still recognised.
@@ -180,14 +246,14 @@ public class MmsIngestService extends Service {
             threadRepository.recordThread(ThreadMatcher.signature(phones), subgroupId);
         }
 
-        MmsReader reader = new MmsReader(this);
+        MmsReader reader = new MmsReader(context);
         MmsReader.ReadResult result = reader.fetchRecentInboxIds(since);
         if (result.permissionDenied) {
             Log.e(TAG, "READ_SMS denied; cannot scan for inbound group MMS");
-            return;
+            return ScanOutcome.DONE;
         }
 
-        CommandProcessor processor = new CommandProcessor(this);
+        CommandProcessor processor = new CommandProcessor(context);
         boolean bridgedAny = false;
         boolean deferredAny = false;
         long nowMs = System.currentTimeMillis();
@@ -221,6 +287,7 @@ public class MmsIngestService extends Service {
                     // this phone. Never bridge, never reply.
                     rejection = "UNMATCHED";
                 } else {
+                    learnOwnNumber(context, match);
                     sender = memberRepository.findByPhone(PhoneNumberUtils.normalize(m.sender));
                     if (sender == null) {
                         rejection = "NOT_MEMBER";
@@ -245,18 +312,29 @@ public class MmsIngestService extends Service {
         }
 
         if (bridgedAny) {
-            SmsSendService.start(this);
+            SmsSendService.start(context);
         }
-        if (deferredAny) {
-            // One re-scan after the settle window, so a message caught mid-write is retried even if
-            // nothing else changes in content://mms in the meantime.
-            handler.postDelayed(this::requestScan, SETTLE_MILLIS + 5_000L);
-        }
+        return deferredAny ? ScanOutcome.DEFERRED : ScanOutcome.DONE;
+    }
+
+    /**
+     * Learns the relay's own number from a matched thread. ThreadMatcher only matches when the
+     * participants are the recorded signature plus exactly one extra, and a recorded signature is
+     * the members jRelay itself sent to, so it never contains the relay. The relay is always on
+     * its own threads, and inbound group MMS list it in TO (verified on the device), so that one
+     * extra is usually the relay's own number, but not always (a thread missing the relay, matched
+     * against an older signature, points at a member), so it is only a candidate:
+     * RelayIdentity stores it after a second, different thread agrees, and never over a stored
+     * number.
+     */
+    private static void learnOwnNumber(Context context, ThreadMatcher.Match match) {
+        RelayIdentity.observeThreadCandidate(context, match.removedParticipant, match.signature);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+        running = false;
         if (observer != null) {
             getContentResolver().unregisterContentObserver(observer);
         }

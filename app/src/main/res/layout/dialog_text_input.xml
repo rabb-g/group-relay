@@ -3,11 +3,20 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="8dp">
 
+    <!-- inputType is left to the platform default: callers use this for names, numbers and
+         multi-line direct messages alike. Styled explicitly because the dialog theme does not
+         inherit the app's editTextStyle. -->
     <EditText
         android:id="@+id/edit_text_input"
+        style="@style/Widget.JRelay.EditText"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:textAlignment="viewStart"
+        android:importantForAutofill="no" />
 
 </LinearLayout>

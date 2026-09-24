@@ -18,50 +18,91 @@
         </LinearLayout>
 
         <LinearLayout
+            style="@style/Widget.JRelay.Page"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/text_error"
-                style="@style/TextAppearance.JRelay.Caption"
+                style="@style/Widget.JRelay.Banner.Danger"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/danger"
                 android:visibility="gone"
-                android:layout_marginBottom="8dp" />
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                style="@style/Widget.JRelay.FormLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:labelFor="@+id/edit_phone_number"
+                android:text="@string/form_label_phone" />
 
             <EditText
                 android:id="@+id/edit_phone_number"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/hint_phone_number"
-                android:inputType="textNoSuggestions"
-                android:layout_marginBottom="12dp" />
+                android:inputType="phone"
+                android:importantForAutofill="no"
+                android:textDirection="ltr"
+                android:textAlignment="viewStart"
+                android:imeOptions="actionNext"
+                android:nextFocusDown="@+id/edit_nickname"
+                android:nextFocusForward="@+id/edit_nickname" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="16dp"
+                android:text="@string/form_help_phone" />
+
+            <TextView
+                style="@style/Widget.JRelay.FormLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:labelFor="@+id/edit_nickname"
+                android:text="@string/form_label_nickname" />
 
             <EditText
                 android:id="@+id/edit_nickname"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/hint_nickname"
                 android:inputType="textPersonName|textCapWords"
-                android:layout_marginBottom="16dp" />
+                android:importantForAutofill="no"
+                android:imeOptions="actionDone"
+                android:nextFocusDown="@+id/button_save" />
 
-            <Button
-                android:id="@+id/button_save"
-                style="@style/Widget.JRelay.Button"
+            <TextView
+                style="@style/TextAppearance.JRelay.Caption"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/action_save"
-                android:layout_marginBottom="10dp" />
+                android:layout_marginTop="4dp"
+                android:text="@string/form_help_nickname" />
 
-            <Button
-                android:id="@+id/button_cancel"
-                style="@style/Widget.JRelay.Button.Outline"
+            <LinearLayout
+                style="@style/Widget.JRelay.ButtonBar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/action_cancel" />
+                android:orientation="vertical">
+
+                <Button
+                    android:id="@+id/button_save"
+                    style="@style/Widget.JRelay.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/action_save"
+                    android:layout_marginBottom="10dp" />
+
+                <Button
+                    android:id="@+id/button_cancel"
+                    style="@style/Widget.JRelay.Button.Outline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/action_cancel" />
+
+            </LinearLayout>
 
         </LinearLayout>
     </LinearLayout>

@@ -102,11 +102,9 @@ public final class MmsSender {
 
         byte[] pdu = MmsPduWriter.buildSendReq(recipientsE164, textBody, transactionId);
 
-        // Logged BEFORE sending, not as debug noise: this is the only way to tell "the platform
-        // refused us" apart from "our bytes were malformed" after the fact, and that distinction
-        // already saved this feature from being wrongly abandoned once during the spike.
+        // No PDU dump: it carries every recipient's number and the message text.
         Log.i(TAG, "Sending group MMS for row " + rowId + " to " + recipientsE164.size()
-                + " recipients, transactionId=" + transactionId + "\n" + MmsPduWriter.toHexDump(pdu));
+                + " recipients, pdu=" + pdu.length + " bytes");
 
         Uri contentUri;
         try {

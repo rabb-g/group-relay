@@ -216,39 +216,4 @@ public final class MmsPduWriter {
             out.write(b);
         }
     }
-
-    /**
-     * Renders {@code pdu} as an annotated hex dump: offset, 16 hex bytes per
-     * line, and an ASCII gutter (non-printable bytes shown as '.'). This is
-     * the tool for checking each field's bytes against the spec by hand when
-     * a real send fails, to distinguish "our PDU is malformed" from "the
-     * platform refused a non-default app's send".
-     */
-    public static String toHexDump(byte[] pdu) {
-        if (pdu == null) {
-            throw new IllegalArgumentException("pdu must not be null");
-        }
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format(Locale.US, "MMS m-send-req PDU dump, %d bytes total%n", pdu.length));
-        for (int offset = 0; offset < pdu.length; offset += 16) {
-            int lineLen = Math.min(16, pdu.length - offset);
-            sb.append(String.format(Locale.US, "%04X  ", offset));
-
-            StringBuilder ascii = new StringBuilder();
-            for (int i = 0; i < 16; i++) {
-                if (i < lineLen) {
-                    int b = pdu[offset + i] & 0xFF;
-                    sb.append(String.format(Locale.US, "%02X ", b));
-                    ascii.append((b >= 0x20 && b < 0x7F) ? (char) b : '.');
-                } else {
-                    sb.append("   "); // pad short final line so the ASCII gutter still aligns
-                }
-                if (i == 7) {
-                    sb.append(' '); // visual mid-line break, standard hexdump convention
-                }
-            }
-            sb.append(" |").append(ascii).append('|').append(String.format(Locale.US, "%n"));
-        }
-        return sb.toString();
-    }
 }

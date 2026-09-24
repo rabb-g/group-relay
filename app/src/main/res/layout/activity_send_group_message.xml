@@ -18,35 +18,65 @@
         </LinearLayout>
 
         <LinearLayout
+            style="@style/Widget.JRelay.Page"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.JRelay.FormLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:labelFor="@+id/edit_group_message"
+                android:text="@string/form_label_group_message" />
 
             <EditText
                 android:id="@+id/edit_group_message"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minLines="4"
+                android:minLines="3"
                 android:gravity="top|start"
-                android:hint="@string/hint_group_message"
                 android:inputType="textMultiLine|textCapSentences"
-                android:layout_marginBottom="16dp" />
+                android:importantForAutofill="no"
+                android:nextFocusDown="@+id/button_send" />
 
-            <Button
-                android:id="@+id/button_send"
-                style="@style/Widget.JRelay.Button"
+            <TextView
+                style="@style/TextAppearance.JRelay.Caption"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/action_send"
-                android:layout_marginBottom="10dp" />
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="12dp"
+                android:text="@string/form_help_group_message" />
 
-            <Button
-                android:id="@+id/button_cancel"
-                style="@style/Widget.JRelay.Button.Outline"
+            <!-- Filled in from the active-member count in SendGroupMessageActivity -->
+            <TextView
+                android:id="@+id/text_send_cost"
+                style="@style/Widget.JRelay.Banner.Info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                style="@style/Widget.JRelay.ButtonBar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/action_cancel" />
+                android:orientation="vertical">
+
+                <Button
+                    android:id="@+id/button_send"
+                    style="@style/Widget.JRelay.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/action_send"
+                    android:layout_marginBottom="10dp" />
+
+                <Button
+                    android:id="@+id/button_cancel"
+                    style="@style/Widget.JRelay.Button.Outline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/action_cancel" />
+
+            </LinearLayout>
 
         </LinearLayout>
     </LinearLayout>

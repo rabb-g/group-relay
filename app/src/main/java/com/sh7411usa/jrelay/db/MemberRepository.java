@@ -192,6 +192,10 @@ public class MemberRepository {
         ContentValues cv = new ContentValues();
         cv.put("active", 0);
         cv.put("removed_at", System.currentTimeMillis());
+        // A removed member is never an admin. Admin queries already filter on active = 1, but a
+        // stale is_admin on an inactive row is a trap waiting for any query that forgets to.
+        // reactivate() resets it to 0 as well, so rejoining never restores admin status.
+        cv.put("is_admin", 0);
         db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
     }
 

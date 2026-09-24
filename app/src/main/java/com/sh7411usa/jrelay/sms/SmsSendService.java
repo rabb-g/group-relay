@@ -506,7 +506,7 @@ public class SmsSendService extends Service {
             // attempt already recorded above, so the row isn't left looking like it's still
             // awaiting results that will never arrive; then hand it to the same retry policy the
             // result path uses rather than duplicating it here.
-            Log.e(TAG, "Failed to send SMS to " + item.phoneE164, e);
+            Log.e(TAG, "Failed to send SMS for outbox row " + item.id, e);
             outbox.markHandedOff(item.id, 0, token);
             SentReceiver.handleFailure(this, item, token, SentReceiver.RESULT_NOT_SENT);
         }

@@ -1,5 +1,6 @@
 package com.sh7411usa.jrelay;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -16,9 +17,12 @@ import android.text.format.DateFormat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -52,6 +56,27 @@ public class SettingsActivity extends BaseActivity {
 
     private static final long PAUSE_STATUS_TICK_MS = 1000;
 
+    private static final String STATE_OPEN_CATEGORY = "open_category";
+
+    /**
+     * The screen is one layout split into category containers; only the hub (plus Pause Service)
+     * or a single category is visible at a time. The three arrays are parallel: container, its
+     * hub row, and the header title shown while it is open. Every section's views and Save button
+     * live inside the same container, so this is purely a visibility switch.
+     */
+    private static final int[] CATEGORY_CONTAINER_IDS = {
+            R.id.settings_cat_group, R.id.settings_cat_delivery, R.id.settings_cat_speed,
+            R.id.settings_cat_limits, R.id.settings_cat_content, R.id.settings_cat_app
+    };
+    private static final int[] CATEGORY_ROW_IDS = {
+            R.id.row_settings_cat_group, R.id.row_settings_cat_delivery, R.id.row_settings_cat_speed,
+            R.id.row_settings_cat_limits, R.id.row_settings_cat_content, R.id.row_settings_cat_app
+    };
+    private static final int[] CATEGORY_TITLE_IDS = {
+            R.string.settings_cat_group, R.string.settings_cat_delivery, R.string.settings_cat_speed,
+            R.string.settings_cat_limits, R.string.settings_cat_content, R.string.settings_cat_app
+    };
+
     /**
      * Pacing ceilings live on {@link RateLimitConfig}, which also applies them when the drain
      * READS these values - clamping only here, on save, would leave any out-of-range value already
@@ -70,9 +95,21 @@ public class SettingsActivity extends BaseActivity {
     // Pause Service
     private Spinner pauseSpinner;
     private TextView pauseStatusView;
+    private View resumeNowButton;
     private final AdapterView.OnItemSelectedListener pauseSpinnerListener = new AdapterView.OnItemSelectedListener() {
         @Override
         public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+            // Position 0 ("Not paused") is the spinner's idle resting item, not a command. The
+            // spinner always springs back to it, so a person choosing it again changes nothing and
+            // Android sends no callback at all. The ONLY time position 0 arrives here is from a
+            // layout pass, e.g. the automatic first-layout callback after the Pause section was
+            // hidden and then shown again, which happens when Settings is recreated (rotation,
+            // process death) with a category open. Treating that as "resume" silently cancelled an
+            // active pause and started draining held messages. Resuming is the explicit
+            // button_resume_now instead.
+            if (position == 0) {
+                return;
+            }
             applyPauseSelection(position);
         }
 
@@ -175,6 +212,16 @@ public class SettingsActivity extends BaseActivity {
     private Button clearHistoryButton;
     private TextView appVersionView;
 
+    // Category navigation
+    private ScrollView scrollView;
+    private TextView titleView;
+    private View hubView;
+    private View pauseSectionView;
+    /** Index into CATEGORY_CONTAINER_IDS of the open category, or -1 while the hub is showing. */
+    private int openCategory = -1;
+    /** API 33+ back callback, registered only while a category is open. See onBackPressed(). */
+    private Object categoryBackCallback;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -186,6 +233,105 @@ public class SettingsActivity extends BaseActivity {
         bindViews();
         populateFromPrefs();
         wireListeners();
+        wireCategoryNavigation();
+
+        int restored = savedInstanceState != null ? savedInstanceState.getInt(STATE_OPEN_CATEGORY, -1) : -1;
+        if (restored >= 0 && restored < CATEGORY_CONTAINER_IDS.length) {
+            showCategory(restored);
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(STATE_OPEN_CATEGORY, openCategory);
+    }
+
+    /**
+     * Back while a category is open returns to the hub; Back from the hub finishes as normal.
+     *
+     * Overridden rather than using androidx's OnBackPressedDispatcher (no androidx here). This
+     * override covers API 24-35. On Android 16+ an app targeting SDK 36 no longer receives
+     * onBackPressed() at all (predictive back is on by default), so there Back is caught by the
+     * framework OnBackInvokedCallback that showCategory() registers - see setCategoryBackCallback().
+     * Lint's GestureBackNavigation is suppressed for that reason: its suggested fix is androidx.
+     */
+    @Override
+    @SuppressWarnings("deprecation")
+    @SuppressLint("GestureBackNavigation")
+    public void onBackPressed() {
+        if (openCategory >= 0) {
+            showHub();
+            return;
+        }
+        super.onBackPressed();
+    }
+
+    private void wireCategoryNavigation() {
+        scrollView = findViewById(R.id.settings_scroll);
+        titleView = findViewById(R.id.text_settings_title);
+        hubView = findViewById(R.id.settings_hub);
+        pauseSectionView = findViewById(R.id.settings_pause_section);
+        for (int i = 0; i < CATEGORY_ROW_IDS.length; i++) {
+            final int index = i;
+            findViewById(CATEGORY_ROW_IDS[i]).setOnClickListener(v -> showCategory(index));
+        }
+    }
+
+    private void showCategory(int index) {
+        openCategory = index;
+        hubView.setVisibility(View.GONE);
+        pauseSectionView.setVisibility(View.GONE);
+        for (int i = 0; i < CATEGORY_CONTAINER_IDS.length; i++) {
+            findViewById(CATEGORY_CONTAINER_IDS[i]).setVisibility(i == index ? View.VISIBLE : View.GONE);
+        }
+        titleView.setText(CATEGORY_TITLE_IDS[index]);
+        setCategoryBackCallback(true);
+
+        final View container = findViewById(CATEGORY_CONTAINER_IDS[index]);
+        scrollView.post(() -> {
+            scrollView.scrollTo(0, 0);
+            // DPAD only: in touch mode the first focusable-in-touch-mode view is often an
+            // EditText further down, and focusing it would scroll the page away from the top.
+            if (!container.isInTouchMode()) {
+                container.requestFocus(View.FOCUS_DOWN);
+            }
+        });
+    }
+
+    private void showHub() {
+        final int left = openCategory;
+        openCategory = -1;
+        for (int id : CATEGORY_CONTAINER_IDS) {
+            findViewById(id).setVisibility(View.GONE);
+        }
+        hubView.setVisibility(View.VISIBLE);
+        pauseSectionView.setVisibility(View.VISIBLE);
+        titleView.setText(R.string.rate_limit_title);
+        setCategoryBackCallback(false);
+
+        scrollView.post(() -> {
+            scrollView.scrollTo(0, 0);
+            if (left >= 0) {
+                findViewById(CATEGORY_ROW_IDS[left]).requestFocus();
+            }
+        });
+    }
+
+    /** Registers (or removes) the API 33+ back callback so it is live only while a category is open. */
+    private void setCategoryBackCallback(boolean register) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return;
+        }
+        OnBackInvokedDispatcher dispatcher = getOnBackInvokedDispatcher();
+        if (register && categoryBackCallback == null) {
+            OnBackInvokedCallback callback = this::showHub;
+            dispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback);
+            categoryBackCallback = callback;
+        } else if (!register && categoryBackCallback != null) {
+            dispatcher.unregisterOnBackInvokedCallback((OnBackInvokedCallback) categoryBackCallback);
+            categoryBackCallback = null;
+        }
     }
 
     @Override
@@ -209,6 +355,8 @@ public class SettingsActivity extends BaseActivity {
     private void bindViews() {
         pauseSpinner = findViewById(R.id.spinner_pause);
         pauseStatusView = findViewById(R.id.text_pause_status);
+        resumeNowButton = findViewById(R.id.button_resume_now);
+        resumeNowButton.setOnClickListener(v -> resumeNow());
         groupModeSpinner = findViewById(R.id.spinner_group_mode);
         appVersionView = findViewById(R.id.text_app_version);
 
@@ -473,9 +621,18 @@ public class SettingsActivity extends BaseActivity {
         pauseSpinner.post(() -> pauseSpinner.setOnItemSelectedListener(pauseSpinnerListener));
     }
 
+    /** The one way to end a pause from this screen. See the note in pauseSpinnerListener. */
+    private void resumeNow() {
+        prefs.setPauseUntilMillis(0);
+        SmsSendService.start(this);
+        refreshPauseStatus();
+    }
+
     private void refreshPauseStatus() {
         long until = prefs.getPauseUntilMillis();
-        if (until == 0 || (until != Prefs.PAUSE_INDEFINITE && System.currentTimeMillis() >= until)) {
+        boolean paused = !(until == 0 || (until != Prefs.PAUSE_INDEFINITE && System.currentTimeMillis() >= until));
+        resumeNowButton.setVisibility(paused ? View.VISIBLE : View.GONE);
+        if (!paused) {
             pauseStatusView.setText(R.string.pause_status_not_paused);
         } else if (until == Prefs.PAUSE_INDEFINITE) {
             pauseStatusView.setText(R.string.pause_status_indefinite);
@@ -488,18 +645,18 @@ public class SettingsActivity extends BaseActivity {
     private String formatPauseDuration(long millis) {
         long totalSeconds = millis / 1000;
         if (totalSeconds < 60) {
-            return totalSeconds + "s";
+            return getString(R.string.duration_seconds, totalSeconds);
         }
         long minutes = totalSeconds / 60;
         if (minutes < 60) {
-            return minutes + "m " + (totalSeconds % 60) + "s";
+            return getString(R.string.duration_minutes_seconds, minutes, totalSeconds % 60);
         }
         long hours = minutes / 60;
         if (hours < 24) {
-            return hours + "h " + (minutes % 60) + "m";
+            return getString(R.string.duration_hours_minutes, hours, minutes % 60);
         }
         long days = hours / 24;
-        return days + "d " + (hours % 24) + "h";
+        return getString(R.string.duration_days_hours, days, hours % 24);
     }
 
     private void saveGroupMode() {
@@ -759,7 +916,7 @@ public class SettingsActivity extends BaseActivity {
         systemIntervalInput.setEnabled(hasPermission);
         systemSaveButton.setEnabled(hasPermission);
         systemPermissionNotice.setVisibility(hasPermission ? View.GONE : View.VISIBLE);
-        systemPermissionNotice.setText(getString(R.string.rate_limit_permission_missing) + "\n" + RateLimitSettings.ADB_GRANT_COMMAND);
+        systemPermissionNotice.setText(getString(R.string.line_break_join, getString(R.string.rate_limit_permission_missing), RateLimitSettings.ADB_GRANT_COMMAND));
     }
 
     private void copyAdbCommandToClipboard() {

@@ -97,6 +97,7 @@ public class Prefs {
     private static final String KEY_SUBGROUP_TARGET_SIZE = "subgroup_target_size";
     private static final String KEY_PAUSE_UNTIL_MILLIS = "pause_until_millis";
     private static final String KEY_MMS_INGEST_SINCE_SECONDS = "mms_ingest_since_seconds";
+    private static final String KEY_SMS_CATCH_UP_SINCE_MILLIS = "sms_catch_up_since_millis";
 
     private static final String KEY_REPLY_WINDOW_HOURS = "reply_window_hours";
     private static final String KEY_COPY_REPLIES_TO_ADMINS = "copy_replies_to_admins";
@@ -640,6 +641,20 @@ public class Prefs {
 
     public void setMmsIngestSinceSeconds(long sinceEpochSeconds) {
         prefs.edit().putLong(KEY_MMS_INGEST_SINCE_SECONDS, sinceEpochSeconds).apply();
+    }
+
+    /**
+     * Epoch millis (the content://sms {@code date} column, i.e. receive time) of the newest inbox
+     * SMS the catch-up scan has examined. 0 = not yet seeded; the first scan sets this to "now"
+     * instead of relaying, so texts that predate the feature are never replayed. See
+     * {@code SmsCatchUp#run}.
+     */
+    public long getSmsCatchUpSinceMillis() {
+        return prefs.getLong(KEY_SMS_CATCH_UP_SINCE_MILLIS, 0L);
+    }
+
+    public void setSmsCatchUpSinceMillis(long sinceEpochMillis) {
+        prefs.edit().putLong(KEY_SMS_CATCH_UP_SINCE_MILLIS, sinceEpochMillis).apply();
     }
 
     private <E extends Enum<E>> E parseEnum(String stored, Class<E> type, E defaultValue) {

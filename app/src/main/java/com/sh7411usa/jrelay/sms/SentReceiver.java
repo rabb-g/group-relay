@@ -274,8 +274,8 @@ public class SentReceiver extends BroadcastReceiver {
         // all, so it needs to be findable and to say why, not just that it happened. Uses
         // describe() rather than its own label logic so the log and the activity feed never
         // disagree about what a given resultCode means.
-        Log.w(TAG, "Send failed for outbox row " + item.id + " (" + item.phoneE164
-                + "), resultCode=" + resultCode + " (" + reason + ")");
+        Log.w(TAG, "Send failed for outbox row " + item.id
+                + ", resultCode=" + resultCode + " (" + reason + ")");
 
         OutboxRepository outbox = new OutboxRepository(appContext);
         Prefs prefs = new Prefs(appContext);

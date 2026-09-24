@@ -2,6 +2,7 @@ package com.sh7411usa.jrelay;
 
 import android.os.Bundle;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -11,6 +12,7 @@ import com.sh7411usa.jrelay.model.Member;
 import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.PhoneNumberUtils;
 import com.sh7411usa.jrelay.util.Prefs;
+import com.sh7411usa.jrelay.util.RelayIdentity;
 
 public class AddMemberActivity extends BaseActivity {
 
@@ -29,6 +31,15 @@ public class AddMemberActivity extends BaseActivity {
         nicknameInput = findViewById(R.id.edit_nickname);
         errorView = findViewById(R.id.text_error);
 
+        // The IME's Done key on the last field submits the form, same as the Save button.
+        nicknameInput.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                onSave();
+                return true;
+            }
+            return false;
+        });
+
         findViewById(R.id.button_save).setOnClickListener(v -> onSave());
         findViewById(R.id.button_cancel).setOnClickListener(v -> finish());
     }
@@ -43,6 +54,10 @@ public class AddMemberActivity extends BaseActivity {
         }
         if (nickname.isEmpty()) {
             showError(R.string.error_empty_nickname);
+            return;
+        }
+        if (RelayIdentity.isOwnNumber(this, normalized)) {
+            showError(R.string.error_own_relay_number);
             return;
         }
         Member existing = memberRepository.findByPhone(normalized);

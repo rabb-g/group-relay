@@ -93,8 +93,6 @@
 
     <!-- Add Member -->
     <string name="add_member_title">צולייגן א מיטגליד</string>
-    <string name="hint_phone_number">טעלעפאן נומער</string>
-    <string name="hint_nickname">צונאמען</string>
     <string name="action_save">אָפּהיטן</string>
     <string name="action_cancel">אָפּזאָגן</string>
     <string name="action_retry_permission">פּרוּוון נאָכאמאָל</string>
@@ -161,8 +159,13 @@
     <string name="pause_option_1_day">אָפּשטעלן פאר איין טאג</string>
     <string name="pause_option_until_unpaused">אָפּשטעלן ביז מ\'שטעלט ווידער אָן</string>
     <string name="pause_status_not_paused">נישט אָפּגעשטעלט.</string>
+    <string name="action_resume_now">ווידער אָנהייבן איצט</string>
     <string name="pause_status_indefinite">אָפּגעשטעלט אָן א צייט-גרענעץ.</string>
     <string name="pause_status_timed">אָפּגעשטעלט. שטעלט זיך ווידער אָן אין %1$s.</string>
+    <string name="duration_seconds">%1$d סעק׳</string>
+    <string name="duration_minutes_seconds">%1$d מינ׳ %2$d סעק׳</string>
+    <string name="duration_hours_minutes">%1$d שעה %2$d מינ׳</string>
+    <string name="duration_days_hours">%1$d טאג %2$d שעה</string>
 
     <string name="section_group_mode">גרופע-מאָדוס</string>
     <string name="group_mode_desc">גרופע-מאָדוס שיקט אריבער אלעמענס ידיעות ווי געוויינטליך. אָנזאָג-מאָדוס שיקט אריבער צו אלעמען נאר אדמין-ידיעות - אלע אנדערע\'ס ידיעות גייען נאר צו אדמינען. ענטפער-מאָדוס שיקט אריבער א ידיעה צו אלעמען נאר ווען זי הייבט זיך אן מיט #all; א פשוטע ענטפער גייט נאר צום מיטגליד וואס האט געשיקט. קען אויך ווערן געביטן דורך א מעסעדזש מיט #mode group / #mode announcement / #mode reply.</string>
@@ -323,7 +326,7 @@
     <string name="section_language">שפראך</string>
     <string name="label_language">אפליקאציע שפראך</string>
     <!-- Each shown in its own language, not translated per-locale -->
-    <string name="language_system">System Default</string>
+    <string name="language_system">סיסטעם גרונט-איינשטעלונג</string>
     <string name="language_english">English</string>
     <string name="language_hebrew">עברית</string>
     <string name="language_yiddish">יידיש</string>
@@ -354,13 +357,11 @@
     <string name="action_disband_group">אויפלייזן די גרופע</string>
     <string name="disband_group_title">אויפלייזן די גרופע?</string>
     <string name="disband_group_warning">דאס וועט אויף שטענדיק אויסמעקן אלע מיטגלידער און די גאנצע היסטאריע פון ידיעות. קיינער וועט נישט באקומען קיין מודעה. דאס קען נישט ווערן צוריקגענומען.\n\nכדי צו באשטעטיקן, שטעלט אריין דעם PIN וואס ווערט געוויזן אונטן.</string>
-    <string name="hint_disband_pin">שטעלט אריין דעם PIN</string>
     <string name="disband_pin_mismatch">דער PIN שטימט נישט. די גרופע איז נישט אויפגעלייזט געוואָרן.</string>
     <string name="disband_group_done">די גרופע איז אויפגעלייזט געוואָרן.</string>
 
     <!-- Send to Group -->
     <string name="send_group_message_title">שיקן צו דער גרופע</string>
-    <string name="hint_group_message">א ידיעה צו שיקן צו יעדן אקטיוון מיטגליד</string>
     <string name="action_send">שיקן</string>
 
     <!-- Notifications -->
@@ -477,4 +478,18 @@
     <string name="join_group_full_toast">די גרופע איז פול. נעמט ארויס עמעצן אדער הייבט אויף די גרענעץ פריער.</string>
     <string name="join_declined_toast">די בקשה איז אָפּגעווארפן געוואָרן.</string>
     <string name="join_approved_by_app">דער אדמין</string>
+
+    <!-- Settings categories -->
+    <string name="settings_cat_group">גרופע</string>
+    <string name="settings_cat_group_desc">מאָדוס, ענטפערס, באפעלן, מודעות, בקשות, קיבולת</string>
+    <string name="settings_cat_delivery">שיקן אין גרופעס</string>
+    <string name="settings_cat_delivery_desc">שיקן אין גרופעס, צעמישן די סדר</string>
+    <string name="settings_cat_speed">שיק-גיכקייט</string>
+    <string name="settings_cat_speed_desc">צעטיילן, פארזאמלונגען, מיקרא-צווישנרוים, צונויפגיסן</string>
+    <string name="settings_cat_limits">גרענעצן און נישט-געלונגענע</string>
+    <string name="settings_cat_limits_desc">איבערפּרוּוון, גרופעס טעגליכע גרענעץ, Android\'ס גרענעץ</string>
+    <string name="settings_cat_content">אינהאלט פון דער ידיעה</string>
+    <string name="settings_cat_content_desc">שיקערס נומער, טעלעפאן נומערן, איינציקמאכן</string>
+    <string name="settings_cat_app">אַפּליקאַציע</string>
+    <string name="settings_cat_app_desc">שפראך, אויסזען, היסטאריע, ליצענץ, ווערסיע</string>
 </resources>

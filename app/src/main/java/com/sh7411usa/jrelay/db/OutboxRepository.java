@@ -7,6 +7,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
 import android.os.SystemClock;
 
+import com.sh7411usa.jrelay.util.MessageSalt;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -600,6 +602,64 @@ public class OutboxRepository {
         db.update(DbHelper.TABLE_OUTBOX, cv,
                 "id = ? AND handed_off_at = ? AND status IN ('" + STATUS_SEND_FAILED + "', 'SENDING')",
                 new String[]{String.valueOf(id), String.valueOf(token)});
+    }
+
+    /**
+     * Self-loop breaker: did the relay itself send {@code normalizedBody} to {@code phoneE164}
+     * (an individual row, SENDING or SENT) inside [{@code windowStartMillis},
+     * {@code windowEndMillis}]? See {@link #withinEchoWindow} for which timestamps count. Stored
+     * bodies are compared through {@link MessageSalt#isEchoOf}, which strips MessageSalt's
+     * send-time salt the same way on both sides. Bounded to that one phone and that time window.
+     */
+    public boolean sentSameBodyRecently(String phoneE164, String normalizedBody,
+                                        long windowStartMillis, long windowEndMillis) {
+        if (phoneE164 == null || phoneE164.isEmpty() || normalizedBody == null || normalizedBody.isEmpty()) {
+            return false;
+        }
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        // The SQL only narrows by the lower bound; withinEchoWindow below is the actual decision.
+        String since = String.valueOf(windowStartMillis);
+        Cursor c = db.rawQuery("SELECT body, enqueued_at, handed_off_at FROM " + DbHelper.TABLE_OUTBOX
+                        + " WHERE phone_e164 = ? AND subgroup_id IS NULL"
+                        + " AND status IN ('SENDING', 'SENT')"
+                        + " AND (enqueued_at >= ? OR handed_off_at >= ?)",
+                new String[]{phoneE164, since, since});
+        try {
+            while (c.moveToNext()) {
+                if (withinEchoWindow(c.getLong(1), c.getLong(2), windowStartMillis, windowEndMillis)
+                        && MessageSalt.isEchoOf(c.getString(0), normalizedBody)) {
+                    return true;
+                }
+            }
+            return false;
+        } finally {
+            c.close();
+        }
+    }
+
+    /**
+     * Whether a row with these timestamps could be the source of an echo received in the window.
+     *
+     * <p>The echo comes back when the row is actually SENT, not when it was queued, and a row can
+     * sit PENDING far longer than the window: a coalesce hold of up to 10 minutes, burst waits of
+     * up to an hour, retry back-offs, or a plain backlog. Matching on {@code enqueued_at} alone let
+     * every such row's echo through, and each echo queued the next post, so the loop kept itself
+     * going. So a row also matches when {@code handed_off_at} - the wall-clock
+     * {@code System.currentTimeMillis()} token SmsSendService stamps at the moment it gives the row
+     * to the radio, kept unchanged through SENT - falls in the window.
+     *
+     * <p>{@code handed_off_at} is 0 for a row claimed but not yet handed off (nothing sent, so no
+     * echo can exist yet) and for rows written before that column existed. A SENT row always has a
+     * real token, because recordPartSent only marks SENT when the result's token matches it. 0 is
+     * therefore treated as "no hand-off time", and such a row can match on {@code enqueued_at} only,
+     * which is the old rule. Pure Java, no Android.
+     */
+    public static boolean withinEchoWindow(long enqueuedAt, long handedOffAt,
+                                           long windowStart, long windowEnd) {
+        if (enqueuedAt >= windowStart && enqueuedAt <= windowEnd) {
+            return true;
+        }
+        return handedOffAt > 0 && handedOffAt >= windowStart && handedOffAt <= windowEnd;
     }
 
     /** Runs a single-value aggregate query over the outbox, returning 0 when there is no row or the value is NULL. */

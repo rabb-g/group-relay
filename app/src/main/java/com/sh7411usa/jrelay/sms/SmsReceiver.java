@@ -28,14 +28,20 @@ public class SmsReceiver extends BroadcastReceiver {
             return;
         }
 
-        StringBuilder bodyBuilder = new StringBuilder();
-        for (SmsMessage message : messages) {
-            if (message.getMessageBody() != null) {
-                bodyBuilder.append(message.getMessageBody());
-            }
+        String[] partBodies = new String[messages.length];
+        for (int i = 0; i < messages.length; i++) {
+            partBodies[i] = messages[i].getMessageBody();
         }
+        String body = SmsCatchUp.concatBodies(partBodies);
 
-        new CommandProcessor(context).handleIncoming(normalized, bodyBuilder.toString());
+        // Claim before handling (at-most-once), with the same key SmsCatchUp computes from the
+        // provider row: the first part's service-center timestamp is what the stock app stores as
+        // date_sent. If the catch-up scan already relayed this text (it can, when this broadcast
+        // arrives late, e.g. after a boot), the claim fails and it is not relayed a second time.
+        if (SmsCatchUp.claim(context, normalized, messages[0].getTimestampMillis(), body,
+                System.currentTimeMillis(), SmsCatchUp.SOURCE_LIVE)) {
+            new CommandProcessor(context).handleIncoming(normalized, body);
+        }
         // Cheap catch-up scan; no-ops unless delivery mode is GROUP_MMS.
         MmsIngestService.start(context.getApplicationContext());
     }

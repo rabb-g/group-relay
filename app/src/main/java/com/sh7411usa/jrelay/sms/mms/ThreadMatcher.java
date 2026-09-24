@@ -74,14 +74,19 @@ public final class ThreadMatcher {
         Long subgroupFor(String signature);
     }
 
-    /** A confirmed match: which sub-group, and the exact signature that was recorded for it. */
+    /**
+     * A confirmed match: which sub-group, the exact signature that was recorded for it, and the one
+     * participant that was removed to reproduce that signature (usually the relay's own number).
+     */
     public static final class Match {
         public final long subgroupId;
         public final String signature;
+        public final String removedParticipant;
 
-        public Match(long subgroupId, String signature) {
+        public Match(long subgroupId, String signature, String removedParticipant) {
             this.subgroupId = subgroupId;
             this.signature = signature;
+            this.removedParticipant = removedParticipant;
         }
     }
 
@@ -122,19 +127,16 @@ public final class ThreadMatcher {
             }
         }
 
-        List<List<String>> candidateSets = new ArrayList<>();
-        for (String toRemove : participants) {
-            List<String> subset = new ArrayList<>(participants);
-            subset.remove(toRemove);
-            candidateSets.add(subset);
-        }
-
         Long agreedSubgroupId = null;
         String agreedSignature = null;
-        for (List<String> candidateSet : candidateSets) {
-            if (!candidateSet.contains(normalizedSender)) {
+        String agreedRemoved = null;
+        for (String toRemove : participants) {
+            if (toRemove.equals(normalizedSender)) {
+                // The only subset without the sender; a sender cannot match a thread it is not on.
                 continue;
             }
+            List<String> candidateSet = new ArrayList<>(participants);
+            candidateSet.remove(toRemove);
             String candidateSignature = signature(candidateSet);
             Long subgroupId = lookup.subgroupFor(candidateSignature);
             if (subgroupId == null) {
@@ -143,6 +145,7 @@ public final class ThreadMatcher {
             if (agreedSubgroupId == null) {
                 agreedSubgroupId = subgroupId;
                 agreedSignature = candidateSignature;
+                agreedRemoved = toRemove;
             } else if (!agreedSubgroupId.equals(subgroupId)) {
                 return null;
             }
@@ -151,6 +154,6 @@ public final class ThreadMatcher {
         if (agreedSubgroupId == null) {
             return null;
         }
-        return new Match(agreedSubgroupId, agreedSignature);
+        return new Match(agreedSubgroupId, agreedSignature, agreedRemoved);
     }
 }

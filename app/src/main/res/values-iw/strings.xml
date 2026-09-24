@@ -93,8 +93,6 @@
 
     <!-- Add Member -->
     <string name="add_member_title">הוספת חבר</string>
-    <string name="hint_phone_number">מספר טלפון</string>
-    <string name="hint_nickname">כינוי</string>
     <string name="action_save">שמירה</string>
     <string name="action_cancel">ביטול</string>
     <string name="action_retry_permission">נסו שוב</string>
@@ -161,8 +159,13 @@
     <string name="pause_option_1_day">השהיה ליום אחד</string>
     <string name="pause_option_until_unpaused">השהיה עד לביטול</string>
     <string name="pause_status_not_paused">לא מושהה.</string>
+    <string name="action_resume_now">חידוש עכשיו</string>
     <string name="pause_status_indefinite">מושהה ללא הגבלת זמן.</string>
     <string name="pause_status_timed">מושהה. מתחדש בעוד %1$s.</string>
+    <string name="duration_seconds">%1$d שנ׳</string>
+    <string name="duration_minutes_seconds">%1$d דק׳ %2$d שנ׳</string>
+    <string name="duration_hours_minutes">%1$d שע׳ %2$d דק׳</string>
+    <string name="duration_days_hours">%1$d ימ׳ %2$d שע׳</string>
 
     <string name="section_group_mode">מצב קבוצה</string>
     <string name="group_mode_desc">מצב קבוצה מעביר את הודעות כולם כרגיל. מצב הכרזה מעביר לכולם רק הודעות מנהלים - הודעות כל האחרים מגיעות רק למנהלים. מצב תגובה מעביר הודעה לכולם רק כשהיא מתחילה ב-#all; תגובה רגילה מגיעה רק למי שפרסם. ניתן לשנות גם באמצעות מסרון עם #mode group / #mode announcement / #mode reply.</string>
@@ -323,7 +326,7 @@
     <string name="section_language">שפה</string>
     <string name="label_language">שפת האפליקציה</string>
     <!-- Each shown in its own language, not translated per-locale -->
-    <string name="language_system">System Default</string>
+    <string name="language_system">ברירת המחדל של המערכת</string>
     <string name="language_english">English</string>
     <string name="language_hebrew">עברית</string>
     <string name="language_yiddish">יידיש</string>
@@ -354,13 +357,11 @@
     <string name="action_disband_group">פירוק הקבוצה</string>
     <string name="disband_group_title">לפרק את הקבוצה?</string>
     <string name="disband_group_warning">פעולה זו תמחק לצמיתות את כל החברים ואת כל היסטוריית ההודעות. אף אחד לא יקבל הודעה. לא ניתן לבטל פעולה זו.\n\nלאישור, הזינו את קוד ה-PIN המוצג למטה.</string>
-    <string name="hint_disband_pin">הזינו PIN</string>
     <string name="disband_pin_mismatch">קוד ה-PIN אינו תואם. הקבוצה לא פורקה.</string>
     <string name="disband_group_done">הקבוצה פורקה.</string>
 
     <!-- Send to Group -->
     <string name="send_group_message_title">שליחה לקבוצה</string>
-    <string name="hint_group_message">הודעה לשליחה לכל חבר פעיל</string>
     <string name="action_send">שליחה</string>
 
     <!-- Notifications -->
@@ -477,4 +478,18 @@
     <string name="join_group_full_toast">הקבוצה מלאה. הסירו מישהו או הגדילו את המגבלה תחילה.</string>
     <string name="join_declined_toast">הבקשה נדחתה.</string>
     <string name="join_approved_by_app">מנהל</string>
+
+    <!-- Settings categories -->
+    <string name="settings_cat_group">קבוצה</string>
+    <string name="settings_cat_group_desc">מצב, תגובות, פקודות, הודעות, בקשות הצטרפות, קיבולת</string>
+    <string name="settings_cat_delivery">משלוח בקבוצות</string>
+    <string name="settings_cat_delivery_desc">משלוח בקבוצות, ערבוב סדר המשלוח</string>
+    <string name="settings_cat_speed">מהירות שליחה</string>
+    <string name="settings_cat_speed_desc">פיזור שליחה, מנות שליחה, מרווח מיקרו, איחוד</string>
+    <string name="settings_cat_limits">מגבלות וכשלים</string>
+    <string name="settings_cat_limits_desc">ניסיונות חוזרים, מגבלה יומית לקבוצה, מגבלת Android</string>
+    <string name="settings_cat_content">תוכן ההודעה</string>
+    <string name="settings_cat_content_desc">מספר השולח, מספרי טלפון, מליחה</string>
+    <string name="settings_cat_app">אפליקציה</string>
+    <string name="settings_cat_app_desc">שפה, מראה, היסטוריה, רישיון, גרסה</string>
 </resources>

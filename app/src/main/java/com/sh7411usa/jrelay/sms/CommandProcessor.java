@@ -2,6 +2,7 @@ package com.sh7411usa.jrelay.sms;
 
 import android.content.Context;
 import android.text.format.DateFormat;
+import android.util.Log;
 
 import com.sh7411usa.jrelay.R;
 import com.sh7411usa.jrelay.db.JoinRequestRepository;
@@ -14,15 +15,25 @@ import com.sh7411usa.jrelay.util.DailyLimitManager;
 import com.sh7411usa.jrelay.util.MessageSalt;
 import com.sh7411usa.jrelay.util.NotificationHelper;
 import com.sh7411usa.jrelay.util.Prefs;
+import com.sh7411usa.jrelay.util.RelayIdentity;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 public class CommandProcessor {
+
+    private static final String TAG = "CommandProcessor";
+
+    /** How far back the self-loop breaker looks for an outbox row this inbound text could be an echo of. */
+    private static final long ECHO_WINDOW_MILLIS = 10 * 60 * 1000L;
+    /** Allowance past the receive time, for clock disagreement between the provider and the outbox. */
+    private static final long ECHO_WINDOW_SLACK_MILLIS = 60 * 1000L;
 
     private final Context context;
     private final MemberRepository memberRepository;
@@ -40,8 +51,17 @@ public class CommandProcessor {
         prefs = new Prefs(this.context);
     }
 
-    /** Entry point for an inbound SMS from an already-normalized sender number. */
+    /** Entry point for an inbound SMS from an already-normalized sender number, received just now. */
     public void handleIncoming(String senderE164, String body) {
+        handleIncoming(senderE164, body, System.currentTimeMillis());
+    }
+
+    /**
+     * Same, for a text received at {@code receivedAtMillis} rather than now. SmsCatchUp passes the
+     * provider's receive time, which can be up to 48 hours ago, so the self-echo check looks at
+     * what the relay sent around THAT time instead of in the last few minutes.
+     */
+    public void handleIncoming(String senderE164, String body, long receivedAtMillis) {
         if (prefs.isPaused()) {
             return;
         }
@@ -53,6 +73,10 @@ public class CommandProcessor {
         // relayPlainMessage() -> postToGroup(), broadcasting an empty "Nickname: " post to the whole
         // group and burning a daily-quota slot. Bail out before anything is logged, queued or replied to.
         if (trimmed.isEmpty()) {
+            return;
+        }
+
+        if (isSelfEcho(senderE164, trimmed, receivedAtMillis)) {
             return;
         }
 
@@ -92,6 +116,44 @@ public class CommandProcessor {
         }
 
         SmsSendService.start(context);
+    }
+
+    /**
+     * Self-loop guards, checked before anything is logged, answered or relayed. If the relay's own
+     * number is ever a member, every post is sent to it as an individual SMS, Android hands that
+     * SMS straight back to the relay, and without these checks it is broadcast again as a new post
+     * from that "member" - on every post, forever. Either guard alone breaks the loop:
+     *
+     * <ul>
+     *   <li><b>Own number</b>: a text from the relay's own number is never a real post. Cheap, but
+     *       only works when {@link RelayIdentity} knows the number (often it can't).</li>
+     *   <li><b>Echo</b>: the relay sent this exact text (ignoring MessageSalt's send-time salt) to
+     *       this same number in the last {@link #ECHO_WINDOW_MILLIS}. Needs no own-number knowledge,
+     *       because the looped copy is by construction identical to a row just sent to it.</li>
+     * </ul>
+     *
+     * <p>Why the echo rule is safe for real members: a person never sends the relay a text
+     * identical to one the relay sent them minutes ago, except by copy-pasting a post back. That
+     * copy-paste is dropped. This is deliberate: re-posting someone else's message verbatim adds
+     * nothing the group hasn't just seen, while a loop sends every group a duplicate of every post.
+     * Occasionally dropping an echo is always preferred over ever looping.
+     */
+    private boolean isSelfEcho(String senderE164, String trimmedBody, long receivedAtMillis) {
+        if (RelayIdentity.isOwnNumber(context, senderE164)) {
+            Log.w(TAG, "Dropped inbound text from the relay's own number");
+            return true;
+        }
+        String normalized = MessageSalt.normalizeEchoBody(trimmedBody);
+        // An echo is received after its row went out, so the window ends at the receive time. The
+        // slack covers the provider's receive time and our own clock disagreeing slightly. On the
+        // live path receivedAtMillis is now, so the upper bound excludes nothing.
+        long windowStart = receivedAtMillis - ECHO_WINDOW_MILLIS;
+        long windowEnd = receivedAtMillis + ECHO_WINDOW_SLACK_MILLIS;
+        if (outboxRepository.sentSameBodyRecently(senderE164, normalized, windowStart, windowEnd)) {
+            Log.w(TAG, "Dropped inbound text that echoes a message the relay just sent to the same number");
+            return true;
+        }
+        return false;
     }
 
     private void handleCommand(Member sender, String text) {
@@ -292,6 +354,10 @@ public class CommandProcessor {
             reply(sender, context.getString(R.string.error_empty_nickname));
             return;
         }
+        if (RelayIdentity.isOwnNumber(context, normalized)) {
+            reply(sender, context.getString(R.string.tpl_add_own_relay_number));
+            return;
+        }
         Member existing = memberRepository.findByPhone(normalized);
         if (existing != null && existing.active) {
             reply(sender, context.getString(R.string.error_duplicate_number));
@@ -309,6 +375,21 @@ public class CommandProcessor {
     }
 
     private Member insertOrReactivateMember(String normalizedPhone, String nickname, String addedBy) {
+        return insertOrReactivateMember(normalizedPhone, nickname, addedBy, RelayIdentity.ownNumber(context));
+    }
+
+    /**
+     * The one place a member row is created or revived, so the one place the relay's own number is
+     * refused: as a member it sends every post to itself (see isSelfEcho). Returns null, having
+     * written nothing, for the own number. {@code ownNumber} is {@link RelayIdentity#ownNumber},
+     * passed in so a CSV import reads the SIM once rather than once per row.
+     */
+    private Member insertOrReactivateMember(String normalizedPhone, String nickname, String addedBy,
+                                            String ownNumber) {
+        if (ownNumber != null && ownNumber.equals(PhoneNumberUtils.normalize(normalizedPhone))) {
+            Log.w(TAG, "Refused to add the relay's own number as a member");
+            return null;
+        }
         Member existing = memberRepository.findByPhone(normalizedPhone);
         long id;
         if (existing != null && !existing.active) {
@@ -327,10 +408,14 @@ public class CommandProcessor {
      * following this toggle.
      */
     public void addMember(String normalizedPhone, String nickname, String addedByLabel) {
+        Member newMember = insertOrReactivateMember(normalizedPhone, nickname, addedByLabel);
+        if (newMember == null) {
+            // The relay's own number: refused, and its pending request (if any) left alone.
+            return;
+        }
         // Every approval path lands here (an admin's texted #add and the app's Approve button), so
         // clearing the pending request here keeps the in-app list from showing someone already added.
         joinRequestRepository.delete(normalizedPhone);
-        Member newMember = insertOrReactivateMember(normalizedPhone, nickname, addedByLabel);
         if (prefs.isAddedReportingEnabled()) {
             String groupName = prefs.getGroupName();
             String welcome = withReplyHint(context.getString(R.string.tpl_added_you, addedByLabel, groupName));
@@ -349,9 +434,13 @@ public class CommandProcessor {
      */
     public int importMembers(List<String[]> phoneNicknamePairs, String addedByLabel, ImportReportingMode mode) {
         List<Member> preExistingMembers = memberRepository.getActiveMembers();
+        String ownNumber = RelayIdentity.ownNumber(context);
         int count = 0;
         for (String[] pair : phoneNicknamePairs) {
-            Member newMember = insertOrReactivateMember(pair[0], pair[1], addedByLabel);
+            Member newMember = insertOrReactivateMember(pair[0], pair[1], addedByLabel, ownNumber);
+            if (newMember == null) {
+                continue;
+            }
             count++;
             if (mode == ImportReportingMode.USUAL) {
                 String groupName = prefs.getGroupName();
@@ -396,6 +485,39 @@ public class CommandProcessor {
             return;
         }
         removeMember(target, sender.nickname);
+    }
+
+    /**
+     * Removes this relay phone's own number from the member list, if it is on it. Silent on
+     * purpose: no "you were removed" text and no notice to the group, because any text addressed
+     * to this number is a text the relay sends to itself.
+     *
+     * <p>The relay can never legitimately be a member. As one it receives a copy of every post,
+     * gets that copy back as an inbound text "from a member", and relays it to everyone again.
+     * That loop reached production on 2026-09-24, twice. As an ADMIN it is worse: every join
+     * request and admin alert is texted to it and then broadcast to the whole group.
+     *
+     * <p>This deliberately bypasses the last-admin protection in the UI. That guard is what trapped
+     * the owner: the relay's own number was the only admin, so Remove was refused, and Revoke
+     * Admin was refused too, leaving no way to fix it from the app. A group with no admin is
+     * recoverable (any member can be made admin in the app); a relay that texts itself is not.
+     *
+     * @return the removed member's nickname (never null, possibly empty), or null if nobody was
+     *         removed.
+     */
+    public String purgeRelaySelfMember() {
+        String own = RelayIdentity.ownNumber(context);
+        if (own == null) {
+            return null;
+        }
+        Member self = memberRepository.findByPhone(own);
+        if (self == null || !self.active) {
+            return null;
+        }
+        // softRemove also clears is_admin.
+        memberRepository.softRemove(self.id);
+        Log.w(TAG, "Removed this relay phone's own number from members (member id " + self.id + ")");
+        return self.nickname == null ? "" : self.nickname;
     }
 
     /** Removes a member and sends the standard notice/broadcast messages. removedByLabel is either an admin's nickname or "An Admin". */
@@ -595,6 +717,9 @@ public class CommandProcessor {
     /** A non-member added themselves via #join with JoinPolicy.ALLOW. */
     public void selfJoin(String normalizedPhone, String nickname) {
         Member newMember = insertOrReactivateMember(normalizedPhone, nickname, nickname);
+        if (newMember == null) {
+            return;
+        }
         if (prefs.isAddedReportingEnabled()) {
             String groupName = prefs.getGroupName();
             String welcome = withReplyHint(context.getString(R.string.tpl_added_you_self, groupName));
@@ -604,10 +729,15 @@ public class CommandProcessor {
         SmsSendService.start(context);
     }
 
-    public enum ApproveResult { ADDED, ALREADY_MEMBER, GROUP_FULL }
+    public enum ApproveResult { ADDED, ALREADY_MEMBER, GROUP_FULL, OWN_NUMBER }
 
     /** Approve a pending request from the app. Same effect as an admin texting "#add <phone> <name>". */
     public ApproveResult approveJoinRequest(String phoneE164, String nickname) {
+        if (RelayIdentity.isOwnNumber(context, phoneE164)) {
+            // Never approvable, so drop the request rather than leave it in the list.
+            joinRequestRepository.delete(phoneE164);
+            return ApproveResult.OWN_NUMBER;
+        }
         Member existing = memberRepository.findByPhone(phoneE164);
         if (existing != null && existing.active) {
             // Added some other way since they asked (CSV import, Members screen); the request is stale.
@@ -724,17 +854,104 @@ public class CommandProcessor {
     /**
      * Sends an admin message to every active member, regardless of mute state. Clears every
      * recipient's reply-target pointer for the same reason as {@link #sendDirectMessage}.
+     *
+     * <p>In GROUP_MMS delivery each sub-group gets one group row instead of one text per member;
+     * see {@link #planBroadcastRecipients} for who goes where. In SMS delivery every active member
+     * gets their own text, as always.
      */
     public void broadcastToGroup(String body) {
         String formatted = context.getString(R.string.tpl_dm_prefix, body);
-        List<Member> members = memberRepository.getActiveMembers();
-        List<Long> recipientIds = new ArrayList<>(members.size());
-        for (Member m : members) {
+        if (prefs.getDeliveryMode() != Prefs.DeliveryMode.GROUP_MMS) {
+            List<Member> members = memberRepository.getActiveMembers();
+            List<Long> recipientIds = new ArrayList<>(members.size());
+            for (Member m : members) {
+                enqueue(m, formatted, "ADMIN");
+                recipientIds.add(m.id);
+            }
+            memberRepository.setLastPostReceivedIdForAll(recipientIds, null);
+            SmsSendService.start(context);
+            return;
+        }
+
+        BroadcastPlan plan = planBroadcastRecipients();
+        List<Long> recipientIds = new ArrayList<>();
+        for (Map.Entry<Long, List<Member>> group : plan.bySubgroup.entrySet()) {
+            // Salted like postToSubgroups: the same body is going to every sub-group thread.
+            outboxRepository.enqueueGroup(group.getKey(), formatted, "ADMIN", 0L, true);
+            for (Member m : group.getValue()) {
+                messageRepository.log(m.id, "OUT", "ADMIN", formatted);
+                recipientIds.add(m.id);
+            }
+        }
+        for (Member m : plan.individuals) {
             enqueue(m, formatted, "ADMIN");
             recipientIds.add(m.id);
         }
         memberRepository.setLastPostReceivedIdForAll(recipientIds, null);
         SmsSendService.start(context);
+    }
+
+    /**
+     * What {@link #broadcastToGroup} would send right now, as
+     * {@code {groupMessages, individualTexts, peopleReached}}. In SMS delivery that is no group
+     * messages and one text per active member. Built from the same {@link #planBroadcastRecipients}
+     * the send uses, so the number an admin is shown cannot drift from what actually goes out.
+     */
+    public int[] planBroadcast() {
+        if (prefs.getDeliveryMode() != Prefs.DeliveryMode.GROUP_MMS) {
+            int active = memberRepository.countActiveMembers();
+            return new int[]{0, active, active};
+        }
+        BroadcastPlan plan = planBroadcastRecipients();
+        int reached = plan.individuals.size();
+        for (List<Member> group : plan.bySubgroup.values()) {
+            reached += group.size();
+        }
+        return new int[]{plan.bySubgroup.size(), plan.individuals.size(), reached};
+    }
+
+    /** GROUP_MMS recipients of an admin broadcast, split into group rows and individual texts. */
+    private static final class BroadcastPlan {
+        /** Sub-group id to the members its group row reaches, in sub-group id order. */
+        final Map<Long, List<Member>> bySubgroup = new TreeMap<>();
+        /** Members the group rows do not reach, each sent their own text. */
+        final List<Member> individuals = new ArrayList<>();
+    }
+
+    /**
+     * Splits the active members for a GROUP_MMS admin broadcast. Each active member lands in
+     * exactly one bucket, from one pass over one {@code getActiveMembers()} read:
+     * <ul>
+     *   <li>in a sub-group and unmuted: that sub-group's group row;</li>
+     *   <li>otherwise (unassigned, or muted): an individual text.</li>
+     * </ul>
+     *
+     * <p>Why nobody is sent it twice and nobody is missed: the two conditions are complements, so
+     * the buckets partition the active set. The group row is resolved at send time by
+     * {@link MemberRepository#getSubgroupMembers}, i.e. {@code active AND unmuted AND subgroup_id
+     * = id} - exactly the first bucket for that id - so it never reaches a muted member or an
+     * unassigned one, which are the individual bucket. A sub-group whose members are all muted
+     * gets no group row at all (its key is never created); its members are all individuals.
+     * Muted members still get admin broadcasts, as they always have in SMS delivery.
+     *
+     * <p>The one gap is the usual enqueue-vs-send race: a member muted, moved or removed between
+     * this call and the send is resolved by the send, as for every other group row.
+     */
+    private BroadcastPlan planBroadcastRecipients() {
+        BroadcastPlan plan = new BroadcastPlan();
+        for (Member m : memberRepository.getActiveMembers()) {
+            if (m.subgroupId != null && !m.isMuted) {
+                List<Member> group = plan.bySubgroup.get(m.subgroupId);
+                if (group == null) {
+                    group = new ArrayList<>();
+                    plan.bySubgroup.put(m.subgroupId, group);
+                }
+                group.add(m);
+            } else {
+                plan.individuals.add(m);
+            }
+        }
+        return plan;
     }
 
     /** An explicit #all / all: post. Same Announcement-mode gate as a plain relay, otherwise always posts to the group. */

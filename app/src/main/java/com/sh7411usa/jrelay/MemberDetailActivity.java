@@ -5,7 +5,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.ContactsContract;
-import android.text.format.DateFormat;
+import android.text.InputType;
+import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -43,11 +44,15 @@ public class MemberDetailActivity extends BaseActivity {
     private TextView nicknameView;
     private TextView numberView;
     private TextView memberMetaView;
+    private TextView adminBadgeView;
+    private TextView mutedBadgeView;
+    private TextView subgroupBadgeView;
     private TextView statSentView;
     private TextView statReceivedView;
     private TextView statTodayView;
     private TextView statActivityLevelView;
     private LinearLayout activityContainer;
+    private TextView activityEmptyView;
     private Button adminButton;
     private Button muteButton;
 
@@ -58,6 +63,7 @@ public class MemberDetailActivity extends BaseActivity {
     private EditText dailyLimitValueInput;
     private TextView dailyLimitUsageView;
     private Button overrideDailyLimitButton;
+    private Button saveDailyLimitButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,11 +79,15 @@ public class MemberDetailActivity extends BaseActivity {
         nicknameView = findViewById(R.id.text_nickname);
         numberView = findViewById(R.id.text_number);
         memberMetaView = findViewById(R.id.text_member_meta);
+        adminBadgeView = findViewById(R.id.text_badge_admin);
+        mutedBadgeView = findViewById(R.id.text_badge_muted);
+        subgroupBadgeView = findViewById(R.id.text_badge_subgroup);
         statSentView = findViewById(R.id.text_stat_sent);
         statReceivedView = findViewById(R.id.text_stat_received);
         statTodayView = findViewById(R.id.text_stat_today);
         statActivityLevelView = findViewById(R.id.text_stat_activity_level);
         activityContainer = findViewById(R.id.container_member_activity);
+        activityEmptyView = findViewById(R.id.text_member_activity_empty);
         adminButton = findViewById(R.id.button_toggle_admin);
         muteButton = findViewById(R.id.button_toggle_mute);
 
@@ -88,6 +98,7 @@ public class MemberDetailActivity extends BaseActivity {
         dailyLimitValueInput = findViewById(R.id.edit_daily_limit_value);
         dailyLimitUsageView = findViewById(R.id.text_daily_limit_usage);
         overrideDailyLimitButton = findViewById(R.id.button_override_daily_limit);
+        saveDailyLimitButton = findViewById(R.id.button_save_daily_limit);
 
         adminButton.setOnClickListener(v -> {
             if (member.isAdmin && memberRepository.countActiveAdmins() <= 1) {
@@ -113,7 +124,7 @@ public class MemberDetailActivity extends BaseActivity {
                 dailyLimitFieldsContainer.setVisibility(isChecked ? View.VISIBLE : View.GONE));
         dailyLimitUnlimitedCheckbox.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) ->
                 dailyLimitValueContainer.setVisibility(isChecked ? View.GONE : View.VISIBLE));
-        findViewById(R.id.button_save_daily_limit).setOnClickListener(v -> saveDailyLimit());
+        saveDailyLimitButton.setOnClickListener(v -> saveDailyLimit());
         overrideDailyLimitButton.setOnClickListener(v -> overrideDailyLimit());
     }
 
@@ -133,6 +144,14 @@ public class MemberDetailActivity extends BaseActivity {
         numberView.setText(member.phoneE164);
         adminButton.setText(member.isAdmin ? R.string.action_revoke_admin : R.string.action_make_admin);
         muteButton.setText(member.isMuted ? R.string.action_unmute : R.string.action_mute);
+        adminBadgeView.setVisibility(member.isAdmin ? View.VISIBLE : View.GONE);
+        mutedBadgeView.setVisibility(member.isMuted ? View.VISIBLE : View.GONE);
+        if (member.subgroupId != null) {
+            subgroupBadgeView.setText(getString(R.string.subgroup_row_badge, member.subgroupId));
+            subgroupBadgeView.setVisibility(View.VISIBLE);
+        } else {
+            subgroupBadgeView.setVisibility(View.GONE);
+        }
 
         int sentCount = messageRepository.countForMember(member.id, "IN");
         int receivedCount = messageRepository.countForMember(member.id, "OUT");
@@ -144,9 +163,9 @@ public class MemberDetailActivity extends BaseActivity {
 
         if (lastActivity > 0) {
             memberMetaView.setText(getString(R.string.label_member_meta_with_activity,
-                    DateFormat.format("MMM d, yyyy", member.createdAt), DateFormat.format("MMM d, h:mm a", lastActivity)));
+                    formatDate(member.createdAt), formatDateTime(lastActivity)));
         } else {
-            memberMetaView.setText(getString(R.string.label_member_meta, DateFormat.format("MMM d, yyyy", member.createdAt)));
+            memberMetaView.setText(getString(R.string.label_member_meta, formatDate(member.createdAt)));
         }
 
         statSentView.setText(String.valueOf(sentCount));
@@ -156,6 +175,16 @@ public class MemberDetailActivity extends BaseActivity {
 
         populateDailyLimitFields();
         renderActivity();
+    }
+
+    private String formatDate(long millis) {
+        return DateUtils.formatDateTime(this, millis,
+                DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_YEAR | DateUtils.FORMAT_ABBREV_MONTH);
+    }
+
+    private String formatDateTime(long millis) {
+        return DateUtils.formatDateTime(this, millis,
+                DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_TIME | DateUtils.FORMAT_ABBREV_MONTH);
     }
 
     private void setActivityLevel(int recentCount) {
@@ -224,8 +253,14 @@ public class MemberDetailActivity extends BaseActivity {
     }
 
     private void overrideDailyLimit() {
+        // The refresh hides this button; on DPAD, move focus to the adjacent Save button instead
+        // of letting it jump to the top of the screen.
+        boolean hadFocus = overrideDailyLimitButton.hasFocus() && !overrideDailyLimitButton.isInTouchMode();
         new DailyLimitManager(this).overrideMember(member);
         refresh();
+        if (hadFocus && overrideDailyLimitButton.getVisibility() != View.VISIBLE) {
+            saveDailyLimitButton.requestFocus();
+        }
         Toast.makeText(this, R.string.daily_limit_override_done, Toast.LENGTH_SHORT).show();
     }
 
@@ -240,6 +275,7 @@ public class MemberDetailActivity extends BaseActivity {
     private void renderActivity() {
         activityContainer.removeAllViews();
         List<MessageRecord> recent = messageRepository.getRecentForMember(member.id, 20);
+        activityEmptyView.setVisibility(recent.isEmpty() ? View.VISIBLE : View.GONE);
         LayoutInflater inflater = LayoutInflater.from(this);
         for (int i = 0; i < recent.size(); i++) {
             MessageRecord record = recent.get(i);
@@ -247,7 +283,7 @@ public class MemberDetailActivity extends BaseActivity {
             TextView bodyView = row.findViewById(R.id.text_message_body);
             TextView metaView = row.findViewById(R.id.text_message_meta);
             bodyView.setText(record.body);
-            metaView.setText(DateFormat.format("MMM d, h:mm a", record.timestamp));
+            metaView.setText(formatDateTime(record.timestamp));
             activityContainer.addView(row);
             if (i < recent.size() - 1) {
                 activityContainer.addView(UiUtil.createDivider(this, R.color.divider));
@@ -274,10 +310,12 @@ public class MemberDetailActivity extends BaseActivity {
     private void showDmDialog() {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_text_input, null);
         EditText input = dialogView.findViewById(R.id.edit_text_input);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         new AlertDialog.Builder(this)
                 .setTitle(R.string.action_send_dm)
                 .setView(dialogView)
-                .setPositiveButton(R.string.action_save, (dialog, which) -> {
+                .setPositiveButton(R.string.action_send, (dialog, which) -> {
                     String message = input.getText().toString().trim();
                     if (!message.isEmpty()) {
                         commandProcessor.sendDirectMessage(member, message);
@@ -290,6 +328,8 @@ public class MemberDetailActivity extends BaseActivity {
     private void showEditNicknameDialog() {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_text_input, null);
         EditText input = dialogView.findViewById(R.id.edit_text_input);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PERSON_NAME
+                | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
         input.setText(member.nickname);
         new AlertDialog.Builder(this)
                 .setTitle(R.string.action_edit_nickname)
@@ -308,6 +348,10 @@ public class MemberDetailActivity extends BaseActivity {
     private void showEditNumberDialog() {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_text_input, null);
         EditText input = dialogView.findViewById(R.id.edit_text_input);
+        // Phone keypad on T9 devices, and keep "+1555..." from rendering as "1555...+" in RTL.
+        input.setInputType(InputType.TYPE_CLASS_PHONE);
+        input.setTextDirection(View.TEXT_DIRECTION_LTR);
+        input.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
         input.setText(member.phoneE164);
         new AlertDialog.Builder(this)
                 .setTitle(R.string.action_edit_number)

@@ -93,8 +93,6 @@
 
     <!-- Add Member -->
     <string name="add_member_title">Add Member</string>
-    <string name="hint_phone_number">Phone number</string>
-    <string name="hint_nickname">Nickname</string>
     <string name="action_save">Save</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_retry_permission">Try Again</string>
@@ -161,8 +159,15 @@
     <string name="pause_option_1_day">Pause for 1 Day</string>
     <string name="pause_option_until_unpaused">Pause Until Unpaused</string>
     <string name="pause_status_not_paused">Not paused.</string>
+    <string name="action_resume_now">Resume now</string>
     <string name="pause_status_indefinite">Paused indefinitely.</string>
     <string name="pause_status_timed">Paused. Resumes in %1$s.</string>
+    <string name="duration_seconds">%1$ds</string>
+    <string name="duration_minutes_seconds">%1$dm %2$ds</string>
+    <string name="duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="duration_days_hours">%1$dd %2$dh</string>
+    <string name="hint_time_hhmm" translatable="false">HH:mm</string>
+    <string name="line_break_join" translatable="false">%1$s\n%2$s</string>
 
     <string name="section_group_mode">Group Mode</string>
     <string name="group_mode_desc">Group mode relays everyone\'s messages as usual. Announcement mode relays only admins\' messages to everyone -- everyone else\'s messages go to admins only. Reply mode relays a message to everyone only when it starts with #all; a plain reply goes just to the member who posted. Can also be changed by text with #mode group / #mode announcement / #mode reply.</string>
@@ -354,13 +359,11 @@
     <string name="action_disband_group">Disband Group</string>
     <string name="disband_group_title">Disband Group?</string>
     <string name="disband_group_warning">This will permanently erase all members and all message history. Nobody will be notified. This cannot be undone.\n\nTo confirm, enter the PIN shown below.</string>
-    <string name="hint_disband_pin">Enter PIN</string>
     <string name="disband_pin_mismatch">PIN did not match. The group was not disbanded.</string>
     <string name="disband_group_done">The group has been disbanded.</string>
 
     <!-- Send to Group -->
     <string name="send_group_message_title">Send to Group</string>
-    <string name="hint_group_message">Message to send to every active member</string>
     <string name="action_send">Send</string>
 
     <!-- Notifications -->
@@ -477,4 +480,18 @@
     <string name="join_group_full_toast">The group is full. Remove someone or raise the limit first.</string>
     <string name="join_declined_toast">Request declined.</string>
     <string name="join_approved_by_app">Admin</string>
+
+    <!-- Settings categories -->
+    <string name="settings_cat_group">Group</string>
+    <string name="settings_cat_group_desc">Mode, replies, commands, notices, join requests, capacity</string>
+    <string name="settings_cat_delivery">Group delivery</string>
+    <string name="settings_cat_delivery_desc">Group delivery, queue shuffling</string>
+    <string name="settings_cat_speed">Sending speed</string>
+    <string name="settings_cat_speed_desc">Staggering, bursts, microspacing, merging</string>
+    <string name="settings_cat_limits">Limits and failures</string>
+    <string name="settings_cat_limits_desc">Retries, group daily limit, Android SMS limit</string>
+    <string name="settings_cat_content">Message content</string>
+    <string name="settings_cat_content_desc">Sender number, phone numbers, salting</string>
+    <string name="settings_cat_app">App</string>
+    <string name="settings_cat_app_desc">Language, appearance, history, license, version</string>
 </resources>

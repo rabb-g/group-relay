@@ -21,7 +21,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "jrelay.db";
-    private static final int DB_VERSION = 11;
+    private static final int DB_VERSION = 13;
 
     public static final String TABLE_MEMBERS = "members";
     public static final String TABLE_MESSAGE_LOG = "message_log";
@@ -29,6 +29,7 @@ public class DbHelper extends SQLiteOpenHelper {
     public static final String TABLE_KNOWN_THREADS = "known_threads";
     public static final String TABLE_INGESTED_MMS = "ingested_mms";
     public static final String TABLE_JOIN_REQUESTS = "join_requests";
+    public static final String TABLE_PROCESSED_SMS = "processed_sms";
 
     private static DbHelper instance;
 
@@ -114,7 +115,48 @@ public class DbHelper extends SQLiteOpenHelper {
                 "requested_at INTEGER NOT NULL" +
                 ")");
 
+        createProcessedSms(db);
+
         createIndexes(db);
+        createOutboxPhoneIndex(db);
+        createOutboxHandoffIndex(db);
+    }
+
+    /**
+     * {@code outbox(phone_e164, enqueued_at)} - one half of the pair that serves
+     * {@code OutboxRepository.sentSameBodyRecently}'s
+     * {@code phone_e164 = ? ... AND (enqueued_at >= ? OR handed_off_at >= ?)}, which runs on every
+     * inbound SMS against an outbox that is never pruned. On its own it serves only the
+     * {@code phone_e164 = ?} prefix, because the OR's {@code handed_off_at} arm cannot use it, so
+     * every outbox row for that phone is read; see {@link #createOutboxHandoffIndex}. Separate
+     * from {@link #createIndexes} because it arrived in version 12, not 7; onCreate and the
+     * version-12 migration both call it.
+     */
+    private static void createOutboxPhoneIndex(SQLiteDatabase db) {
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_outbox_phone_enqueued ON " + TABLE_OUTBOX + "(phone_e164, enqueued_at)");
+    }
+
+    /**
+     * {@code outbox(phone_e164, handed_off_at)} - the other half: with both indexes SQLite runs
+     * the echo query as a MULTI-INDEX OR, a range search on each arm, instead of reading every row
+     * for the phone. Version 13; onCreate and the version-13 migration both call it.
+     */
+    private static void createOutboxHandoffIndex(SQLiteDatabase db) {
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_outbox_phone_handoff ON " + TABLE_OUTBOX + "(phone_e164, handed_off_at)");
+    }
+
+    /**
+     * processed_sms: seen-set shared by the live SMS_RECEIVED path and the content://sms catch-up
+     * scan, so an inbound SMS is handled at most once whichever path sees it first. See
+     * {@code ProcessedSmsRepository} and {@code SmsCatchUp}. One statement shared by onCreate and
+     * the version-12 migration so both create an identical table.
+     */
+    private static void createProcessedSms(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_PROCESSED_SMS + " (" +
+                "dedupe_key TEXT PRIMARY KEY," +
+                "processed_at INTEGER NOT NULL," +
+                "source TEXT" +
+                ")");
     }
 
     /**
@@ -230,6 +272,13 @@ public class DbHelper extends SQLiteOpenHelper {
                     "requested_at INTEGER NOT NULL" +
                     ")");
         }
+        if (oldVersion < 12) {
+            createProcessedSms(db);
+            createOutboxPhoneIndex(db);
+        }
+        if (oldVersion < 13) {
+            createOutboxHandoffIndex(db);
+        }
     }
 
     /** Permanently erases every member, message, and queued outbound message. Used only by "Disband Group". */
@@ -241,5 +290,9 @@ public class DbHelper extends SQLiteOpenHelper {
         // Pending requests are the numbers of people who asked to join the old group; they must
         // not survive a disband and reappear as approvable requests in the next one.
         db.delete(TABLE_JOIN_REQUESTS, null, null);
+        // processed_sms is deliberately NOT cleared: it is what stops the SMS catch-up scan from
+        // replaying the last 48 hours of already-handled texts (e.g. old #join requests) into the
+        // new group. It holds no message text (only sender numbers, timestamps and body hashes),
+        // and ProcessedSmsRepository prunes it after a week.
     }
 }
