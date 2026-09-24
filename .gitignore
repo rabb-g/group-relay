@@ -22,3 +22,6 @@ Initial Prompt.txt
 docs/
 app/src/test/
 app/src/androidTest/
+
+# All markdown kept local
+*.md
