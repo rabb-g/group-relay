@@ -69,6 +69,7 @@ public class MembershipActivity extends BaseActivity {
                 startActivity(new Intent(this, AddMemberActivity.class)));
         findViewById(R.id.button_membership_options).setOnClickListener(this::showOptionsMenu);
         findViewById(R.id.button_suggest_subgroups).setOnClickListener(v -> suggestSubgroupAssignments());
+        findViewById(R.id.button_send_rosters).setOnClickListener(v -> sendSubgroupRosters());
 
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override
@@ -154,6 +155,29 @@ public class MembershipActivity extends BaseActivity {
                         memberRepository.assignSubgroup(a.memberId, (long) a.subgroupId);
                     }
                     renderMembers();
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
+    /**
+     * Queues one roster per sub-group, each listing only that sub-group's own members. Confirmed
+     * first because it is real outgoing traffic — roughly four segments per sub-group in Hebrew —
+     * and because the admin, not the app, decides when the membership has settled enough to be
+     * worth publishing. See {@link CommandProcessor#sendSubgroupRosters()}.
+     */
+    private void sendSubgroupRosters() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.action_send_rosters)
+                .setMessage(R.string.warning_subgroup_visibility)
+                .setPositiveButton(R.string.action_send_rosters, (dialog, which) -> {
+                    int queued = new CommandProcessor(this).sendSubgroupRosters();
+                    if (queued == 0) {
+                        Toast.makeText(this, R.string.roster_none, Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(this, getString(R.string.roster_queued, queued),
+                                Toast.LENGTH_LONG).show();
+                    }
                 })
                 .setNegativeButton(R.string.action_cancel, null)
                 .show();

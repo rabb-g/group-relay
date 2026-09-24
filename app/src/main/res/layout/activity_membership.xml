@@ -65,6 +65,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/action_suggest_subgroups"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/button_send_rosters"
+                style="@style/Widget.JRelay.Button.Small.Outline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_send_rosters"
                 android:layout_marginBottom="16dp" />
 
             <LinearLayout

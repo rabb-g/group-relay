@@ -215,6 +215,15 @@
     <string name="section_delivery_shuffle">ערבוב סדר המשלוח</string>
     <string name="delivery_shuffle_desc">שולח הודעות לחברים בסדר אקראי בכל מחזור, במקום בסדר חוזר.</string>
     <string name="checkbox_delivery_shuffle">ערבוב סדר המשלוח</string>
+    <string name="section_group_delivery">משלוח בקבוצות</string>
+    <string name="group_delivery_desc">שלח כל הודעה כהודעת קבוצה אחת לכל תת-קבוצה, במקום מסרון נפרד לכל אדם. תחילה שייך חברים לתת-קבוצות במסך החברים. תגובות בתוך שרשור קבוצה עוברות ישירות בין החברים ולא מקבלות קידומת עם שם.</string>
+    <string name="checkbox_group_delivery">שלח לפי תת-קבוצה</string>
+    <string name="roster_header">רשימת %1$s:</string>
+    <string name="roster_footer">שמור את אנשי הקשר האלה כדי לדעת מי כותב.</string>
+    <string name="action_send_rosters">שלח רשימות תת-קבוצה</string>
+    <string name="roster_queued">רשימות נשלחו ל-%1$d תת-קבוצות.</string>
+    <string name="roster_none">אין תת-קבוצות לשליחת רשימה.</string>
+    <string name="error_group_delivery_no_subgroups">שייך תחילה חברים לתת-קבוצות, במסך החברים.</string>
 
     <string name="checkbox_added_reporting_enabled">הודעה לקבוצה כשמתווסף חבר</string>
 

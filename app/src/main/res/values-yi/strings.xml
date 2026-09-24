@@ -215,6 +215,15 @@
     <string name="section_delivery_shuffle">צעמישן די סדר פון שיקן</string>
     <string name="delivery_shuffle_desc">שיקט ידיעות צו מיטגלידער אין א צופעליקער סדר יעדעס מאל, אנשטאט אן איבערחזרנדיקע סדר.</string>
     <string name="checkbox_delivery_shuffle">צעמישן די סדר פון שיקן</string>
+    <string name="section_group_delivery">שיקן אין גרופעס</string>
+    <string name="group_delivery_desc">שיק יעדע מעלדונג ווי איין גרופע-מעלדונג פאר יעדער ווינקל-גרופע, אנשטאט א באזונדערן סמס פאר יעדער מענטשן. צוערשט טייל צו מיטגלידער אין ווינקל-גרופעס אויףן מיטגלידער-שירים. טשובות אינעווייניק א גרופע-שמועס גייען דירעקט צווישן מיטגלידער און האבן ניט קיין נאמען פאראויס.</string>
+    <string name="checkbox_group_delivery">שיק לויט ווינקל-גרופע</string>
+    <string name="roster_header">רשימה פון %1$s:</string>
+    <string name="roster_footer">פארראכט די קאנטאקטן כדי צו וויסן ווער עס שרייבט.</string>
+    <string name="action_send_rosters">שיק ווינקל-גרופע רשימות</string>
+    <string name="roster_queued">רשימות געשיקט פאר %1$d ווינקל-גרופעס.</string>
+    <string name="roster_none">קיין ווינקל-גרופעס צו שיקן א רשימה.</string>
+    <string name="error_group_delivery_no_subgroups">צוטייל צוערשט מיטגלידער אין ווינקל-גרופעס, אויףן מיטגלידער-שירים.</string>
 
     <string name="checkbox_added_reporting_enabled">מודעה צו דער גרופע ווען א מיטגליד ווערט צוגעלייגט</string>
 

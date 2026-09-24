@@ -215,6 +215,15 @@
     <string name="section_delivery_shuffle">Delivery Queue Shuffling</string>
     <string name="delivery_shuffle_desc">Dispatches messages to members in a random order each cycle instead of a repeating order.</string>
     <string name="checkbox_delivery_shuffle">Shuffle delivery order</string>
+    <string name="section_group_delivery">Group Delivery</string>
+    <string name="group_delivery_desc">Send each post as one group message per sub-group instead of one text per person. Assign members to sub-groups on the Membership screen first. Replies inside a group thread go straight between members and are not prefaced with a name.</string>
+    <string name="checkbox_group_delivery">Send by sub-group</string>
+    <string name="roster_header">%1$s roster:</string>
+    <string name="roster_footer">Save these contacts so you know who is writing.</string>
+    <string name="action_send_rosters">Send sub-group rosters</string>
+    <string name="roster_queued">Rosters queued for %1$d sub-group(s).</string>
+    <string name="roster_none">No sub-groups to send a roster to.</string>
+    <string name="error_group_delivery_no_subgroups">Assign members to sub-groups first, on the Membership screen.</string>
 
     <string name="checkbox_added_reporting_enabled">Notify group when a member is added</string>
 

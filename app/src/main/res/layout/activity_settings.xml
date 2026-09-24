@@ -433,6 +433,29 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="28dp" />
 
+            <!-- Group Delivery -->
+            <TextView
+                style="@style/TextAppearance.JRelay.Subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/section_group_delivery"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                style="@style/TextAppearance.JRelay.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/group_delivery_desc"
+                android:layout_marginBottom="8dp" />
+
+            <CheckBox
+                android:id="@+id/checkbox_group_delivery"
+                style="@style/Widget.JRelay.CheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/checkbox_group_delivery"
+                android:layout_marginBottom="28dp" />
+
             <!-- Delivery Queue Shuffling -->
             <TextView
                 style="@style/TextAppearance.JRelay.Subtitle"

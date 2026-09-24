@@ -123,6 +123,7 @@ public class SettingsActivity extends BaseActivity {
 
     // Delivery shuffle
     private CheckBox deliveryShuffleCheckbox;
+    private CheckBox groupDeliveryCheckbox;
 
     // Group Notices
     private CheckBox addedReportingEnabledCheckbox;
@@ -248,6 +249,7 @@ public class SettingsActivity extends BaseActivity {
         maxMergedSegmentsInput = findViewById(R.id.edit_max_merged_segments);
 
         deliveryShuffleCheckbox = findViewById(R.id.checkbox_delivery_shuffle);
+        groupDeliveryCheckbox = findViewById(R.id.checkbox_group_delivery);
 
         addedReportingEnabledCheckbox = findViewById(R.id.checkbox_added_reporting_enabled);
         notifyMemberLeftCheckbox = findViewById(R.id.checkbox_notify_member_left);
@@ -327,6 +329,7 @@ public class SettingsActivity extends BaseActivity {
         maxMergedSegmentsInput.setText(String.valueOf(prefs.getMaxMergedSegments()));
 
         deliveryShuffleCheckbox.setChecked(prefs.isDeliveryShuffleEnabled());
+        groupDeliveryCheckbox.setChecked(prefs.getDeliveryMode() == Prefs.DeliveryMode.GROUP_MMS);
 
         addedReportingEnabledCheckbox.setChecked(prefs.isAddedReportingEnabled());
         notifyMemberLeftCheckbox.setChecked(prefs.isNotifyMemberLeftEnabled());
@@ -564,6 +567,21 @@ public class SettingsActivity extends BaseActivity {
         prefs.setMaxMergedSegments(Math.max(1, parseOrDefault(maxMergedSegmentsInput, prefs.getMaxMergedSegments())));
 
         prefs.setDeliveryShuffleEnabled(deliveryShuffleCheckbox.isChecked());
+
+        // Group delivery is refused while no sub-group exists. The GROUP_MMS branch in
+        // CommandProcessor fans a post out per sub-group; with none assigned it would find nothing
+        // to send to and the post would vanish silently. Falling back to SMS is the safe default
+        // (see Prefs#getDeliveryMode), so on refusal we both un-tick the box and write SMS rather
+        // than leaving the stored mode untouched.
+        if (groupDeliveryCheckbox.isChecked() && memberRepository.getDistinctSubgroupIds().isEmpty()) {
+            groupDeliveryCheckbox.setChecked(false);
+            prefs.setDeliveryMode(Prefs.DeliveryMode.SMS);
+            Toast.makeText(this, R.string.error_group_delivery_no_subgroups, Toast.LENGTH_LONG).show();
+        } else {
+            prefs.setDeliveryMode(groupDeliveryCheckbox.isChecked()
+                    ? Prefs.DeliveryMode.GROUP_MMS
+                    : Prefs.DeliveryMode.SMS);
+        }
 
         Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
     }

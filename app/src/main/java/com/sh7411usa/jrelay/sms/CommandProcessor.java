@@ -791,6 +791,52 @@ public class CommandProcessor {
      * between enqueue and send) is the same enqueue-vs-send race the individual half already
      * accepts.
      */
+    /**
+     * Sends every sub-group a roster of its own members, as one group message into that
+     * sub-group's own thread. See {@link RosterComposer} for why this exists: inside a sub-group
+     * thread jRelay is not in the path of member-to-member replies, so it cannot prefix them with
+     * a nickname, and on a flip phone an unsaved contact arrives as a bare string of digits.
+     *
+     * <p>A sub-group only ever receives its own list, never the whole ~100-member group — that
+     * boundary is the entire privacy argument for splitting into sub-groups in the first place, so
+     * the members passed to the composer come from {@link MemberRepository#getSubgroupMembers}
+     * per id and are never pooled.
+     *
+     * <p>Salting is deliberately off. {@link MessageSalt} exists to keep identical bodies from
+     * looking like bulk traffic, but each sub-group's roster is already a different body, and the
+     * zero-width space it inserts would force the whole message to UCS-2 — halving the segment
+     * size of what is already the longest message this app sends (~4 segments in Hebrew).
+     *
+     * <p>Rows are enqueued under {@code "SYSTEM"}, not {@code CATEGORY_RELAY}: a roster is not a
+     * relayed post, it must not appear in the relay feed as one, and
+     * {@link OutboxRepository#takeReleasedRelayRows} must never consider it for coalescing.
+     * {@code holdUntil} is 0 so rosters are not held behind the coalescing window — they are
+     * admin-triggered and expected to go out now.
+     *
+     * <p><b>Caller's obligation:</b> a roster goes stale the moment that sub-group's membership
+     * changes, and a stale roster is worse than none (it attributes a saved contact to whoever
+     * used to hold that slot). Re-send after any join, removal, or rebalance.
+     *
+     * @return the number of sub-groups a roster was queued for. Empty sub-groups are skipped
+     *         rather than sent a header-only message.
+     */
+    public int sendSubgroupRosters() {
+        String groupName = prefs.getGroupName();
+        String header = context.getString(R.string.roster_header);
+        String footer = context.getString(R.string.roster_footer);
+        int queued = 0;
+        for (Long subgroupId : memberRepository.getDistinctSubgroupIds()) {
+            List<Member> members = memberRepository.getSubgroupMembers(subgroupId);
+            if (members.isEmpty()) {
+                continue;
+            }
+            String body = RosterComposer.compose(header, groupName, footer, members);
+            outboxRepository.enqueueGroup(subgroupId, body, "SYSTEM", 0L, false);
+            queued++;
+        }
+        return queued;
+    }
+
     private void postToSubgroups(Member sender, String formatted, long postLogId) {
         Set<Long> activeSubgroupIds = new LinkedHashSet<>(memberRepository.getDistinctSubgroupIds());
         List<Member> unassignedMembers = memberRepository.getUnassignedActiveUnmutedMembers();
