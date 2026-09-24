@@ -372,6 +372,11 @@
     <string name="notif_send_status">%1$d pending, %2$d held</string>
     <string name="notif_send_status_burst">%1$d pending, %2$d held, burst scheduled</string>
 
+    <string name="notif_mms_ingest_title">jRelay is watching for replies</string>
+    <string name="notif_mms_ingest_channel_name">Group reply watch</string>
+    <string name="notif_mms_ingest_channel_desc">Shown while jRelay watches for inbound group MMS replies to relay, so it keeps running when the screen is off.</string>
+    <string name="notif_mms_ingest_idle">Waiting for group replies</string>
+
     <!-- Command reply / broadcast templates -->
     <string name="tpl_added_you">%1$s added you to %2$s Group. Reply #stop at anytime to opt out.</string>
     <string name="tpl_welcome_reply_hint"> Start a message with #all to post to everyone. A plain reply goes only to the person who posted.</string>

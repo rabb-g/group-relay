@@ -372,6 +372,11 @@
     <string name="notif_send_status">%1$d בתור, %2$d מוחזקות</string>
     <string name="notif_send_status_burst">%1$d בתור, %2$d מוחזקות, מנה מתוזמנת</string>
 
+    <string name="notif_mms_ingest_title">jRelay עוקב אחר תגובות</string>
+    <string name="notif_mms_ingest_channel_name">מעקב תגובות קבוצה</string>
+    <string name="notif_mms_ingest_channel_desc">מוצג בזמן ש-jRelay עוקב אחר תגובות MMS קבוציות נכנסות להעברה, כדי שהשירות ימשיך לפעול גם כשהמסך כבוי.</string>
+    <string name="notif_mms_ingest_idle">ממתין לתגובות קבוצה</string>
+
     <!-- Command reply / broadcast templates -->
     <string name="tpl_added_you">%1$s הוסיף/ה אותך לקבוצת %2$s. השיבו #stop בכל עת כדי לצאת.</string>
     <string name="tpl_welcome_reply_hint"> התחילו הודעה ב-#all כדי לפרסם לכולם. תגובה רגילה מגיעה רק למי שפרסם את ההודעה.</string>

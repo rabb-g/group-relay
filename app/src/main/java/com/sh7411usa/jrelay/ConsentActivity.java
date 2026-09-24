@@ -52,6 +52,8 @@ public class ConsentActivity extends BaseActivity {
         List<String> permissions = new ArrayList<>();
         permissions.add(Manifest.permission.SEND_SMS);
         permissions.add(Manifest.permission.RECEIVE_SMS);
+        permissions.add(Manifest.permission.READ_SMS);
+        permissions.add(Manifest.permission.RECEIVE_MMS);
         if (Build.VERSION.SDK_INT >= 33) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS);
         }

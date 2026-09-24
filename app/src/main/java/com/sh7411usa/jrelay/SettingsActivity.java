@@ -29,6 +29,7 @@ import com.sh7411usa.jrelay.db.MessageRepository;
 import com.sh7411usa.jrelay.model.Member;
 import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.SmsSendService;
+import com.sh7411usa.jrelay.sms.mms.MmsIngestService;
 import com.sh7411usa.jrelay.util.DailyLimitManager;
 import com.sh7411usa.jrelay.util.Prefs;
 import com.sh7411usa.jrelay.util.RateLimitConfig;
@@ -195,6 +196,8 @@ public class SettingsActivity extends BaseActivity {
         refreshGroupDailyLimitStatus();
         refreshCapacityStatus();
         pauseStatusHandler.post(pauseStatusTick);
+        // No-ops unless delivery mode is GROUP_MMS.
+        MmsIngestService.start(this);
     }
 
     @Override
@@ -573,6 +576,7 @@ public class SettingsActivity extends BaseActivity {
         // to send to and the post would vanish silently. Falling back to SMS is the safe default
         // (see Prefs#getDeliveryMode), so on refusal we both un-tick the box and write SMS rather
         // than leaving the stored mode untouched.
+        Prefs.DeliveryMode previousMode = prefs.getDeliveryMode();
         boolean groupDeliveryRefused =
                 groupDeliveryCheckbox.isChecked() && memberRepository.getDistinctSubgroupIds().isEmpty();
         if (groupDeliveryRefused) {
@@ -582,6 +586,14 @@ public class SettingsActivity extends BaseActivity {
             prefs.setDeliveryMode(groupDeliveryCheckbox.isChecked()
                     ? Prefs.DeliveryMode.GROUP_MMS
                     : Prefs.DeliveryMode.SMS);
+        }
+
+        if (previousMode != Prefs.DeliveryMode.GROUP_MMS && prefs.getDeliveryMode() == Prefs.DeliveryMode.GROUP_MMS) {
+            // Turning group delivery on must never bridge threads that existed before this
+            // moment -- seed the ingest watermark to now, same as MmsIngestService's own first-run
+            // seed, so a member's old reply from last week can't suddenly get relayed.
+            prefs.setMmsIngestSinceSeconds(System.currentTimeMillis() / 1000L);
+            MmsIngestService.start(this);
         }
 
         // On refusal show ONLY the explanation. Every other setting on this screen was still

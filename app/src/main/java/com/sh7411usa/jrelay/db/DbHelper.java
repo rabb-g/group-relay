@@ -21,11 +21,13 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "jrelay.db";
-    private static final int DB_VERSION = 9;
+    private static final int DB_VERSION = 10;
 
     public static final String TABLE_MEMBERS = "members";
     public static final String TABLE_MESSAGE_LOG = "message_log";
     public static final String TABLE_OUTBOX = "outbox";
+    public static final String TABLE_KNOWN_THREADS = "known_threads";
+    public static final String TABLE_INGESTED_MMS = "ingested_mms";
 
     private static DbHelper instance;
 
@@ -91,6 +93,18 @@ public class DbHelper extends SQLiteOpenHelper {
                 "parts_pending INTEGER NOT NULL DEFAULT 0," +
                 "handed_off_at INTEGER NOT NULL DEFAULT 0," +
                 "subgroup_id INTEGER" +
+                ")");
+
+        db.execSQL("CREATE TABLE " + TABLE_KNOWN_THREADS + " (" +
+                "signature TEXT PRIMARY KEY," +
+                "subgroup_id INTEGER NOT NULL," +
+                "last_used_at INTEGER NOT NULL" +
+                ")");
+
+        db.execSQL("CREATE TABLE " + TABLE_INGESTED_MMS + " (" +
+                "mms_id INTEGER PRIMARY KEY," +
+                "ingested_at INTEGER NOT NULL," +
+                "outcome TEXT" +
                 ")");
 
         createIndexes(db);
@@ -178,6 +192,25 @@ public class DbHelper extends SQLiteOpenHelper {
             // - see OutboxRepository#mapCursor's explicit isNull check, which is the same
             // NULL-vs-0 trap already documented above for members.subgroup_id.
             db.execSQL("ALTER TABLE " + TABLE_OUTBOX + " ADD COLUMN subgroup_id INTEGER");
+        }
+        if (oldVersion < 10) {
+            // known_threads: every recipient set the app has ever sent a group MMS to. An inbound
+            // group MMS is only bridged if its participant set matches a signature here - that is
+            // what stops a private group chat that happens to include the relay phone from being
+            // broadcast to everyone. Old signatures are kept, never pruned on reassignment, because
+            // people keep typing in an old thread after a member joins or leaves.
+            db.execSQL("CREATE TABLE " + TABLE_KNOWN_THREADS + " (" +
+                    "signature TEXT PRIMARY KEY," +
+                    "subgroup_id INTEGER NOT NULL," +
+                    "last_used_at INTEGER NOT NULL" +
+                    ")");
+            // ingested_mms: seen-set of inbound MMS rows from content://mms already processed, so
+            // a message is bridged at most once.
+            db.execSQL("CREATE TABLE " + TABLE_INGESTED_MMS + " (" +
+                    "mms_id INTEGER PRIMARY KEY," +
+                    "ingested_at INTEGER NOT NULL," +
+                    "outcome TEXT" +
+                    ")");
         }
     }
 

@@ -25,6 +25,7 @@ import com.sh7411usa.jrelay.model.MessageRecord;
 import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.SendQueueStatus;
 import com.sh7411usa.jrelay.sms.SmsSendService;
+import com.sh7411usa.jrelay.sms.mms.MmsIngestService;
 import com.sh7411usa.jrelay.util.DailyLimitManager;
 import com.sh7411usa.jrelay.util.Prefs;
 import com.sh7411usa.jrelay.util.UiUtil;
@@ -38,6 +39,16 @@ public class MainActivity extends BaseActivity {
     private static final String[] CRITICAL_PERMISSIONS = {
             Manifest.permission.SEND_SMS,
             Manifest.permission.RECEIVE_SMS,
+    };
+
+    /**
+     * Needed only to read and forward inbound group MMS, so they count toward the "missing a
+     * permission" banner only while group delivery is on. In SMS mode relaying works without them,
+     * and a banner claiming the app "is not relaying messages" would be false.
+     */
+    private static final String[] GROUP_MMS_PERMISSIONS = {
+            Manifest.permission.READ_SMS,
+            Manifest.permission.RECEIVE_MMS,
     };
 
     private Prefs prefs;
@@ -123,18 +134,25 @@ public class MainActivity extends BaseActivity {
         if (outboxRepository.countUnsent() > 0) {
             SmsSendService.start(this);
         }
+        // Cheap catch-up scan; no-ops unless delivery mode is GROUP_MMS.
+        MmsIngestService.start(this);
         refresh();
         queueStatusHandler.post(queueStatusTick);
     }
 
-    private void updatePermissionWarning() {
-        boolean missing = false;
-        for (String permission : CRITICAL_PERMISSIONS) {
+    private boolean anyDenied(String[] permissions) {
+        for (String permission : permissions) {
             if (checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
-                missing = true;
-                break;
+                return true;
             }
         }
+        return false;
+    }
+
+    private void updatePermissionWarning() {
+        boolean missing = anyDenied(CRITICAL_PERMISSIONS)
+                || (prefs.getDeliveryMode() == Prefs.DeliveryMode.GROUP_MMS
+                        && anyDenied(GROUP_MMS_PERMISSIONS));
         permissionWarningView.setVisibility(missing ? View.VISIBLE : View.GONE);
     }
 

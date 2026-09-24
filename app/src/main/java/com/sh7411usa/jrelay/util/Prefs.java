@@ -96,6 +96,7 @@ public class Prefs {
     private static final String KEY_DELIVERY_MODE = "delivery_mode";
     private static final String KEY_SUBGROUP_TARGET_SIZE = "subgroup_target_size";
     private static final String KEY_PAUSE_UNTIL_MILLIS = "pause_until_millis";
+    private static final String KEY_MMS_INGEST_SINCE_SECONDS = "mms_ingest_since_seconds";
 
     private static final String KEY_REPLY_WINDOW_HOURS = "reply_window_hours";
     private static final String KEY_COPY_REPLIES_TO_ADMINS = "copy_replies_to_admins";
@@ -626,6 +627,19 @@ public class Prefs {
 
     public void setSubgroupTargetSize(int size) {
         prefs.edit().putInt(KEY_SUBGROUP_TARGET_SIZE, size).apply();
+    }
+
+    /**
+     * Epoch seconds after which inbound group MMS may be bridged. 0 = not yet seeded; the first
+     * scan after group delivery is enabled sets this to "now" instead of bridging, so history that
+     * predates enabling the feature is never relayed. See {@code MmsIngestService#scan}.
+     */
+    public long getMmsIngestSinceSeconds() {
+        return prefs.getLong(KEY_MMS_INGEST_SINCE_SECONDS, 0L);
+    }
+
+    public void setMmsIngestSinceSeconds(long sinceEpochSeconds) {
+        prefs.edit().putLong(KEY_MMS_INGEST_SINCE_SECONDS, sinceEpochSeconds).apply();
     }
 
     private <E extends Enum<E>> E parseEnum(String stored, Class<E> type, E defaultValue) {

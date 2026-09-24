@@ -699,7 +699,9 @@ public class CommandProcessor {
             sendToAdminsOnly(sender, body);
             return;
         }
-        postToGroup(sender, body);
+        // Direct 1:1 SMS path: nobody has seen this yet except the poster, so no sub-group is
+        // pre-excluded from the relay set. See postToGroup's alreadyDeliveredSubgroupId javadoc.
+        postToGroup(sender, body, null);
     }
 
     private void relayPlainMessage(Member sender, String body) {
@@ -712,7 +714,64 @@ public class CommandProcessor {
             handleReply(sender, body);
             return;
         }
-        postToGroup(sender, body);
+        // Direct 1:1 SMS path: same as handleExplicitPost, nothing pre-excluded.
+        postToGroup(sender, body, null);
+    }
+
+    /**
+     * A message a member wrote inside the group-MMS thread of sub-group {@code threadSubgroupId}.
+     * A separate unit (the inbound group-MMS reader) calls this for every message a member posts
+     * in their sub-group thread; this bridges ("relays") it onward to every other sub-group plus
+     * unassigned members, exactly like a relayed post from a direct SMS, except the thread's own
+     * sub-group is excluded — its members already saw the message peer-to-peer, in the thread it
+     * was written in, before jRelay ever saw it.
+     */
+    public void handleThreadMessage(Member sender, long threadSubgroupId, String body) {
+        if (prefs.isPaused()) {
+            return;
+        }
+        // Bridging only makes sense in GROUP_MMS delivery: in SMS mode there is no sub-group
+        // thread to have "already seen" the message, so bridging here would send every one of the
+        // thread's own members an individual SMS duplicating what they just read in the thread.
+        if (prefs.getDeliveryMode() != Prefs.DeliveryMode.GROUP_MMS) {
+            return;
+        }
+        if (sender == null || !sender.active) {
+            return;
+        }
+        String trimmed = body == null ? "" : body.trim();
+        if (trimmed.isEmpty()) {
+            return;
+        }
+
+        // Log the inbound message the same way handleIncoming does for a direct message, so the
+        // dashboard/message history shows real in-thread conversation, not just relayed copies.
+        messageRepository.log(sender.id, "IN", "RELAY", body);
+
+        if (sender.isMuted) {
+            // Muted means jRelay does not relay this member's posts, in-thread or direct.
+            return;
+        }
+        // Bare keywords ("stop", "help", ...) are deliberately NOT treated as commands here, even
+        // when the bare-keywords setting is on. In a conversation between neighbours "stop" is an
+        // ordinary word, so it is bridged like any other message. Only an explicit '#' command is
+        // held back (owner decision, 2026-09-24).
+        if (trimmed.startsWith("#")) {
+            // Commands must be texted directly to the relay. Executing a command typed inside a
+            // group-MMS thread — visible to every other member of that thread — is out of scope
+            // and would let e.g. #remove or #mode be triggered in front of an audience; just drop it.
+            return;
+        }
+        if (prefs.getGroupMode() == Prefs.GroupMode.ANNOUNCEMENT && !sender.isAdmin) {
+            // The thread's peers already saw it peer-to-peer; Announcement mode means only admins'
+            // posts reach the rest of the group. Don't sendToAdminsOnly here either — that would
+            // cost extra texts for a message the sender's own thread already delivered.
+            return;
+        }
+        // Reply mode has no meaning for an in-thread message: it has no 1:1 reply target (it was
+        // written to a group thread, not to jRelay), so it's always treated as a group post here,
+        // same as a direct-SMS post in Group mode.
+        postToGroup(sender, trimmed, threadSubgroupId);
     }
 
     /**
@@ -727,20 +786,46 @@ public class CommandProcessor {
         return welcome;
     }
 
-    private void postToGroup(Member sender, String body) {
+    /**
+     * Shared landing point for every path that turns a member's message into a relayed group
+     * post: a direct 1:1 SMS to the relay (relayPlainMessage / handleExplicitPost, both pass
+     * {@code alreadyDeliveredSubgroupId = null} — nobody but the poster has seen it) and an
+     * in-thread group-MMS message (handleThreadMessage, which passes the thread's own sub-group
+     * id, since that sub-group's members already saw it peer-to-peer and must not get it twice).
+     *
+     * <p>Note: when the poster IS in a sub-group and posted directly (SMS, not in-thread), their
+     * own sub-group now receives the post as a group MMS same as everyone else's, and the poster
+     * — a participant of that MMS thread — gets their own post echoed back to them. That's
+     * accepted as-is (one extra MMS, and it doubles as a delivery confirmation) rather than built
+     * around: there is no way to exclude one participant from a group MMS without a separate
+     * thread, which does not exist here.
+     */
+    private void postToGroup(Member sender, String body, Long alreadyDeliveredSubgroupId) {
         DailyLimitManager limitManager = new DailyLimitManager(context);
+
+        // A non-null alreadyDeliveredSubgroupId means this post came from inside a group thread,
+        // not a direct text. On that path an exhausted cap drops the bridge SILENTLY. Replying would
+        // send one 1:1 "limit reached" SMS for every in-thread message from any of ~100 members,
+        // unbounded, at exactly the moment the carrier budget is already spent -- and the writer's
+        // own group has seen the message anyway. A direct text still gets the reply, as before:
+        // there the sender has no other sign that nothing went out.
+        boolean replyOnLimit = alreadyDeliveredSubgroupId == null;
 
         DailyLimitManager.Status groupStatus = limitManager.groupStatus();
         if (groupStatus.isExhausted()) {
-            reply(sender, context.getString(R.string.tpl_group_limit_blocked,
-                    groupStatus.used, groupStatus.limit, resetTimeLabel(groupStatus.resetAtMillis)));
+            if (replyOnLimit) {
+                reply(sender, context.getString(R.string.tpl_group_limit_blocked,
+                        groupStatus.used, groupStatus.limit, resetTimeLabel(groupStatus.resetAtMillis)));
+            }
             return;
         }
 
         DailyLimitManager.Status memberStatus = limitManager.memberStatus(sender);
         if (memberStatus.isExhausted()) {
-            reply(sender, context.getString(R.string.tpl_individual_limit_blocked,
-                    memberStatus.used, memberStatus.limit, resetTimeLabel(memberStatus.resetAtMillis)));
+            if (replyOnLimit) {
+                reply(sender, context.getString(R.string.tpl_individual_limit_blocked,
+                        memberStatus.used, memberStatus.limit, resetTimeLabel(memberStatus.resetAtMillis)));
+            }
             return;
         }
 
@@ -758,7 +843,7 @@ public class CommandProcessor {
         // DeliveryMode.SMS -> exactly today's behaviour, unchanged: one row per recipient via
         // broadcastExcept, same as before this branch existed. GROUP_MMS is the only new path.
         if (prefs.getDeliveryMode() == Prefs.DeliveryMode.GROUP_MMS) {
-            postToSubgroups(sender, formatted, postLogId);
+            postToSubgroups(sender, formatted, postLogId, alreadyDeliveredSubgroupId);
         } else {
             broadcastExcept(sender.id, formatted, OutboxRepository.CATEGORY_RELAY, postLogId);
         }
@@ -770,6 +855,15 @@ public class CommandProcessor {
      * {@link SubgroupRouter#routePost} returns both halves precisely so neither can be dropped —
      * the unassigned half is who silently stops receiving anything if it's ever skipped, since
      * today every member is unassigned.
+     *
+     * <p>{@code alreadyDeliveredSubgroupId} is the one sub-group (if any) whose members have
+     * already seen this message some other way and must not receive the relayed copy — the
+     * thread's own sub-group for an in-thread post (see {@link #handleThreadMessage}), or
+     * {@code null} for a direct 1:1 SMS post, where no sub-group has seen it yet. It is passed
+     * straight through as {@link SubgroupRouter#routePost}'s {@code posterSubgroupId} argument.
+     * This used to always be {@code sender.subgroupId}, on the theory that a direct SMS poster's
+     * own sub-group had "already seen it peer-to-peer" — wrong for a direct SMS (nobody but the
+     * poster has seen it; the caller must actually be excluding based on delivery, not membership).
      *
      * <p>D1 (5.9 review): the unassigned half is built from
      * {@link MemberRepository#getUnassignedActiveUnmutedMembers()}, not the unfiltered
@@ -860,7 +954,7 @@ public class CommandProcessor {
         return true;
     }
 
-    private void postToSubgroups(Member sender, String formatted, long postLogId) {
+    private void postToSubgroups(Member sender, String formatted, long postLogId, Long alreadyDeliveredSubgroupId) {
         Set<Long> activeSubgroupIds = new LinkedHashSet<>(memberRepository.getDistinctSubgroupIds());
         List<Member> unassignedMembers = memberRepository.getUnassignedActiveUnmutedMembers();
         List<Long> unassignedIds = new ArrayList<>(unassignedMembers.size());
@@ -869,7 +963,7 @@ public class CommandProcessor {
         }
 
         SubgroupRouter.OutboundPlan plan = SubgroupRouter.routePost(
-                sender.id, sender.subgroupId, activeSubgroupIds, unassignedIds);
+                sender.id, alreadyDeliveredSubgroupId, activeSubgroupIds, unassignedIds);
 
         long holdUntil = prefs.isCoalescingEnabled()
                 ? System.currentTimeMillis() + prefs.getCoalesceWindowSeconds() * 1000L

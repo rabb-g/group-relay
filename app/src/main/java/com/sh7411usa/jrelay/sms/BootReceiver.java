@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.util.Log;
 
 import com.sh7411usa.jrelay.db.OutboxRepository;
+import com.sh7411usa.jrelay.sms.mms.MmsIngestService;
 import com.sh7411usa.jrelay.util.Prefs;
 
 /**
@@ -39,5 +40,7 @@ public class BootReceiver extends BroadcastReceiver {
             return;
         }
         SmsSendService.start(appContext);
+        // No-ops unless delivery mode is GROUP_MMS.
+        MmsIngestService.start(appContext);
     }
 }

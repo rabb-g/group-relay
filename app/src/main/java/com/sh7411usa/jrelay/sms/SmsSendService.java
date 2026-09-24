@@ -554,6 +554,12 @@ public class SmsSendService extends Service {
 
         String body = item.applySalt ? MessageSalt.applySendTime(prefs, item.body) : item.body;
 
+        // Recorded before MmsSender.send: the recipient set handed to the radio here IS the
+        // thread's participant set, so recording it now means even a send whose result is lost
+        // is still recognised as a known thread when replies come back.
+        new com.sh7411usa.jrelay.db.ThreadRepository(this).recordThread(
+                com.sh7411usa.jrelay.sms.mms.ThreadMatcher.signature(recipients), item.subgroupId);
+
         // Recorded before the send call, same contract as sendOne's individual path: MmsSentReceiver
         // matches a result back to this row via handed_off_at, so this must happen with the same
         // token passed to MmsSender.send, before the radio is ever invoked.

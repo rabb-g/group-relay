@@ -21,6 +21,9 @@
          natural moment to ask is when the owner switches delivery mode to group threads, since
          that is the only mode where it is used. -->
     <uses-permission android:name="android.permission.READ_SMS" />
+    <!-- Lets WapPushReceiver be notified the moment an MMS notification arrives, so
+         MmsIngestService can be woken up to scan once the stock app finishes downloading it. -->
+    <uses-permission android:name="android.permission.RECEIVE_MMS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
@@ -81,6 +84,16 @@
             android:name=".sms.mms.MmsSentReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".sms.mms.WapPushReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_WAP_PUSH">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.WAP_PUSH_RECEIVED" />
+                <data android:mimeType="application/vnd.wap.mms-message" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".sms.SmsSendService"
             android:exported="false"
@@ -88,6 +101,15 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Relays SMS to group members on a paced schedule; the send must continue while the screen is off." />
+        </service>
+
+        <service
+            android:name=".sms.mms.MmsIngestService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Watches for inbound group MMS replies so they can be relayed to the other sub-groups; must continue while the screen is off." />
         </service>
 
         <provider

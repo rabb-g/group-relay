@@ -372,6 +372,11 @@
     <string name="notif_send_status">%1$d אין ריי, %2$d געהאלטן</string>
     <string name="notif_send_status_burst">%1$d אין ריי, %2$d געהאלטן, פארזאמלונג באשטימט</string>
 
+    <string name="notif_mms_ingest_title">jRelay קוקט נאך ענטפערס</string>
+    <string name="notif_mms_ingest_channel_name">קוקן נאך גרופע ענטפערס</string>
+    <string name="notif_mms_ingest_channel_desc">ווערט געוויזן בעת jRelay קוקט נאך אריינקומענדיקע גרופע MMS ענטפערס צו שיקן אריבער, כדי דער סערוויס זאל בלייבן אָנגעשאלטן ווען דער עקראן איז פארמאכט.</string>
+    <string name="notif_mms_ingest_idle">וואַרט אויף גרופע ענטפערס</string>
+
     <!-- Command reply / broadcast templates -->
     <string name="tpl_added_you">%1$s האט אייך צוגעלייגט צו דער %2$s גרופע. ענטפערט #stop כדי אַרויסצוטרעטן.</string>
     <string name="tpl_welcome_reply_hint"> הייבט אן א ידיעה מיט #all כדי צו שיקן צו אלעמען. א פשוטע ענטפער גייט נאר צו דעם וואס האט געשיקט די ידיעה.</string>
