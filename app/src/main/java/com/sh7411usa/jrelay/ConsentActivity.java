@@ -1,10 +1,13 @@
 package com.sh7411usa.jrelay;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.widget.Button;
 import android.widget.CheckBox;
 
@@ -36,9 +39,9 @@ public class ConsentActivity extends BaseActivity {
     }
 
     private void onAgree() {
-        new Prefs(this).setConsentAccepted(true);
         List<String> toRequest = neededPermissions();
         if (toRequest.isEmpty()) {
+            new Prefs(this).setConsentAccepted(true);
             goToMain();
         } else {
             requestPermissions(toRequest.toArray(new String[0]), PERMISSION_REQUEST_CODE);
@@ -61,12 +64,74 @@ public class ConsentActivity extends BaseActivity {
         return toRequest;
     }
 
+    private static boolean isCritical(String permission) {
+        return Manifest.permission.SEND_SMS.equals(permission)
+                || Manifest.permission.RECEIVE_SMS.equals(permission);
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST_CODE) {
+        if (requestCode != PERMISSION_REQUEST_CODE) {
+            return;
+        }
+
+        boolean criticalDenied = false;
+        boolean criticalPermanentlyDenied = false;
+        boolean notificationsDenied = false;
+
+        for (int i = 0; i < permissions.length; i++) {
+            if (i >= grantResults.length || grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                continue;
+            }
+            if (isCritical(permissions[i])) {
+                criticalDenied = true;
+                if (!shouldShowRequestPermissionRationale(permissions[i])) {
+                    criticalPermanentlyDenied = true;
+                }
+            } else {
+                notificationsDenied = true;
+            }
+        }
+
+        if (criticalDenied) {
+            showCriticalDenialDialog(criticalPermanentlyDenied);
+            return;
+        }
+
+        new Prefs(this).setConsentAccepted(true);
+        if (notificationsDenied) {
+            showNotificationsDeniedDialog();
+        } else {
             goToMain();
         }
+    }
+
+    private void showCriticalDenialDialog(boolean permanentlyDenied) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setMessage(R.string.permission_denied_critical)
+                .setCancelable(false);
+        if (permanentlyDenied) {
+            builder.setPositiveButton(R.string.action_open_app_settings, (dialog, which) -> openAppSettings());
+        } else {
+            builder.setPositiveButton(R.string.action_retry_permission, (dialog, which) -> onAgree());
+        }
+        builder.setNegativeButton(R.string.action_cancel, null);
+        builder.show();
+    }
+
+    private void showNotificationsDeniedDialog() {
+        new AlertDialog.Builder(this)
+                .setMessage(R.string.permission_denied_notifications)
+                .setCancelable(false)
+                .setPositiveButton(R.string.action_continue, (dialog, which) -> goToMain())
+                .show();
+    }
+
+    private void openAppSettings() {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        intent.setData(Uri.fromParts("package", getPackageName(), null));
+        startActivity(intent);
     }
 
     private void goToMain() {

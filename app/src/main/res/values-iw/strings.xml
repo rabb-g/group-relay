@@ -78,9 +78,12 @@
     <string name="hint_nickname">כינוי</string>
     <string name="action_save">שמירה</string>
     <string name="action_cancel">ביטול</string>
+    <string name="action_retry_permission">נסו שוב</string>
+    <string name="action_open_app_settings">פתיחת הגדרות</string>
     <string name="error_invalid_number">פורמט מספר טלפון לא תקין.</string>
     <string name="error_duplicate_number">המספר הזה כבר רשום כחבר.</string>
     <string name="error_empty_nickname">הכינוי לא יכול להיות ריק.</string>
+    <string name="error_invalid_nickname">אי אפשר להשתמש בשם הזה. בחרו שם ללא : או # שלא מתחיל ב-[ או @.</string>
     <string name="error_last_admin">חבר זה הוא המנהל היחיד. הפכו מישהו אחר למנהל לפני שתסירו אותו או תבטלו את הרשאתו.</string>
 
     <!-- Member Detail -->
@@ -269,6 +272,9 @@
     <string name="hint_system_max_count">כמות</string>
     <string name="hint_system_interval_minutes">דקות</string>
     <string name="rate_limit_permission_missing">ל-jRelay אין הרשאה לשנות הגדרת מערכת זו. הריצו פקודה זו ממחשב עם ADB, כשהמכשיר מחובר. הקישו כדי להעתיק:</string>
+    <string name="warning_permission_missing">ל-jRelay חסרה הרשאה שהיא צריכה והיא אינה מעבירה הודעות. הקישו לתיקון.</string>
+    <string name="permission_denied_critical">jRelay לא יכול לשלוח או לקבל הודעות ללא הרשאת מסרונים. jRelay לא יפעל עד שההרשאה תינתן.</string>
+    <string name="permission_denied_notifications">ללא הרשאת התראות לא תקבלו התראה על הודעות שנכשלו או בקשות למנהל. jRelay ימשיך לפעול.</string>
     <string name="rate_limit_value_unavailable">לא זמין במכשיר זה</string>
     <string name="toast_adb_command_copied">הפקודה הועתקה ללוח.</string>
 

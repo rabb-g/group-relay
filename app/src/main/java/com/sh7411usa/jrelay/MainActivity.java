@@ -1,10 +1,14 @@
 package com.sh7411usa.jrelay;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.text.format.DateFormat;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,15 +24,21 @@ import com.sh7411usa.jrelay.model.Member;
 import com.sh7411usa.jrelay.model.MessageRecord;
 import com.sh7411usa.jrelay.sms.CommandProcessor;
 import com.sh7411usa.jrelay.sms.SendQueueStatus;
+import com.sh7411usa.jrelay.sms.SmsSendService;
+import com.sh7411usa.jrelay.util.DailyLimitManager;
 import com.sh7411usa.jrelay.util.Prefs;
 import com.sh7411usa.jrelay.util.UiUtil;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends BaseActivity {
 
     private static final long QUEUE_STATUS_TICK_MS = 1000;
+
+    private static final String[] CRITICAL_PERMISSIONS = {
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.RECEIVE_SMS,
+    };
 
     private Prefs prefs;
     private MemberRepository memberRepository;
@@ -49,6 +59,7 @@ public class MainActivity extends BaseActivity {
     private TextView queueCountView;
     private TextView sendingBadgeView;
     private TextView nextBurstView;
+    private TextView permissionWarningView;
     private LinearLayout recentActivityContainer;
 
     private final Handler queueStatusHandler = new Handler(Looper.getMainLooper());
@@ -89,11 +100,17 @@ public class MainActivity extends BaseActivity {
         queueCountView = findViewById(R.id.text_queue_count);
         sendingBadgeView = findViewById(R.id.badge_sending);
         nextBurstView = findViewById(R.id.text_next_burst);
+        permissionWarningView = findViewById(R.id.warning_permission_missing);
         recentActivityContainer = findViewById(R.id.container_recent_activity);
 
         findViewById(R.id.button_options).setOnClickListener(this::showOptionsMenu);
         findViewById(R.id.button_membership).setOnClickListener(v ->
                 startActivity(new Intent(this, MembershipActivity.class)));
+        permissionWarningView.setOnClickListener(v -> {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(Uri.fromParts("package", getPackageName(), null));
+            startActivity(intent);
+        });
     }
 
     @Override
@@ -102,8 +119,23 @@ public class MainActivity extends BaseActivity {
         if (!prefs.isConsentAccepted()) {
             return;
         }
+        updatePermissionWarning();
+        if (outboxRepository.countUnsent() > 0) {
+            SmsSendService.start(this);
+        }
         refresh();
         queueStatusHandler.post(queueStatusTick);
+    }
+
+    private void updatePermissionWarning() {
+        boolean missing = false;
+        for (String permission : CRITICAL_PERMISSIONS) {
+            if (checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+                missing = true;
+                break;
+            }
+        }
+        permissionWarningView.setVisibility(missing ? View.VISIBLE : View.GONE);
     }
 
     @Override
@@ -191,10 +223,10 @@ public class MainActivity extends BaseActivity {
         statsAdminsView.setText(String.valueOf(adminCount));
         statsMutedView.setText(String.valueOf(mutedCount));
 
-        long startOfDay = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1);
-        statsMessagesTodayView.setText(String.valueOf(messageRepository.countSince(startOfDay)));
+        long windowStart = new DailyLimitManager(this).currentWindowStart();
+        statsMessagesTodayView.setText(String.valueOf(messageRepository.countSince(windowStart)));
         statsMessagesTotalView.setText(String.valueOf(messageRepository.countAll()));
-        statsFailedTodayView.setText(String.valueOf(messageRepository.countFailedSince(startOfDay)));
+        statsFailedTodayView.setText(String.valueOf(messageRepository.countFailedSince(windowStart)));
 
         refreshQueueStatus();
         renderRecentActivity();

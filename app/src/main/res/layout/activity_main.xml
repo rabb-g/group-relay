@@ -70,6 +70,16 @@
                 android:text="@string/action_options" />
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/warning_permission_missing"
+            style="@style/Widget.JRelay.Row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/danger"
+            android:textStyle="bold"
+            android:text="@string/warning_permission_missing"
+            android:visibility="gone" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

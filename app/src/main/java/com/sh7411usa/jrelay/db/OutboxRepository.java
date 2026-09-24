@@ -45,6 +45,17 @@ public class OutboxRepository {
         dbHelper = DbHelper.getInstance(context);
     }
 
+    /**
+     * Intermediate status a row occupies between a failed delivery result (or a synchronous throw
+     * that never reached the radio) being recorded and the retry-vs-fail policy being applied to
+     * it. Distinct from every other status on purpose: {@code takeBurst} only ever draws
+     * {@code PENDING} rows, so a row parked here cannot be reclaimed and sent again, and
+     * {@code resetOrphanedSending} only ever matches {@code SENDING}, so a row parked here cannot
+     * be reset back to PENDING out from under {@link SentReceiver#handleFailure}. The row leaves
+     * this status only via {@link #requeueForRetry} or {@link #markFailed}.
+     */
+    private static final String STATUS_SEND_FAILED = "SEND_FAILED";
+
     /** Existing 3-arg form kept as a delegate: category null, no hold, no send-time salt. */
     public void enqueue(Long memberId, String phoneE164, String body) {
         enqueue(memberId, phoneE164, body, null, 0L, false);
@@ -126,7 +137,13 @@ public class OutboxRepository {
      * original send may still be in flight, so this method now resets a SENDING row only when:
      * <ul>
      *   <li>{@code parts_pending = 0} - claimed by {@code takeBurst} but killed before ever reaching
-     *       the radio, so no delivery result can ever arrive for it, or
+     *       the radio, so no delivery result can ever arrive for it. This covers both a kill before
+     *       {@code markHandedOff} ever ran, and a kill after a synchronous {@code SmsManager} throw
+     *       called {@code markHandedOff(id, 0, token)} but before the row could be moved on to
+     *       {@link #STATUS_SEND_FAILED} - since 5.7 that is the only other way {@code parts_pending}
+     *       reaches 0, so any row still SENDING with {@code parts_pending = 0} is provably one of
+     *       these two "killed before it could move on" cases, never a row whose outcome is mid-write
+     *       elsewhere; see {@link #recordPartSent} and {@link #recordSendFailure}, or
      *   <li>{@code parts_pending > 0} but {@code handed_off_at} is older than
      *       {@link #AWAITING_RESULT_STALE_MILLIS} - a delivery result that has not arrived within
      *       that window is never arriving (radio crash, lost broadcast, etc.), so the row is
@@ -201,9 +218,15 @@ public class OutboxRepository {
         return neverHandedOff + strandedAwaitingResult;
     }
 
-    /** Messages still waiting to go out: not yet claimed for sending, or currently mid-send. */
+    /**
+     * Messages still waiting to go out: not yet claimed for sending, currently mid-send, or a
+     * failed result recorded but the retry-vs-fail policy not yet applied ({@link
+     * #STATUS_SEND_FAILED} - it still might become a retried PENDING row, so it counts as unsent
+     * the same as a mid-send row does).
+     */
     public int countUnsent() {
-        return (int) queryScalar("COUNT(*)", "status IN ('PENDING', 'SENDING')", null);
+        return (int) queryScalar("COUNT(*)",
+                "status IN ('PENDING', 'SENDING', '" + STATUS_SEND_FAILED + "')", null);
     }
 
     public int countPending() {
@@ -237,38 +260,19 @@ public class OutboxRepository {
     }
 
     /**
-     * Marks a row SENT. Guarded on {@code status = 'SENDING' AND handed_off_at = ?} (the same
-     * `token` the caller's own {@link #recordPartSent(long, long)} call just matched) so a stale
-     * caller - one whose attempt has since been abandoned and the row reclaimed into a new
-     * SENDING attempt under a new token - matches zero rows and is silently dropped instead of
-     * stamping SENT over a live, unrelated attempt. Every other outbox mutator that acts on a
-     * SENDING row (recordPartSent, recordSendFailure, takeBurst) is guarded the same way; this
-     * one previously was not, which is the second half of the same duplicate-send bug fixed in
-     * resetOrphanedSending's stranded branch. {@link #requeueForRetry} and {@link #markFailed}
-     * carry the identical guard for the same reason.
-     */
-    public void markSent(long id, long token) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues cv = new ContentValues();
-        cv.put("status", "SENT");
-        db.update(DbHelper.TABLE_OUTBOX, cv, "id = ? AND status = ? AND handed_off_at = ?",
-                new String[]{String.valueOf(id), "SENDING", String.valueOf(token)});
-    }
-
-    /**
      * Marks a row FAILED - the retry limit has been exhausted. Guarded on
-     * {@code status = 'SENDING' AND handed_off_at = ?}, same pattern and same reasoning as
-     * {@link #markSent} / {@link #requeueForRetry}: `token` is the attempt this call is
-     * terminating, and if the row has since been reclaimed into a newer SENDING attempt under a
-     * different token, zero rows match and the call is silently dropped instead of stamping
-     * FAILED over a live, unrelated attempt.
+     * {@code id AND handed_off_at = ? AND status IN ('SEND_FAILED', 'SENDING')} - see
+     * {@link #requeueForRetry} for why both statuses are matched here. If the row has since been
+     * reclaimed into a newer attempt under a different token, zero rows match and the call is
+     * silently dropped instead of stamping FAILED over a live, unrelated attempt.
      */
     public void markFailed(long id, long token) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put("status", "FAILED");
-        db.update(DbHelper.TABLE_OUTBOX, cv, "id = ? AND status = ? AND handed_off_at = ?",
-                new String[]{String.valueOf(id), "SENDING", String.valueOf(token)});
+        db.update(DbHelper.TABLE_OUTBOX, cv,
+                "id = ? AND handed_off_at = ? AND status IN ('" + STATUS_SEND_FAILED + "', 'SENDING')",
+                new String[]{String.valueOf(id), String.valueOf(token)});
     }
 
     /**
@@ -288,6 +292,17 @@ public class OutboxRepository {
      * remain, or -1 when this row is no longer awaiting results (already resolved, a late
      * duplicate result, or a result from a stale attempt whose `token` no longer matches the row's
      * `handed_off_at`). Callers must treat -1 as "ignore this result".
+     *
+     * <p>When the decrement reaches 0 this call writes {@code status = 'SENT'} itself, inside the
+     * same transaction, instead of leaving the row in SENDING for a later separate {@code markSent}
+     * call to close out (the pre-5.7 design). That older design left a real window - however
+     * short - where the row sat at {@code status = 'SENDING', parts_pending = 0}: exactly the
+     * state {@link #resetOrphanedSending()}'s first branch treats as "claimed but never reached the
+     * radio" and resets to PENDING. A drain running that reset concurrently with this call could
+     * catch the row in that window and flip it back to PENDING, and {@code takeBurst} would then
+     * send it again even though it had already been delivered. Folding the SENT write into this
+     * transaction means no other statement ever observes the row at {@code parts_pending = 0}
+     * while it is still SENDING - it goes from "awaiting" straight to "SENT" atomically.
      */
     public int recordPartSent(long id, long token) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
@@ -315,6 +330,16 @@ public class OutboxRepository {
             }
             c.close();
 
+            if (remaining == 0) {
+                // Plain id-match update is safe here: the row-owning update above, in this same
+                // transaction, already confirmed this call holds the live SENDING attempt for
+                // `token` - nothing else can have touched the row since (SQLite serializes writers
+                // through this same transaction), so no further status/token guard is needed.
+                ContentValues doneCv = new ContentValues();
+                doneCv.put("status", "SENT");
+                db.update(DbHelper.TABLE_OUTBOX, doneCv, "id = ?", new String[]{String.valueOf(id)});
+            }
+
             db.setTransactionSuccessful();
             return remaining;
         } finally {
@@ -328,12 +353,26 @@ public class OutboxRepository {
      * result already resolved it, or when `token` no longer matches the row's `handed_off_at`
      * (a stale result from a previous attempt), so a multi-part message reports its failure
      * exactly once and a stale result is silently ignored.
+     *
+     * <p>Moves the row's status to {@link #STATUS_SEND_FAILED} in the same write that clears
+     * {@code parts_pending} - not just {@code parts_pending}, as before 5.7. Leaving status at
+     * SENDING here left the row at {@code parts_pending = 0, status = 'SENDING'} for the whole
+     * span of {@code SentReceiver.handleFailure}, which is exactly the state
+     * {@link #resetOrphanedSending()}'s first branch resets to PENDING (without bumping
+     * {@code attempts}); a drain running that reset concurrently could reclaim the row via
+     * {@code takeBurst} while the original failure was still being processed, and the recipient
+     * got the message twice. Moving status here closes that window: {@code resetOrphanedSending}
+     * only ever matches {@code status = 'SENDING'}, so a row parked in SEND_FAILED cannot be
+     * touched by it, and {@code takeBurst} only ever draws {@code status = 'PENDING'}, so it
+     * cannot reclaim it either. The row leaves SEND_FAILED only via {@link #requeueForRetry} or
+     * {@link #markFailed}, both of which this same token must also match.
      */
     public boolean recordSendFailure(long id, long token, int resultCode) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         db.beginTransaction();
         try {
             ContentValues cv = new ContentValues();
+            cv.put("status", STATUS_SEND_FAILED);
             cv.put("parts_pending", 0);
             // last_result has no Java reader (the failure reason reaches the UI via
             // tpl_failed_with_reason instead) - it's kept write-only, deliberately, so the raw
@@ -420,15 +459,26 @@ public class OutboxRepository {
      * behavior. The hold reuses the same `hold_until` column and the same `takeBurst` filter the
      * coalescing window uses, so a backed-off row is simply invisible to bursts until it is due.
      *
-     * <p>Guarded on {@code status = 'SENDING' AND handed_off_at = ?}, same pattern as
-     * {@link #markSent} / {@link #recordPartSent} / {@link #recordSendFailure}: `token` is the
-     * attempt this failure belongs to. Without this guard, a late failure result for an attempt
-     * that has since been superseded - the row reclaimed into a newer SENDING attempt under a new
-     * token - would stamp PENDING directly over that live attempt; the newer attempt's real result
-     * then finds the row no longer in the state it expects and is discarded as stale, and the row
-     * gets sent again - a duplicate delivery, repeating until `attempts` exhausts. Zero rows
-     * matched means the row has moved on and this call is silently dropped instead, the same
-     * contract every other guarded mutator here already implements.
+     * <p>Guarded on {@code id AND handed_off_at = ? AND status IN ('SEND_FAILED', 'SENDING')}.
+     * {@code SentReceiver.handleFailure} has exactly two callers, and by the time either reaches
+     * this method the row is in one of exactly two states, both legitimately resolvable:
+     * <ul>
+     *   <li>{@link #STATUS_SEND_FAILED} - the broadcast path: {@link #recordSendFailure} already
+     *       moved the row here, atomically with recording the outcome, before calling
+     *       {@code handleFailure}.
+     *   <li>{@code SENDING} - the synchronous-throw path: {@code SmsSendService#sendOne}'s catch
+     *       block calls {@code markHandedOff(id, 0, token)} (which does not change status) and then
+     *       calls {@code handleFailure} directly, in the same synchronous call, with no other
+     *       write able to interleave.
+     * </ul>
+     * `token` is the attempt this failure belongs to either way. Without this guard, a late
+     * failure result for an attempt that has since been superseded - the row reclaimed into a
+     * newer SENDING attempt under a new token - would stamp PENDING directly over that live
+     * attempt; the newer attempt's real result then finds the row no longer in the state it
+     * expects and is discarded as stale, and the row gets sent again - a duplicate delivery,
+     * repeating until `attempts` exhausts. Zero rows matched means the row has moved on (or is a
+     * live, unrelated SENDING attempt under a different token) and this call is silently dropped
+     * instead, the same contract {@link #markFailed} implements.
      */
     public void requeueForRetry(long id, long token, int attempts, long holdUntilMillis) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
@@ -436,8 +486,9 @@ public class OutboxRepository {
         cv.put("status", "PENDING");
         cv.put("attempts", attempts);
         cv.put("hold_until", holdUntilMillis);
-        db.update(DbHelper.TABLE_OUTBOX, cv, "id = ? AND status = ? AND handed_off_at = ?",
-                new String[]{String.valueOf(id), "SENDING", String.valueOf(token)});
+        db.update(DbHelper.TABLE_OUTBOX, cv,
+                "id = ? AND handed_off_at = ? AND status IN ('" + STATUS_SEND_FAILED + "', 'SENDING')",
+                new String[]{String.valueOf(id), String.valueOf(token)});
     }
 
     /** Runs a single-value aggregate query over the outbox, returning 0 when there is no row or the value is NULL. */

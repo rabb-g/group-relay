@@ -78,9 +78,12 @@
     <string name="hint_nickname">Nickname</string>
     <string name="action_save">Save</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_retry_permission">Try Again</string>
+    <string name="action_open_app_settings">Open Settings</string>
     <string name="error_invalid_number">Invalid phone number format.</string>
     <string name="error_duplicate_number">This number is already a member.</string>
     <string name="error_empty_nickname">Nickname cannot be empty.</string>
+    <string name="error_invalid_nickname">That name can\'t be used. Please pick a name without : or # and not starting with [ or @.</string>
     <string name="error_last_admin">This member is the only admin. Make someone else an admin before removing or demoting them.</string>
 
     <!-- Member Detail -->
@@ -269,6 +272,9 @@
     <string name="hint_system_max_count">Count</string>
     <string name="hint_system_interval_minutes">Minutes</string>
     <string name="rate_limit_permission_missing">jRelay does not have permission to change this system setting. Run this command from a computer with ADB, with the device connected. Tap it to copy:</string>
+    <string name="warning_permission_missing">jRelay is missing a permission it needs and is not relaying messages. Tap to fix.</string>
+    <string name="permission_denied_critical">jRelay cannot send or receive messages without SMS permission. The relay will not work until it is granted.</string>
+    <string name="permission_denied_notifications">Without notification permission you will not be alerted about failed messages or admin requests. The relay will still work.</string>
     <string name="rate_limit_value_unavailable">Not available on this device</string>
     <string name="toast_adb_command_copied">Command copied to clipboard.</string>
 

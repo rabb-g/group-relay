@@ -138,9 +138,9 @@ public class MemberDetailActivity extends BaseActivity {
         int receivedCount = messageRepository.countForMember(member.id, "OUT");
         long lastActivity = messageRepository.lastActivityForMember(member.id);
         long sevenDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(7);
-        int recentCount = messageRepository.countForMemberSince(member.id, sevenDaysAgo);
-        long startOfDay = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1);
-        int todayCount = messageRepository.countForMemberSince(member.id, startOfDay);
+        int recentCount = messageRepository.countInboundForMemberSince(member.id, sevenDaysAgo);
+        long currentWindowStart = new DailyLimitManager(this).currentWindowStart();
+        int todayCount = messageRepository.countForMemberSince(member.id, currentWindowStart);
 
         if (lastActivity > 0) {
             memberMetaView.setText(getString(R.string.label_member_meta_with_activity,
@@ -161,10 +161,14 @@ public class MemberDetailActivity extends BaseActivity {
     private void setActivityLevel(int recentCount) {
         int labelRes;
         int colorRes;
-        if (recentCount >= 20) {
+        // recentCount now counts only messages the member actually sent (see
+        // countInboundForMemberSince), not passive receipt of group traffic. These thresholds are
+        // a judgement call, not a derived number: >=7/week is roughly a post a day, >=3/week is a
+        // few posts, and >=1 is any activity at all.
+        if (recentCount >= 7) {
             labelRes = R.string.activity_level_high;
             colorRes = R.color.success;
-        } else if (recentCount >= 5) {
+        } else if (recentCount >= 3) {
             labelRes = R.string.activity_level_medium;
             colorRes = R.color.primary;
         } else if (recentCount >= 1) {

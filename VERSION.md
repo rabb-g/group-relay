@@ -1,5 +1,71 @@
 # Version History
 
+## 5.7 - The Rest of the Audit
+
+The second and largest remediation wave. Thirteen parallel units, and it clears most of what the
+September audit found — including the one finding that let any member pretend to be you.
+
+- **A member can no longer forge a message from an admin.** This was the worst thing in the audit.
+  Relayed messages are shown as `Name: what they said`, and when several posts are combined into
+  one text they are stacked on separate lines. Nothing stopped a member from putting a line break
+  inside their own message followed by `[Admin]: ...` — and what arrived on ninety-nine phones was
+  indistinguishable from a real notice from you. No warning, no trace, nothing to notice
+  afterwards. The same trick worked by simply renaming yourself to `[Admin]`.
+  - A relayed message is now always a single line, so the sender's name is always the first thing
+    on it and an impostor line can never start one.
+  - Nicknames are now checked: no colons, no line breaks, nothing starting with `[`, `@` or `#`,
+    and a length limit. The rule about the first character is the important one — it also defeats
+    lookalike letters from other alphabets without having to list them.
+  - Names already stored by an older version are cleaned when displayed, so this cannot be
+    exploited using data that is already there.
+- **The last way a message could be sent twice is closed.** There was a brief moment while the
+  outcome of a send was being recorded where a second part of the app could decide the message had
+  been abandoned and send it again. A message now moves to its final state in a single indivisible
+  step, so that moment no longer exists. This was the last of three such paths; the other two were
+  closed in 5.5.
+- **A crash in the sending thread no longer stops the relay for good.** An unexpected error while
+  sending would kill the app mid-delivery, and nothing restarted it — the remaining members simply
+  waited until somebody happened to text. The sender now survives an error, records it, and
+  carries on. Getting this wrong would have been worse than leaving it: a related piece of
+  bookkeeping had to be moved first, or the fix would have turned a loud crash into a relay that
+  silently never sent anything again.
+- **Two people can no longer be created for one phone number.** If a number was entered using
+  Arabic-Indic digits, it was stored differently from the same number typed in ordinary digits.
+  The result was two entries for one person, who then received every message twice — while their
+  own texts were not recognised as coming from a member at all.
+- **`#to` with a phone number now works.** Sending `#to 5551234567 see you at 8` delivered
+  nothing and told the sender they had got the syntax wrong. The app was treating the whole line
+  as a name. Relatedly, a member can no longer take a nickname that looks like somebody else's
+  phone number and have commands aimed at that number reach them instead.
+- **Opening the app now restarts a stalled queue.** If sending stopped for any reason, opening
+  jRelay did nothing about it — the host could watch a queue of 47 messages sit there. It now
+  starts sending again.
+- **You will be told if a permission is taken away.** If Android revokes the SMS permission —
+  which it does on its own for apps it thinks are unused — the app kept running, looking perfectly
+  healthy, and silently relayed nothing. A warning now appears on the dashboard, and tapping it
+  goes straight to the setting.
+- **Denying a permission at setup is no longer ignored.** The first-run screen asked for
+  permissions and then carried on regardless of the answer, leaving a relay that appeared set up
+  and could not send. It now explains what will not work and offers to ask again or open Settings.
+- **Admin alerts no longer stop arriving.** Every alert created a new notification and none was
+  ever cleared, so after about fifty Android silently discarded the rest — permanently, on a phone
+  nobody taps. Alerts now collapse into one that updates in place.
+- **The message history is indexed and no longer grows forever.** There was not a single index in
+  the database, and nothing was ever deleted — roughly a hundred rows per message posted, about
+  three quarters of a million a year, every one of them scanned each time the dashboard refreshed.
+  Indexes are added and history older than ninety days is removed once per sending run.
+- **The member statistics were wrong and are now right.** "Sent" counted every message twice.
+  The activity rating measured messages a member *received*, so in a large group everybody looked
+  highly active and "inactive" was unreachable. And "today" on the dashboard covered a different
+  period from "today" in the daily limit, so the two disagreed.
+- **The app fits the screen on Android 15.** Newer Android draws behind the status bar and the
+  navigation area; nothing accounted for it, so headings sat under the clock and the bottom of
+  every screen was unreachable. On a folded phone that is a large share of the usable space.
+- Hebrew and Yiddish kept in sync with the six new strings (350 in each of the three files).
+- Test suite 71 to 110. The new tests cover the message and nickname checks that stop the
+  impersonation described above, and the phone-number handling — all of which had none.
+- Updated `README.md` and `VERSION.md`.
+
 ## 5.6 - Group Capacity, and an End to Announcement Spam
 
 Two features, both about the same thing: not spending your daily message budget on things that

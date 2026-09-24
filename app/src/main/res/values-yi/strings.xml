@@ -78,9 +78,12 @@
     <string name="hint_nickname">צונאמען</string>
     <string name="action_save">אָפּהיטן</string>
     <string name="action_cancel">אָפּזאָגן</string>
+    <string name="action_retry_permission">פּרוּוון נאָכאמאָל</string>
+    <string name="action_open_app_settings">עפענען אײנשטעלונגען</string>
     <string name="error_invalid_number">דער טעלעפאן נומער איז נישט גילטיק.</string>
     <string name="error_duplicate_number">דער נומער איז שוין א מיטגליד.</string>
     <string name="error_empty_nickname">דער צונאמען קען נישט זיין ליידיק.</string>
+    <string name="error_invalid_nickname">דעם נאמען קען מען נישט ניצן. קלייבט א נאמען אָן : אָדער # וואס הייבט זיך נישט אן מיט [ אָדער @.</string>
     <string name="error_last_admin">דער מיטגליד איז דער איינציקער אדמין. מאכט עמעצער אנדערש אן אדמין איידער איר נעמט אים אַרויס אָדער נעמט אָפּ זיין אדמין רעכטן.</string>
 
     <!-- Member Detail -->
@@ -269,6 +272,9 @@
     <string name="hint_system_max_count">צאל</string>
     <string name="hint_system_interval_minutes">מינוט</string>
     <string name="rate_limit_permission_missing">jRelay האט נישט קיין רשות צו טוישן די סיסטעם-אײנשטעלונג. פירט אויס דעם באפעל פון א קאמפיוטער מיט ADB, בעת דער מכשיר איז פארבונדן. דריקט צו קאפירן:</string>
+    <string name="warning_permission_missing">jRelay פעלט א רשות וואס עס דארף און שיקט נישט אריבער קיין ידיעות. דריקט צו פארריכטן.</string>
+    <string name="permission_denied_critical">jRelay קען נישט שיקן אָדער באקומען ידיעות אָן SMS רשות. דער סערוויס וועט נישט פונקציאנירן ביז די רשות ווערט געגעבן.</string>
+    <string name="permission_denied_notifications">אָן א רשות פאר מודעות וועט איר נישט ווערן געוואָרנט וועגן נישט-געלונגענע ידיעות אָדער אדמין בקשות. דער סערוויס וועט נאך אלץ פונקציאנירן.</string>
     <string name="rate_limit_value_unavailable">נישט פאראן אויף דעם מכשיר</string>
     <string name="toast_adb_command_copied">דער באפעל איז קאפירט געוואָרן.</string>
 

@@ -75,10 +75,17 @@ public class MessageRepository {
         return list;
     }
 
+    /**
+     * A member's messages in one direction. Excludes the internal "RELAYED" quota marker (see
+     * {@link #getRecent}): without this, every relayed post from a member logs both a "RELAY" row
+     * and a "RELAYED" marker row in direction IN, so {@code countForMember(id, "IN")} counted each
+     * relayed post twice.
+     */
     public int countForMember(long memberId, String direction) {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
         Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + DbHelper.TABLE_MESSAGE_LOG +
-                " WHERE member_id = ? AND direction = ?", new String[]{String.valueOf(memberId), direction});
+                " WHERE member_id = ? AND direction = ? AND category != 'RELAYED'",
+                new String[]{String.valueOf(memberId), direction});
         int count = 0;
         if (c.moveToFirst()) {
             count = c.getInt(0);
@@ -87,16 +94,36 @@ public class MessageRepository {
         return count;
     }
 
+    /**
+     * A member's activity of either direction since a cutoff. Excludes the "RELAYED" marker (see
+     * {@link #getRecent}) but, like the pre-existing behavior, still mixes IN and OUT rows - so a
+     * member who only ever receives messages still counts as "active" here. Callers that need a
+     * member's own posting activity (e.g. an activity-level indicator) should use
+     * {@link #countInboundForMemberSince} instead.
+     */
     public int countForMemberSince(long memberId, long sinceTimestamp) {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
         Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + DbHelper.TABLE_MESSAGE_LOG +
-                " WHERE member_id = ? AND timestamp >= ?", new String[]{String.valueOf(memberId), String.valueOf(sinceTimestamp)});
+                " WHERE member_id = ? AND timestamp >= ? AND category != 'RELAYED'",
+                new String[]{String.valueOf(memberId), String.valueOf(sinceTimestamp)});
         int count = 0;
         if (c.moveToFirst()) {
             count = c.getInt(0);
         }
         c.close();
         return count;
+    }
+
+    /**
+     * A member's own inbound activity since a cutoff - messages the member sent in, not
+     * messages relayed to them. Excludes the "RELAYED" marker (see {@link #getRecent}) for the
+     * same double-counting reason as {@link #countForMember}. Use this instead of
+     * {@link #countForMemberSince} wherever "active" should mean "this member posted", not
+     * "this member had any traffic logged against them".
+     */
+    public int countInboundForMemberSince(long memberId, long sinceTimestamp) {
+        return countWhere("member_id = ? AND direction = 'IN' AND timestamp >= ? AND category != 'RELAYED'",
+                new String[]{String.valueOf(memberId), String.valueOf(sinceTimestamp)});
     }
 
     public long lastActivityForMember(long memberId) {
@@ -145,10 +172,11 @@ public class MessageRepository {
         return count;
     }
 
+    /** Messages logged since a cutoff, group-wide. Excludes the "RELAYED" marker (see {@link #getRecent}). */
     public int countSince(long sinceTimestamp) {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
         Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + DbHelper.TABLE_MESSAGE_LOG +
-                " WHERE timestamp >= ?", new String[]{String.valueOf(sinceTimestamp)});
+                " WHERE timestamp >= ? AND category != 'RELAYED'", new String[]{String.valueOf(sinceTimestamp)});
         int count = 0;
         if (c.moveToFirst()) {
             count = c.getInt(0);
@@ -157,9 +185,11 @@ public class MessageRepository {
         return count;
     }
 
+    /** All-time message count, group-wide. Excludes the "RELAYED" marker (see {@link #getRecent}). */
     public int countAll() {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + DbHelper.TABLE_MESSAGE_LOG, null);
+        Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + DbHelper.TABLE_MESSAGE_LOG +
+                " WHERE category != 'RELAYED'", null);
         int count = 0;
         if (c.moveToFirst()) {
             count = c.getInt(0);
@@ -172,6 +202,22 @@ public class MessageRepository {
     public void deleteAll() {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         db.delete(DbHelper.TABLE_MESSAGE_LOG, null, null);
+    }
+
+    /**
+     * Permanently deletes message_log rows older than {@code cutoffTimestamp}. Returns the number
+     * of rows deleted. Backed by the {@code idx_message_log_timestamp} index (see
+     * {@link DbHelper}), so this is a single indexed range delete, not a table scan.
+     *
+     * <p>This is a bulk maintenance operation, not part of the per-message write path: {@link #log}
+     * runs on every inbound/outbound message (~101 rows per relayed post), so calling a prune from
+     * there would turn one cheap insert into a delete scan on every single message. Call this only
+     * from an infrequent, off-the-hot-path trigger - e.g. once a day from a background job or
+     * app-open check - never from {@link #log} or any per-message code path.
+     */
+    public int pruneOlderThan(long cutoffTimestamp) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        return db.delete(DbHelper.TABLE_MESSAGE_LOG, "timestamp < ?", new String[]{String.valueOf(cutoffTimestamp)});
     }
 
     /** Rough on-disk size estimate for the message log, for the "Clear History" button label. */

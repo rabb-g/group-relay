@@ -22,7 +22,74 @@ public final class MessageIntent {
 
     private static final long MILLIS_PER_HOUR = 3_600_000L;
 
+    /** Any run of whitespace that includes a newline, carriage return, tab, or other control character. */
+    private static final Pattern MULTILINE_WHITESPACE_RUN = Pattern.compile("\\s+");
+
+    private static final int MAX_NICKNAME_LENGTH = 32;
+
     private MessageIntent() {
+    }
+
+    /**
+     * Collapses a relayed member body to a single line: every run of whitespace (including
+     * newlines, carriage returns and tabs) becomes one space, and the result is trimmed. This is
+     * the anti-forgery guard for the relay path (audit 2.3): every relayed post is rendered as
+     * "%1$s: %2$s", so if the body itself could contain a newline, a member could plant a second
+     * "line" reading like "[Admin]: ..." that is structurally indistinguishable from a genuine
+     * merged post. Collapsing to one line means the sender's own nickname is always the first
+     * thing recipients see, and nothing after it can masquerade as a new attribution line.
+     * Only apply this to a member's relayed body — never to command arguments, admin broadcasts,
+     * or anything composed by the app itself.
+     */
+    public static String sanitizeRelayBody(String body) {
+        if (body == null) {
+            return "";
+        }
+        return MULTILINE_WHITESPACE_RUN.matcher(body.trim()).replaceAll(" ").trim();
+    }
+
+    /**
+     * True when `nickname` is safe to store and to render inside "%1$s: ..." relay/attribution
+     * prefixes (audit 2.3). Rejects: empty/whitespace-only; anything containing a newline, tab, or
+     * other control character; anything containing ':' (the attribution-line separator itself);
+     * anything whose first non-space character is '[', '@', or '#' (these are exactly the leading
+     * characters the app's own system prefixes use — "[Admin]", "@admin", "@system" — so banning
+     * them as the *first* character defeats impersonation without having to enumerate homoglyphs:
+     * "[Аdmin]" with a Cyrillic А still starts with '['); and anything over 32 characters.
+     */
+    public static boolean isValidNickname(String nickname) {
+        if (nickname == null) {
+            return false;
+        }
+        String trimmed = nickname.trim();
+        if (trimmed.isEmpty() || trimmed.length() > MAX_NICKNAME_LENGTH) {
+            return false;
+        }
+        for (int i = 0; i < nickname.length(); i++) {
+            char c = nickname.charAt(i);
+            if (c == ':' || Character.isISOControl(c)) {
+                return false;
+            }
+        }
+        char first = trimmed.charAt(0);
+        return first != '[' && first != '@' && first != '#';
+    }
+
+    /**
+     * Neutralizes a nickname already stored before {@link #isValidNickname} existed, so it can't
+     * still forge an attribution line at render time. Collapses embedded newlines/tabs the same
+     * way {@link #sanitizeRelayBody} does, then strips any leading '[', '@' or '#' characters
+     * (repeatedly, in case of e.g. "[[Admin]"), falling back to a neutral label if nothing is left.
+     */
+    public static String sanitizeNicknameForRender(String nickname) {
+        String collapsed = sanitizeRelayBody(nickname);
+        int start = 0;
+        while (start < collapsed.length()
+                && (collapsed.charAt(start) == '[' || collapsed.charAt(start) == '@' || collapsed.charAt(start) == '#')) {
+            start++;
+        }
+        String stripped = collapsed.substring(start).trim();
+        return stripped.isEmpty() ? "Member" : stripped;
     }
 
     /** Returns the body with an explicit post prefix removed, or null when `trimmed` is not an explicit post. */

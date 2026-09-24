@@ -60,4 +60,57 @@ public class PhoneNumberUtilsTest {
                 new String[]{"+1 (234) 567-8910", "John Doe"},
                 PhoneNumberUtils.splitTrailingNumberAndRest("John Doe +1 (234) 567-8910"));
     }
+
+    // ---- normalizeStrict ----
+
+    @Test
+    public void normalizeStrict_acceptsBareTenDigitNumber() {
+        assertEquals("+15551234567", PhoneNumberUtils.normalizeStrict("5551234567"));
+    }
+
+    @Test
+    public void normalizeStrict_acceptsFormattedNumberWithParensAndSpaces() {
+        assertEquals("+15551234567", PhoneNumberUtils.normalizeStrict("+1 (555) 123-4567"));
+    }
+
+    // Duplicate-member fix (finding 2.11): Arabic-Indic digits must normalize to the SAME
+    // string as their ASCII equivalent, or the same person creates two distinct DB rows and
+    // receives every relayed message twice.
+    @Test
+    public void normalizeStrict_arabicIndicDigitsMatchAsciiEquivalent() {
+        String arabicIndic = PhoneNumberUtils.normalizeStrict("٢٣٤٥٦٧٨٩١٠");
+        String ascii = PhoneNumberUtils.normalizeStrict("2345678910");
+        assertEquals(ascii, arabicIndic);
+        assertEquals("+12345678910", arabicIndic);
+    }
+
+    @Test
+    public void normalizeStrict_rejectsNumberWithTrailingWords() {
+        assertNull(PhoneNumberUtils.normalizeStrict("5551234567 hi there"));
+    }
+
+    @Test
+    public void normalizeStrict_rejectsNumberEmbeddedInSentence() {
+        assertNull(PhoneNumberUtils.normalizeStrict("call 234-567-8910 now"));
+    }
+
+    @Test
+    public void normalizeStrict_rejectsLettersOnly() {
+        assertNull(PhoneNumberUtils.normalizeStrict("VERIZON"));
+    }
+
+    @Test
+    public void normalizeStrict_rejectsShortCode() {
+        assertNull(PhoneNumberUtils.normalizeStrict("12345"));
+    }
+
+    @Test
+    public void normalizeStrict_rejectsEmptyString() {
+        assertNull(PhoneNumberUtils.normalizeStrict(""));
+    }
+
+    @Test
+    public void normalizeStrict_rejectsNull() {
+        assertNull(PhoneNumberUtils.normalizeStrict(null));
+    }
 }

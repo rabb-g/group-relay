@@ -212,6 +212,13 @@ public class CommandProcessor {
             reply(sender, context.getString(R.string.error_empty_nickname));
             return;
         }
+        // Audit 2.3: a nickname is rendered verbatim as the attribution prefix of every relayed
+        // post ("%1$s: ..."), so an unvalidated #name can forge "[Admin]"/"@system"-style lines
+        // just as effectively as a body-injection newline. See MessageIntent.isValidNickname.
+        if (!MessageIntent.isValidNickname(newNickname)) {
+            reply(sender, context.getString(R.string.error_invalid_nickname));
+            return;
+        }
         if (newNickname.equals(sender.nickname)) {
             reply(sender, context.getString(R.string.tpl_name_changed_confirm, newNickname));
             return;
@@ -546,6 +553,12 @@ public class CommandProcessor {
         String nickname = stripLeadingWord(text).trim();
         if (nickname.isEmpty()) {
             nickname = MessageSalt.localDigits(senderE164);
+        } else if (!MessageIntent.isValidNickname(nickname)) {
+            // Audit 2.3: same forgery risk as #name — a nickname is rendered verbatim as the
+            // attribution prefix of every relayed post. #join is the one command a non-member can
+            // send, so there's no Member row yet to reply(); use replyToNumber instead.
+            replyToNumber(senderE164, context.getString(R.string.error_invalid_nickname));
+            return;
         }
 
         int maxMembers = prefs.getMaxMembers();
@@ -695,7 +708,14 @@ public class CommandProcessor {
             return;
         }
 
-        String formatted = context.getString(R.string.tpl_relay_prefix, sender.nickname, body);
+        // Audit 2.3: collapse the body to one line and neutralize an unsafe stored nickname before
+        // this ever reaches the "%1$s: %2$s" relay prefix, so an injected newline or a "[Admin]"-style
+        // nickname can't forge a second attribution line. This is the shared landing point for both
+        // relay entries in non-Reply-mode: a plain message (relayPlainMessage) and an #all-prefixed
+        // post (handleExplicitPost) both call postToGroup().
+        String safeNickname = MessageIntent.sanitizeNicknameForRender(sender.nickname);
+        String safeBody = MessageIntent.sanitizeRelayBody(body);
+        String formatted = context.getString(R.string.tpl_relay_prefix, safeNickname, safeBody);
         formatted = MessageSalt.applyEnqueueTime(prefs, sender.phoneE164, formatted);
         long postLogId = messageRepository.log(sender.id, "IN", "RELAYED", body);
         broadcastExcept(sender.id, formatted, OutboxRepository.CATEGORY_RELAY, postLogId);
@@ -746,20 +766,25 @@ public class CommandProcessor {
      * (mirrors #admin / Announcement routing). Optionally copies it to admins.
      */
     private void deliverReply(Member sender, Member target, String body) {
+        // Audit 2.3: this is the relay path's other convergence point — the plain-message entry
+        // (relayPlainMessage) reaches here in Reply Mode. Sanitize once and reuse for both the
+        // target delivery and the admin copy below, so neither can be bypassed independently.
+        String safeSenderNickname = MessageIntent.sanitizeNicknameForRender(sender.nickname);
+        String safeBody = MessageIntent.sanitizeRelayBody(body);
         if (!target.isMuted) {
-            enqueue(target, context.getString(R.string.tpl_reply_prefix, sender.nickname, body), "REPLY");
+            enqueue(target, context.getString(R.string.tpl_reply_prefix, safeSenderNickname, safeBody), "REPLY");
         }
         if (prefs.isCopyRepliesToAdmins()) {
-            copyReplyToAdmins(sender, target, body);
+            copyReplyToAdmins(sender.id, safeSenderNickname, target, safeBody);
         }
     }
 
     /** Copies a delivered reply to active admins, skipping muted admins and the sender/target so nobody gets it twice. */
-    private void copyReplyToAdmins(Member sender, Member target, String body) {
-        String formatted = context.getString(R.string.tpl_reply_copy_admin, sender.nickname, target.nickname, body);
+    private void copyReplyToAdmins(long senderId, String senderNickname, Member target, String body) {
+        String formatted = context.getString(R.string.tpl_reply_copy_admin, senderNickname, target.nickname, body);
         List<Member> admins = memberRepository.getActiveAdmins();
         for (Member admin : admins) {
-            if (admin.isMuted || admin.id == sender.id || admin.id == target.id) {
+            if (admin.isMuted || admin.id == senderId || admin.id == target.id) {
                 continue;
             }
             enqueue(admin, formatted, "ADMIN");
@@ -828,22 +853,35 @@ public class CommandProcessor {
 
     /**
      * Resolves a user-typed member reference the tolerant way #remove, #override and #to all share:
-     * an active-member nickname match first, falling back to a normalized phone match. Returns null
-     * when nothing matches.
+     * a strict phone-number match first, falling back to an active-member nickname match. Returns
+     * null when nothing matches.
+     *
+     * <p>Phone is checked first (not nickname first) using {@link PhoneNumberUtils#normalizeStrict},
+     * which only accepts a candidate that IS a phone number end-to-end — no embedded/trailing digits
+     * bleeding in from surrounding text (audit 4.2a: that looseness in the old {@code normalize()}
+     * fallback let {@code #to 5551234567 hi there} keep matching longer and longer word-prefixes
+     * until the whole message was consumed as "nickname", leaving nothing to deliver). Checking
+     * phone first also closes the nickname-shadowing hole: if nickname were tried first, a member
+     * whose NICKNAME happens to be a phone-shaped string (e.g. "5551234567") would shadow the real
+     * owner of that number for every command — most dangerously {@code #remove}, which would then
+     * remove the wrong member. With phone-first, a strictly-numeric candidate always resolves to
+     * whoever actually owns that number (if anyone), never to a same-shaped nickname.
+     *
+     * <p>Trade-off: a member whose nickname is itself a bare phone-shaped string can no longer be
+     * targeted by that nickname if a DIFFERENT member owns the matching number — the number match
+     * wins. That's judged the safer failure mode: it fails closed (targets the real number owner,
+     * or nobody) rather than failing open onto whichever member happened to pick a numeric-looking
+     * nickname. Admins can still avoid the collision by not assigning phone-shaped nicknames.
      */
     private Member resolveMemberTolerant(String candidate) {
-        Member target = memberRepository.findActiveByNickname(candidate);
-        if (target != null) {
-            return target;
-        }
-        String normalized = PhoneNumberUtils.normalize(candidate);
+        String normalized = PhoneNumberUtils.normalizeStrict(candidate);
         if (normalized != null) {
             Member byPhone = memberRepository.findByPhone(normalized);
             if (byPhone != null && byPhone.active) {
                 return byPhone;
             }
         }
-        return null;
+        return memberRepository.findActiveByNickname(candidate);
     }
 
     private void broadcastExcept(long excludeId, String message) {

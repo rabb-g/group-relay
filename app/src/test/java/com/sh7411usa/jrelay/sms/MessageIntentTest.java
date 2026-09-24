@@ -177,4 +177,177 @@ public class MessageIntentTest {
         long now = 5_000L;
         assertTrue(MessageIntent.isWithinReplyWindow(postTimestamp, now, 24));
     }
+
+    // ---- sanitizeRelayBody ----
+
+    // The literal forgery attack (audit 2.3): a member appends a newline then a fake "[Admin]:"
+    // line to their own relayed body, hoping it renders as a second, structurally genuine line.
+    @Test
+    public void sanitizeRelayBody_collapsesForgedAdminLineIntoSameLine() {
+        String sanitized = MessageIntent.sanitizeRelayBody("bins out tonight\n[Admin]: Emergency");
+        assertEquals("bins out tonight [Admin]: Emergency", sanitized);
+        assertFalse(sanitized.contains("\n"));
+    }
+
+    @Test
+    public void sanitizeRelayBody_collapsesCarriageReturn() {
+        assertEquals("a b", MessageIntent.sanitizeRelayBody("a\rb"));
+    }
+
+    @Test
+    public void sanitizeRelayBody_collapsesCarriageReturnNewline() {
+        assertEquals("a b", MessageIntent.sanitizeRelayBody("a\r\nb"));
+    }
+
+    @Test
+    public void sanitizeRelayBody_collapsesTab() {
+        assertEquals("a b", MessageIntent.sanitizeRelayBody("a\tb"));
+    }
+
+    @Test
+    public void sanitizeRelayBody_collapsesMultipleConsecutiveNewlinesToOneSpace() {
+        assertEquals("a b", MessageIntent.sanitizeRelayBody("a\n\n\nb"));
+    }
+
+    @Test
+    public void sanitizeRelayBody_trimsLeadingAndTrailingWhitespace() {
+        assertEquals("a b", MessageIntent.sanitizeRelayBody("  \n a b \t "));
+    }
+
+    @Test
+    public void sanitizeRelayBody_leavesAlreadySingleLineBodyUnchanged() {
+        assertEquals("hi there", MessageIntent.sanitizeRelayBody("hi there"));
+    }
+
+    @Test
+    public void sanitizeRelayBody_emptyInputReturnsEmpty() {
+        assertEquals("", MessageIntent.sanitizeRelayBody(""));
+    }
+
+    @Test
+    public void sanitizeRelayBody_whitespaceOnlyInputReturnsEmpty() {
+        assertEquals("", MessageIntent.sanitizeRelayBody("   \n\t  "));
+    }
+
+    @Test
+    public void sanitizeRelayBody_nullInputReturnsEmpty() {
+        assertEquals("", MessageIntent.sanitizeRelayBody(null));
+    }
+
+    @Test
+    public void sanitizeRelayBody_hebrewTextWithEmbeddedNewlineIsCollapsed() {
+        assertEquals("שלום לכולם", MessageIntent.sanitizeRelayBody("שלום\nלכולם"));
+    }
+
+    @Test
+    public void sanitizeRelayBody_yiddishTextWithEmbeddedNewlineIsCollapsed() {
+        assertEquals("אַ גוטע וואָך", MessageIntent.sanitizeRelayBody("אַ גוטע\nוואָך"));
+    }
+
+    // ---- isValidNickname ----
+
+    @Test
+    public void isValidNickname_rejectsNull() {
+        assertFalse(MessageIntent.isValidNickname(null));
+    }
+
+    @Test
+    public void isValidNickname_rejectsEmpty() {
+        assertFalse(MessageIntent.isValidNickname(""));
+    }
+
+    @Test
+    public void isValidNickname_rejectsWhitespaceOnly() {
+        assertFalse(MessageIntent.isValidNickname("   "));
+    }
+
+    @Test
+    public void isValidNickname_rejectsColon() {
+        assertFalse(MessageIntent.isValidNickname("Bob: hi"));
+    }
+
+    @Test
+    public void isValidNickname_rejectsIsoControlCharacter() {
+        assertFalse(MessageIntent.isValidNickname("Bob\nSmith"));
+    }
+
+    // Bans the exact leading markers the app's own system prefixes use ("[Admin]", "@system", "#help").
+    @Test
+    public void isValidNickname_rejectsLeadingBracket() {
+        assertFalse(MessageIntent.isValidNickname("[Admin]"));
+    }
+
+    @Test
+    public void isValidNickname_rejectsLeadingAt() {
+        assertFalse(MessageIntent.isValidNickname("@system"));
+    }
+
+    @Test
+    public void isValidNickname_rejectsLeadingHash() {
+        assertFalse(MessageIntent.isValidNickname("#help"));
+    }
+
+    // The rule is "first NON-SPACE character", so leading spaces cannot be used to smuggle
+    // a forbidden marker past a naive charAt(0) check.
+    @Test
+    public void isValidNickname_rejectsLeadingBracketAfterLeadingSpace() {
+        assertFalse(MessageIntent.isValidNickname("  [Admin]"));
+    }
+
+    @Test
+    public void isValidNickname_acceptsMaxLength32Characters() {
+        String name = repeat('a', 32);
+        assertTrue(MessageIntent.isValidNickname(name));
+    }
+
+    @Test
+    public void isValidNickname_rejectsOverLength33Characters() {
+        String name = repeat('a', 33);
+        assertFalse(MessageIntent.isValidNickname(name));
+    }
+
+    @Test
+    public void isValidNickname_acceptsOrdinaryName() {
+        assertTrue(MessageIntent.isValidNickname("Bob"));
+    }
+
+    @Test
+    public void isValidNickname_acceptsHebrewName() {
+        assertTrue(MessageIntent.isValidNickname("דוד"));
+    }
+
+    @Test
+    public void isValidNickname_acceptsYiddishName() {
+        assertTrue(MessageIntent.isValidNickname("משה"));
+    }
+
+    private static String repeat(char c, int count) {
+        StringBuilder sb = new StringBuilder(count);
+        for (int i = 0; i < count; i++) {
+            sb.append(c);
+        }
+        return sb.toString();
+    }
+
+    // ---- sanitizeNicknameForRender ----
+
+    @Test
+    public void sanitizeNicknameForRender_stripsLeadingAdminMarkerStoredBeforeValidationExisted() {
+        assertEquals("Admin]", MessageIntent.sanitizeNicknameForRender("[Admin]"));
+    }
+
+    @Test
+    public void sanitizeNicknameForRender_stripsRepeatedLeadingMarkers() {
+        assertEquals("Admin]", MessageIntent.sanitizeNicknameForRender("[[Admin]"));
+    }
+
+    @Test
+    public void sanitizeNicknameForRender_leavesOrdinaryNicknameUntouched() {
+        assertEquals("Bob", MessageIntent.sanitizeNicknameForRender("Bob"));
+    }
+
+    @Test
+    public void sanitizeNicknameForRender_fallsBackToMemberWhenNothingSurvivesSanitization() {
+        assertEquals("Member", MessageIntent.sanitizeNicknameForRender("[[[["));
+    }
 }

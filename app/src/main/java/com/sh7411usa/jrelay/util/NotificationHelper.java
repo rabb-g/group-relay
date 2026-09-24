@@ -8,18 +8,41 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.service.notification.StatusBarNotification;
+import android.util.Log;
 
 import com.sh7411usa.jrelay.MainActivity;
 import com.sh7411usa.jrelay.R;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 public class NotificationHelper {
 
-    private static final String CHANNEL_ID = "admin_messages";
-    private static final int NOTIFICATION_ID_BASE = 1000;
-    private static int notificationCounter = 0;
+    private static final String TAG = "NotificationHelper";
 
-    // Admin-alert ids above are NOTIFICATION_ID_BASE (1000) and up, so a small
-    // constant here can never collide with them.
+    private static final String CHANNEL_ID = "admin_messages";
+
+    // Every admin alert collapses into this single id instead of a fresh id
+    // per alert. A growing set of distinct, auto-cancel-only ids relies on a
+    // human tapping each one to ever clear it; on an unattended relay phone
+    // that never happens, so the old counter grew without bound until
+    // Android's ~50-notification cap silently dropped every alert after it
+    // (audit 3.4). Collapsing onto one id with InboxStyle keeps the most
+    // recent alerts visible and bounded no matter how long the phone runs
+    // unattended.
+    private static final int ADMIN_NOTIFICATION_ID = 1000;
+
+    // How many of the most recent alert lines to keep visible in the
+    // expandable notification. Bounds memory and on-screen size regardless
+    // of how many alerts have fired.
+    private static final int MAX_ALERT_LINES = 8;
+
+    private static final List<String> recentAlerts =
+            Collections.synchronizedList(new ArrayList<String>());
+
+    // Admin-alert id above is a single fixed constant, so a small constant
+    // here can never collide with it.
     /** Notification id for the ongoing send-service notification. */
     public static final int FOREGROUND_NOTIFICATION_ID = 1;
 
@@ -28,6 +51,13 @@ public class NotificationHelper {
     public static void showAdminMessage(Context context, String text) {
         NotificationManager nm = context.getSystemService(NotificationManager.class);
         if (nm == null) {
+            return;
+        }
+        if (!nm.areNotificationsEnabled()) {
+            // On API 33+ (and whenever the user has disabled the channel/app),
+            // notify() below silently does nothing and reports no error. This
+            // is the only trace that an admin alert was ever attempted.
+            Log.e(TAG, "Admin alert suppressed, notifications disabled: " + text);
             return;
         }
 
@@ -46,13 +76,37 @@ public class NotificationHelper {
             builder.setPriority(Notification.PRIORITY_HIGH);
         }
 
+        Notification.InboxStyle inbox = new Notification.InboxStyle();
+        String latest;
+        int total;
+        synchronized (recentAlerts) {
+            recentAlerts.add(text);
+            while (recentAlerts.size() > MAX_ALERT_LINES) {
+                recentAlerts.remove(0);
+            }
+            for (String line : recentAlerts) {
+                inbox.addLine(line);
+            }
+            total = recentAlerts.size();
+            latest = text;
+        }
+        inbox.setBigContentTitle(context.getString(R.string.notification_admin_title));
+        inbox.setSummaryText(String.valueOf(total));
+
         builder.setContentTitle(context.getString(R.string.notification_admin_title))
-                .setContentText(text)
+                .setContentText(latest)
                 .setSmallIcon(android.R.drawable.ic_dialog_email)
                 .setContentIntent(mainActivityPendingIntent(context))
+                .setStyle(inbox)
+                // A single fixed id means tapping now actually clears the
+                // notification the alerts are collapsed into, so auto-cancel
+                // is meaningful again: whoever opens the dashboard (the only
+                // place these alerts matter) dismisses it, and the next
+                // alert starts a fresh one. Previously every alert had a
+                // distinct id, so auto-cancel-on-tap could never keep up.
                 .setAutoCancel(true);
 
-        nm.notify(NOTIFICATION_ID_BASE + (++notificationCounter), builder.build());
+        nm.notify(ADMIN_NOTIFICATION_ID, builder.build());
     }
 
     /** Tapping either notification opens the dashboard. Shared so the two cannot drift apart. */

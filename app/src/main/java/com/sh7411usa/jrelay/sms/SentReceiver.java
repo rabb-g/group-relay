@@ -183,7 +183,14 @@ public class SentReceiver extends BroadcastReceiver {
         // way, nothing further happens for this broadcast.
     }
 
-    /** Mirrors sendOne's old success path: all parts in -> SENT, and the member's failure streak resets. */
+    /**
+     * Mirrors sendOne's old success path: all parts in -> SENT, and the member's failure streak
+     * resets. {@link OutboxRepository#recordPartSent} writes the SENT status itself, atomically,
+     * the moment the last part's decrement reaches 0 - there is no separate markSent call to make
+     * here (removed in 5.7; leaving that write for a later, separate call left a window where the
+     * row sat at SENDING with parts_pending = 0, which resetOrphanedSending could reclaim and
+     * takeBurst could then resend, duplicating a message that had already gone out).
+     */
     private static void handleSuccess(OutboxRepository outbox, MemberRepository memberRepository,
                                        OutboxRepository.OutboxItem item, long token) {
         int remaining = outbox.recordPartSent(item.id, token);
@@ -193,7 +200,6 @@ public class SentReceiver extends BroadcastReceiver {
             //  >0: other parts of this message are still outstanding - nothing more to do yet.
             return;
         }
-        outbox.markSent(item.id, token);
         if (item.memberId != null) {
             Member member = memberRepository.findById(item.memberId);
             if (member != null) {
@@ -248,13 +254,16 @@ public class SentReceiver extends BroadcastReceiver {
      *
      * <p>{@code token} is the attempt this failure belongs to - both callers already hold the
      * correct one in scope: {@link #onReceive} reads it from the intent extras, and by the time it
-     * calls here {@code recordSendFailure} has already confirmed it matches the row's
-     * {@code handed_off_at} while status was still {@code SENDING}; {@code SmsSendService#sendOne}'s
-     * catch block mints it earlier in the method and writes it via {@code markHandedOff}
-     * immediately before calling here, with status still {@code SENDING} from {@code takeBurst}.
-     * Passed straight through to {@link OutboxRepository#requeueForRetry} /
-     * {@link OutboxRepository#markFailed} so either write is dropped, not applied, if the row has
-     * since been reclaimed into a newer attempt under a different token.
+     * calls here {@code recordSendFailure} has already moved the row from SENDING to
+     * {@code OutboxRepository}'s SEND_FAILED status under that token, atomically with recording
+     * the outcome; {@code SmsSendService#sendOne}'s catch block mints it earlier in the method and
+     * writes it via {@code markHandedOff(id, 0, token)} immediately before calling here, leaving
+     * the row at {@code status = 'SENDING', parts_pending = 0} (that write does not touch status,
+     * and no other write can interleave in the same synchronous call). Passed straight through to
+     * {@link OutboxRepository#requeueForRetry} / {@link OutboxRepository#markFailed}, which guard
+     * on `token` matching either SEND_FAILED or SENDING for exactly these two cases, so either
+     * write is dropped, not applied, if the row has since been reclaimed into a newer attempt
+     * under a different token.
      */
     public static void handleFailure(Context context, OutboxRepository.OutboxItem item, long token, int resultCode) {
         Context appContext = context.getApplicationContext();

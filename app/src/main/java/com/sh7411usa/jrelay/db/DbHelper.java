@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DbHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "jrelay.db";
-    private static final int DB_VERSION = 6;
+    private static final int DB_VERSION = 7;
 
     public static final String TABLE_MEMBERS = "members";
     public static final String TABLE_MESSAGE_LOG = "message_log";
@@ -76,6 +76,36 @@ public class DbHelper extends SQLiteOpenHelper {
                 "parts_pending INTEGER NOT NULL DEFAULT 0," +
                 "handed_off_at INTEGER NOT NULL DEFAULT 0" +
                 ")");
+
+        createIndexes(db);
+    }
+
+    /**
+     * Indexes for the query patterns MessageRepository and OutboxRepository actually run.
+     * Kept in one place so onCreate (fresh install) and the version-7 migration (upgrade) create
+     * an identical set - verified by diffing this method's statements against the version-7
+     * onUpgrade block, which just calls it too.
+     *
+     * <ul>
+     *   <li>{@code message_log(timestamp)} - {@code getRecent}'s {@code ORDER BY timestamp DESC
+     *       LIMIT ?} (a full-table sort without it), plus the range scans in {@code countSince},
+     *       {@code countRelayedSince}, and {@code countFailedSince}.
+     *   <li>{@code message_log(member_id, timestamp)} - {@code countForMember} and
+     *       {@code countForMemberSince}'s {@code member_id = ?} filters, {@code getRecentForMember}'s
+     *       {@code member_id = ? ... ORDER BY timestamp DESC}, {@code lastActivityForMember}'s
+     *       {@code MAX(timestamp) WHERE member_id = ?}, and {@code countRelayedForMemberSince}.
+     *       Leading {@code member_id} serves the equality filter every one of these queries has;
+     *       the trailing {@code timestamp} then satisfies the range/order-by without a second pass.
+     *   <li>{@code outbox(status, hold_until)} - {@code takeBurst}'s
+     *       {@code status = ? AND hold_until <= ?} and {@code takeReleasedRelayRows}'s
+     *       {@code status = ? AND category = ? AND hold_until <= ?} (status is by far the more
+     *       selective column here, so it leads).
+     * </ul>
+     */
+    private static void createIndexes(SQLiteDatabase db) {
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_message_log_timestamp ON " + TABLE_MESSAGE_LOG + "(timestamp)");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_message_log_member_timestamp ON " + TABLE_MESSAGE_LOG + "(member_id, timestamp)");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_outbox_status_hold ON " + TABLE_OUTBOX + "(status, hold_until)");
     }
 
     /** Migrations are additive so existing members, message history, and queued sends survive an app update. */
@@ -109,6 +139,9 @@ public class DbHelper extends SQLiteOpenHelper {
             db.execSQL("ALTER TABLE " + TABLE_OUTBOX + " ADD COLUMN last_result INTEGER");
             db.execSQL("ALTER TABLE " + TABLE_OUTBOX + " ADD COLUMN parts_pending INTEGER NOT NULL DEFAULT 0");
             db.execSQL("ALTER TABLE " + TABLE_OUTBOX + " ADD COLUMN handed_off_at INTEGER NOT NULL DEFAULT 0");
+        }
+        if (oldVersion < 7) {
+            createIndexes(db);
         }
     }
 

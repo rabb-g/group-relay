@@ -43,6 +43,18 @@ public class SmsSendService extends Service {
      * short value exists to avoid (see {@link #waitForOutstandingResults}).
      */
     private static final long OUTSTANDING_RESULTS_WAIT_MILLIS = 60 * 1000L;
+    /**
+     * How far back message_log history is kept before {@link MessageRepository#pruneOlderThan} is
+     * applied to it, once per drain. 90 days: long enough that the dashboard's Recent Activity feed,
+     * a member's activity feed, and {@code lastActivityForMember} still show a genuinely useful
+     * window (a season of a group's real history) for a host reviewing "who's been active lately,"
+     * while short enough that row growth stays bounded — at ~101 rows/relayed post, even a busy
+     * group settles into roughly a constant-size table instead of the unbounded ~737k rows/year an
+     * unpruned log accumulates. Costs: any activity older than 90 days is gone for good; a host who
+     * wants a longer or shorter window has no way to change this without a code edit (no Prefs
+     * setting added here — flagged separately as a possible follow-up).
+     */
+    private static final long MESSAGE_LOG_RETENTION_MILLIS = 90L * 24 * 60 * 60 * 1000L;
 
     /**
      * True while a drain loop is running. drainAll() now only returns once the outbox is fully
@@ -117,17 +129,54 @@ public class SmsSendService extends Service {
         }
         new Thread(() -> {
             try {
-                // A prior process death mid-drain leaves rows stuck in SENDING forever, since
-                // nothing else ever moves them back to PENDING. Once per drain-starting
-                // onStartCommand (never on the suppressed path above), before the loop.
-                int resetCount = new OutboxRepository(this).resetOrphanedSending();
-                if (resetCount > 0) {
-                    Log.i(TAG, "Reset " + resetCount + " orphaned SENDING row(s) to PENDING");
-                }
                 boolean again = true;
+                // Runs resetOrphanedSending() on the first iteration only — "once per
+                // drain-starting onStartCommand, before the loop" — but now INSIDE the same
+                // try/finally that clears DRAINING, not before it. It used to run ahead of that
+                // try: a throw there left DRAINING permanently true with no owner, since every
+                // later start() would suppress into RERUN, which only this (now-dead) thread
+                // could ever consume. Keeping it inside means the catch below and the finally's
+                // DRAINING.set(false) both still fire if it throws.
+                boolean first = true;
                 while (again) {
                     try {
+                        if (first) {
+                            // A prior process death mid-drain leaves rows stuck in SENDING
+                            // forever, since nothing else ever moves them back to PENDING.
+                            int resetCount = new OutboxRepository(this).resetOrphanedSending();
+                            if (resetCount > 0) {
+                                Log.i(TAG, "Reset " + resetCount + " orphaned SENDING row(s) to PENDING");
+                            }
+                            // Once per drain-starting onStartCommand, same as resetOrphanedSending
+                            // above: bulk housekeeping that must never run per-message (see
+                            // MessageRepository#pruneOlderThan's javadoc). Runs here, on this
+                            // background thread, before drainAll() ever draws a burst — not
+                            // interleaved between bursts — so the DELETE's cost is paid once up
+                            // front per drain instead of pushing back the pacing of real sends
+                            // mid-burst.
+                            long cutoff = System.currentTimeMillis() - MESSAGE_LOG_RETENTION_MILLIS;
+                            int prunedCount = new MessageRepository(this).pruneOlderThan(cutoff);
+                            if (prunedCount > 0) {
+                                Log.i(TAG, "Pruned " + prunedCount + " message_log row(s) older than retention window");
+                            }
+                            first = false;
+                        }
                         drainAll();
+                    } catch (Throwable t) {
+                        // Was previously uncaught: any SQLiteException (disk full, lock
+                        // contention with the receiver thread), a notify() failure, or a throw
+                        // from SentReceiver.handleFailure (called out of sendOne's catch) killed
+                        // this whole thread mid-fan-out. START_NOT_STICKY means nothing restarts
+                        // it, so the remaining recipients just sat there until an unrelated
+                        // inbound SMS happened to trigger a fresh start(). Logged at ERROR since
+                        // nothing else surfaces this on an unattended phone. Deliberately does
+                        // NOT loop back into drainAll() immediately: a DB that just threw is
+                        // likely to throw again on the very next call, and an immediate retry
+                        // here would spin. Falling through to the same RERUN check every normal
+                        // pass already uses means this only retries if a start() has genuinely
+                        // arrived with new work (or already had one queued) — bounded by the same
+                        // demand-driven re-entry as any other pass, not a busy loop.
+                        Log.e(TAG, "Drain thread crashed; outbox will resume on next trigger", t);
                     } finally {
                         DRAINING.set(false);
                     }
