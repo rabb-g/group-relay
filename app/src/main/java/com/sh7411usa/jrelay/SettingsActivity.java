@@ -380,6 +380,8 @@ public class SettingsActivity extends BaseActivity {
         findViewById(R.id.button_save_reply_mode).setOnClickListener(v -> saveReplyModeSettings());
         findViewById(R.id.button_save_commands).setOnClickListener(v -> saveCommandsSettings());
         findViewById(R.id.button_save).setOnClickListener(v -> savePacingSettings());
+        findViewById(R.id.button_save_group_delivery).setOnClickListener(v -> saveGroupDelivery());
+        findViewById(R.id.button_save_delivery_shuffle).setOnClickListener(v -> saveDeliveryShuffle());
         findViewById(R.id.button_save_reporting).setOnClickListener(v -> saveReportingSettings());
         findViewById(R.id.button_save_notices).setOnClickListener(v -> saveNoticesSettings());
         findViewById(R.id.button_save_capacity).setOnClickListener(v -> saveCapacitySettings());
@@ -569,8 +571,23 @@ public class SettingsActivity extends BaseActivity {
                 Math.min(600, Math.max(0, parseOrDefault(coalesceWindowSecondsInput, prefs.getCoalesceWindowSeconds()))));
         prefs.setMaxMergedSegments(Math.max(1, parseOrDefault(maxMergedSegmentsInput, prefs.getMaxMergedSegments())));
 
-        prefs.setDeliveryShuffleEnabled(deliveryShuffleCheckbox.isChecked());
+        Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
+    }
 
+    /**
+     * Group Delivery and Delivery Shuffling each have their own Save button, directly under their
+     * checkbox. Both used to be saved by the pacing section's Save button, which sits ABOVE them on
+     * the screen, so an admin who ticked either box and pressed the nearest Save below it (Group
+     * Notices') saw "Saved." while the setting silently stayed as it was. Found on the device,
+     * 2026-09-24: group delivery never switched on.
+     */
+    private void saveDeliveryShuffle() {
+        prefs.setDeliveryShuffleEnabled(deliveryShuffleCheckbox.isChecked());
+        Toast.makeText(this, R.string.rate_limit_member_saved, Toast.LENGTH_SHORT).show();
+    }
+
+    /** See {@link #saveDeliveryShuffle()} for why this has its own Save button. */
+    private void saveGroupDelivery() {
         // Group delivery is refused while no sub-group exists. The GROUP_MMS branch in
         // CommandProcessor fans a post out per sub-group; with none assigned it would find nothing
         // to send to and the post would vanish silently. Falling back to SMS is the safe default
@@ -596,8 +613,8 @@ public class SettingsActivity extends BaseActivity {
             MmsIngestService.start(this);
         }
 
-        // On refusal show ONLY the explanation. Every other setting on this screen was still
-        // saved, but following "assign members to sub-groups first" with "Saved." reads as
+        // On refusal show ONLY the explanation. Following "assign members to sub-groups first"
+        // with "Saved." reads as
         // confirmation that group delivery went on — the admin walks away believing it is enabled
         // when the box was forced back off, and the failure of a group post to arrive is silent.
         // The more specific message is the one worth showing.

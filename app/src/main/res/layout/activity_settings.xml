@@ -454,6 +454,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/checkbox_group_delivery"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/button_save_group_delivery"
+                style="@style/Widget.JRelay.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_save"
                 android:layout_marginBottom="28dp" />
 
             <!-- Delivery Queue Shuffling -->
@@ -477,6 +485,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/checkbox_delivery_shuffle"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/button_save_delivery_shuffle"
+                style="@style/Widget.JRelay.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_save"
                 android:layout_marginBottom="28dp" />
 
             <!-- Group Notices -->
