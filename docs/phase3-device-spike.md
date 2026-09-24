@@ -48,9 +48,28 @@ A real send needs a composed text-only `SendReq` PDU exposed through a content p
 - The provider side is equally minimal: one `ContentProvider` subclass implementing `openFile()` over a file in app-private storage, `android:exported="false"`, `android:grantUriPermissions="true"` — the same shape as the handoff's `MmsFileProvider`, but again, a throwaway class is fine for this test.
 - One `Activity` with one button that runs the send and logs the result is enough. No UI polish.
 
+> **The harness has been built** (2026-09-23). It lives OUTSIDE this repo, as intended, at
+> `C:\Users\YK\githubFiles\mms-spike` — a standalone Gradle project, package
+> `com.sh7411usa.mmsspike`, installable alongside jRelay and deletable afterwards. It requests
+> `SEND_SMS` and nothing else.
+>
+> It does **not** vendor AOSP's `PduComposer`/`SendReq`/`PduHeaders` hierarchy. Instead
+> `pdu/MmsPduWriter.java` hand-rolls just the bytes an `m-send-req` with one text/plain part
+> needs — ~255 lines instead of thousands, with every field commented against the spec.
+>
+> **Its output has been verified by execution, not by reading.** The class is pure Java with no
+> Android imports, so it was compiled and run on the desktop: for two recipients and the body
+> "test" it emits exactly 72 bytes, and every field was checked against WSP/MMS encapsulation —
+> the `0x92` version short-integer, the `0x81` insert-address-token, Content-Type genuinely last,
+> and two separate `0x97` To headers in one PDU, which is the construction this entire spike turns
+> on. That verification matters: **a malformed PDU would produce a false negative**, we would read
+> it as "the platform refuses non-default apps", and Phase 3 would be abandoned for a bug of our
+> own making. The harness also prints an annotated hex dump before every send for the same reason.
+
 ### Steps
 1. Confirm the phone numbers for every recipient device, in the exact format the carrier expects (E.164, e.g. `+15551234567`, is safest).
-2. Build the throwaway harness: request `SEND_SMS` only, vendor the minimal PDU subset above, add the throwaway file provider.
+2. ~~Build the throwaway harness~~ — done, see the note above. Install
+   `mms-spike/app/build/outputs/apk/debug/app-debug.apk` on the host phone.
 3. Compose one `SendReq`:
    - `MessageType = PduHeaders.MESSAGE_TYPE_SEND_REQ`
    - `To` = every recipient's number, added via `addTo(new EncodedStringValue(number))` for each — this is what makes it a multi-recipient send rather than N single sends.
