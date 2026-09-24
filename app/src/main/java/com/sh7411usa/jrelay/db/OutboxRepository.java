@@ -314,6 +314,21 @@ public class OutboxRepository {
                 args.toArray(new String[0]));
     }
 
+    /**
+     * Deletes any roster still waiting to go out to this sub-group, so a newer one replaces it.
+     *
+     * <p>A roster's body is fixed when it is queued. Adding five people to one group one at a
+     * time used to queue five rosters, the first four already out of date by the time they sent.
+     * Only PENDING rows are removed: a SENDING row is already with the radio, and pulling it out
+     * from under the send would orphan its delivery result.
+     */
+    public int deletePendingRosters(long subgroupId) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        return db.delete(DbHelper.TABLE_OUTBOX,
+                "status = 'PENDING' AND category = 'SYSTEM' AND subgroup_id = ?",
+                new String[]{String.valueOf(subgroupId)});
+    }
+
     public int countPending() {
         return (int) queryScalar("COUNT(*)", "status = 'PENDING'", null);
     }

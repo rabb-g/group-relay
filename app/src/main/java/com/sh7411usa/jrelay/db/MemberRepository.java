@@ -206,6 +206,12 @@ public class MemberRepository {
         cv.put("active", 1);
         cv.putNull("removed_at");
         cv.putNull("last_post_received_id");
+        // A rejoining member comes back unassigned, not into their old sub-group. A rejoin arrives
+        // by SMS with no admin action, and by then the old group may have been refilled to 9 (so
+        // putting them back makes 11 participants, which fails silently on some carriers) or merged
+        // away entirely (so they would resurrect it as a one-member "group"). Unassigned, they
+        // get individual SMS until the admin places them.
+        cv.putNull("subgroup_id");
         db.update(DbHelper.TABLE_MEMBERS, cv, "id = ?", new String[]{String.valueOf(id)});
     }
 

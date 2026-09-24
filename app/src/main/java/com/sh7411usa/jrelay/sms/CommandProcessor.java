@@ -853,6 +853,9 @@ public class CommandProcessor {
                 prefs.getGroupName(),
                 context.getString(R.string.roster_footer),
                 members);
+        // Replace, don't pile up: a roster still queued for this group lists who was in it when
+        // it was written, and this one supersedes it.
+        outboxRepository.deletePendingRosters(subgroupId);
         outboxRepository.enqueueGroup(subgroupId, body, "SYSTEM", 0L, false);
         return true;
     }

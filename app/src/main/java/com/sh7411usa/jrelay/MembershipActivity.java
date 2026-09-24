@@ -287,6 +287,7 @@ public class MembershipActivity extends BaseActivity {
         List<Long> existingIds = memberRepository.getDistinctSubgroupIds();
         Map<Long, Integer> sizes = memberRepository.countMembersPerSubgroup();
 
+        int targetSize = new Prefs(this).getSubgroupTargetSize();
         List<CharSequence> options = new ArrayList<>();
         List<Long> optionIds = new ArrayList<>();
         for (Long id : existingIds) {
@@ -294,6 +295,12 @@ public class MembershipActivity extends BaseActivity {
                 continue;
             }
             int count = sizes.containsKey(id) ? sizes.get(id) : 0;
+            // A full group is not offered at all. One more member there is 11 participants in the
+            // thread counting this phone, which the owner found fails on some carriers -- and
+            // fails silently, starting with the automatic roster that confirmAndAssign sends.
+            if (count >= targetSize) {
+                continue;
+            }
             options.add(getString(R.string.subgroup_option_existing, id, count));
             optionIds.add(id);
         }

@@ -533,6 +533,20 @@ public class SmsSendService extends Service {
             return;
         }
 
+        // Last line of defence against an overfilled group. More than the target size means 11+
+        // participants counting this phone, which fails silently on some carriers. Every known
+        // path that could overfill is guarded upstream; this turns any path nobody has found yet
+        // into a failure the admin is told about, instead of a thread that quietly stops working.
+        if (members.size() > prefs.getSubgroupTargetSize()) {
+            Log.e(TAG, "Sub-group " + item.subgroupId + " has " + members.size()
+                    + " members, over the ceiling of " + prefs.getSubgroupTargetSize()
+                    + "; failing outbox row " + item.id + " instead of sending");
+            outbox.markHandedOff(item.id, 0, token);
+            outbox.markFailed(item.id, token);
+            new CommandProcessor(this).alertAdminsOfGroupFailure(item.subgroupId);
+            return;
+        }
+
         List<String> recipients = new ArrayList<>(members.size());
         for (Member m : members) {
             recipients.add(m.phoneE164);
