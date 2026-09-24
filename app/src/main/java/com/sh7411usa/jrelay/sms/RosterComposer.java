@@ -92,7 +92,7 @@ public final class RosterComposer {
     }
 
     /**
-     * Formats a phone number for a flip-phone-readable roster line, e.g. {@code "848-207-4564"}.
+     * Formats a phone number for a flip-phone-readable roster line, e.g. {@code "555-010-0001"}.
      * For the common case (10-digit NANP number) the digits are grouped 3-3-4 with hyphens, which
      * reads far better on a small screen than E.164. If the result is not exactly 10 digits (an
      * international number, or malformed/missing data), grouping it would misrepresent the number,
@@ -139,7 +139,7 @@ public final class RosterComposer {
      * </ul>
      * A nine-member roster is one of the very few places this app deliberately sends a
      * multi-segment message, so worked example (Hebrew/Yiddish, UCS-2): a header line plus nine
-     * lines like {@code "שם 848-207-4564"} (~18 chars each) plus a footer runs to roughly
+     * lines like {@code "שם 555-010-0001"} (~18 chars each) plus a footer runs to roughly
      * 30 + 9*18 + 40 ≈ 232 characters. 232 does not fit a single 70-char UCS-2 segment, so it
      * concatenates: {@code ceil(232 / 67) = 4} segments — matching the "~4 segments" estimate in
      * {@code docs/phase3-redesign.md} §2.

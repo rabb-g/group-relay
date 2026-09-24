@@ -26,9 +26,9 @@ public class RosterComposerTest {
     @Test
     public void compose_sortsMembersByNicknameCaseInsensitively() {
         List<Member> members = Arrays.asList(
-                member("Chana", "+18482074564"),
-                member("alice", "+18482074565"),
-                member("Bob", "+18482074566"));
+                member("Chana", "+15550100001"),
+                member("alice", "+15550100002"),
+                member("Bob", "+15550100003"));
         String body = RosterComposer.compose("%1$s roster:", "Group", "Save these.", members);
 
         int aliceIdx = body.indexOf("alice");
@@ -43,15 +43,15 @@ public class RosterComposerTest {
     @Test
     public void compose_groups10DigitNanpNumberWithHyphens() {
         String body = RosterComposer.compose("%1$s:", "Group", "Save.",
-                Arrays.asList(member("Alice", "8482074564")));
-        assertTrue(body.contains("Alice 848-207-4564"));
+                Arrays.asList(member("Alice", "5550100001")));
+        assertTrue(body.contains("Alice 555-010-0001"));
     }
 
     @Test
     public void compose_stripsLeadingPlusOneFromNanpNumberBeforeGrouping() {
         String body = RosterComposer.compose("%1$s:", "Group", "Save.",
-                Arrays.asList(member("Alice", "+18482074564")));
-        assertTrue(body.contains("Alice 848-207-4564"));
+                Arrays.asList(member("Alice", "+15550100001")));
+        assertTrue(body.contains("Alice 555-010-0001"));
     }
 
     @Test
@@ -105,15 +105,15 @@ public class RosterComposerTest {
     @Test
     public void compose_putsEachMemberOnItsOwnLineWithNoBulletsOrBlankLines() {
         List<Member> members = Arrays.asList(
-                member("Alice", "8482074564"),
-                member("Bob", "8482074565"));
+                member("Alice", "5550100001"),
+                member("Bob", "5550100002"));
         String body = RosterComposer.compose("Header:", "Group", "Footer.", members);
 
         String[] lines = body.split("\n", -1);
         assertEquals(4, lines.length);
         assertEquals("Header:", lines[0]);
-        assertEquals("Alice 848-207-4564", lines[1]);
-        assertEquals("Bob 848-207-4565", lines[2]);
+        assertEquals("Alice 555-010-0001", lines[1]);
+        assertEquals("Bob 555-010-0002", lines[2]);
         assertEquals("Footer.", lines[3]);
         for (String line : lines) {
             assertFalse("no bullet decoration expected", line.startsWith("-"));
@@ -125,7 +125,7 @@ public class RosterComposerTest {
 
     @Test
     public void estimateSegments_shortMessageIsOneSegment() {
-        assertEquals(1, RosterComposer.estimateSegments("Group roster:\nAlice 848-207-4564", false));
+        assertEquals(1, RosterComposer.estimateSegments("Group roster:\nAlice 555-010-0001", false));
     }
 
     @Test
@@ -150,7 +150,7 @@ public class RosterComposerTest {
     @Test
     public void estimateSegments_ucs2NineMemberRosterIsAboutFourSegments() {
         // Worked example from docs/phase3-redesign.md sec2: a ~232-char Hebrew/Yiddish roster
-        // (header + nine "Name 848-207-4564"-shaped lines + footer) concatenates at 67 chars/seg.
+        // (header + nine "Name 555-010-0001"-shaped lines + footer) concatenates at 67 chars/seg.
         String msg = repeat('a', 232);
         assertEquals(4, RosterComposer.estimateSegments(msg, true));
     }

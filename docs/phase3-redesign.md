@@ -83,7 +83,7 @@ message goes peer-to-peer and arrives attributed to whatever the recipient's pho
 that number. On a flip phone with no contact saved, that is a raw string of digits.
 
 So a member's experience splits into `Alice: bins out tonight` from the relay, and
-`+18482074564` from the person standing next door. The second is worse than what they have today,
+`+15550100001` from the person standing next door. The second is worse than what they have today,
 on exactly the device class this deployment exists for.
 
 **This is confirmed, not predicted.** The spike's inbound reply carried two `type=151` rows —
@@ -120,7 +120,7 @@ What that decision implies, and what the implementation must therefore handle:
 - **The roster must be re-sent when the sub-group changes.** A join, a removal, or an admin
   rebalance leaves eight people holding a stale list. Cheap (one message), but easy to forget, and
   a stale roster is worse than none — it attributes a number to the wrong neighbour.
-- **Format for a flip phone.** Nine entries of roughly `Name 848-207-4564` is ~225 characters, so
+- **Format for a flip phone.** Nine entries of roughly `Name 555-010-0001` is ~225 characters, so
   about 4 segments in Hebrew or Yiddish at 70 chars each. Acceptable as a one-off per sub-group
   (~48 segments across twelve), but it must be plain text, one member per line, with no decoration
   — and it is a rare case where the app deliberately sends a multi-segment message.
