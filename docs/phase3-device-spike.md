@@ -29,10 +29,38 @@ Evidence:
 than coalescing, salting and pacing put together. Against a ~1,000/day CTIA ceiling that is the
 difference between roughly 10 posts a day and roughly 90.
 
-**Still open: H2** (can a non-default app read an inbound group-MMS reply back out of
-`content://mms`?). Without it, member replies land in the stock Messages app and never reach the
-group, and Phase 3 is send-only — useful but half a feature. Procedure in §4; it needs no app
-code, only `adb shell content query` against a real inbound reply.
+### H2 ALSO PASSED — inbound group-MMS replies are fully readable
+
+A reply sent from inside the group thread landed on the host and every field Phase 3 needs came
+straight out of `content://mms`:
+
+- **Inbox row**: `_id=7, thread_id=5, msg_box=1, m_type=132` — `132` is `m-retrieve-conf`, i.e.
+  fully retrieved, not a `130` notification placeholder. Auto-download behaved.
+- **Sender**: `content://mms/7/addr` → `address=+1848…, type=137` (`PduHeaders.FROM`). Exactly the
+  row shape the handoff predicted.
+- **Body**: `content://mms/part where mid=7 and ct='text/plain'` → **`text=Ok`, readable INLINE in
+  the `text` column.** This is the good case — no need to `openInputStream()` the part URI, which
+  §4 warned might be necessary on some carriers. Confirmed twice (`mid=4` → `text=Hi`).
+- An `application/smil` part is present alongside the text part, as normal for MMS. An
+  implementation must select on `ct='text/plain'` rather than taking the first part.
+
+**Unexpected and design-relevant: the full participant list is on the inbound row.** Alongside the
+`type=137` sender there were two `type=151` (`PduHeaders.TO`) rows carrying both other numbers. So
+an inbound reply tells jRelay not just who sent it but who else already received it — which is
+precisely what sub-group routing needs to avoid double-delivering. It also means **members in a
+sub-group see each other's replies directly, without the relay sending anything at all.** That is
+a further saving beyond the 8x, but it changes the model: within a sub-group the conversation is
+peer-to-peer, and jRelay's job becomes bridging *between* sub-groups rather than relaying every
+message to everyone. Phase 3's design should be revisited with that in mind before it is built.
+
+**One honest caveat.** These reads were done via `adb shell content query`, which runs with shell
+privileges, per §4's procedure. That proves the data exists and is shaped as expected. It does not
+by itself prove a non-default *app* can read it — that additionally requires `READ_SMS`, which
+jRelay already declares and holds. `READ_SMS` gates reading `content://mms` for any app (only
+writing and deleting are reserved to the default SMS app), so this is expected to translate, but
+the first thing the real `MmsIngestService` should do is confirm it.
+
+**Both hypotheses pass. Phase 3 is viable and should be scheduled.**
 
 Note for whoever builds Phase 3: the harness deliberately does NOT vendor AOSP's
 `PduComposer`/`SendReq`/`PduHeaders` hierarchy. `mms-spike/.../pdu/MmsPduWriter.java` hand-rolls
