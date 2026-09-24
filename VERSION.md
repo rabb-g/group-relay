@@ -1,5 +1,19 @@
 # Version History
 
+## Repository hygiene - docs and tests untracked (no app change)
+
+Ahead of publishing the repository publicly, two directories were removed from version control
+and added to `.gitignore`. **No application code changed and `versionName` is unchanged at 5.9** -
+the built APK is byte-identical.
+
+- `docs/` untracked - `audit-2026-09.md`, `phase3-redesign.md`, `phase3-device-spike.md`,
+  `multi-device-design.md`. The audit in particular is a precise map of the app's known
+  weaknesses, which does not belong in a public repository.
+- `app/src/test/` untracked - all 8 unit-test files.
+- Both remain on disk and both still work. `git rm --cached` only stops tracking; the tests still
+  compile and run locally via gradle. Anyone cloning the public repo will not get them.
+
+
 ## 5.9 - Group Sending, Built but Switched Off
 
 The machinery for sending one message to a whole sub-group instead of one message per person. It
